@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================
+// ENUMS
+// ===============================
+enum Role {
+  ADMIN
+  ENSEIGNANT
+  USER
+}
+
+// ===============================
+// MODELS
+// ===============================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+
+  // Relations (audit)
+  etudiants         Etudiant[]
+  classes           Classe[]
+  filieres          Filiere[]
+  anneesAcademiques AnneeAcademique[]
+  notes             Note[]
+}
+
+// -------------------------------
+
+model Etudiant {
+  id      Int    @id @default(autoincrement())
+  nom     String
+  postnom String
+  prenom  String
+  email   String @unique
+
+  classe   Classe @relation(fields: [classeId], references: [id])
+  classeId Int
+
+  notes Note[]
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+
+model Classe {
+  id      Int    @id @default(autoincrement())
+  nom     String
+  section String
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  etudiants Etudiant[]
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+
+model Filiere {
+  id  Int    @id @default(autoincrement())
+  nom String
+
+  classes Classe[]
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+
+model AnneeAcademique {
+  id     Int     @id @default(autoincrement())
+  annee  String  @unique
+  active Boolean @default(false)
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+
+model Note {
+  id      Int    @id @default(autoincrement())
+  matiere String
+  note    Float
+
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId Int
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+}
