@@ -372,6 +372,16 @@ export default function NotesClient() {
     // =======================
 // Impression Brevet coloré
 // =======================
+// =======================
+// Impression Brevet paysage
+// =======================
+// =======================
+// Impression Brevet paysage (compact)
+// =======================
+const formatPrenom = (prenom: string) => {
+  if (!prenom) return "";
+  return prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
+};
 const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
   try {
     const notes = await getReleve(etudiantId, anneeId);
@@ -394,97 +404,98 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
     else if (pourcentage >= 50) mention = "Satisfaction";
     else mention = "Ajourné";
 
-    // HTML du brevet
+    // HTML du brevet (format paysage compact)
     const brevetHtml = `
     <div style="
-      width:1000px;
+      width:1120px;
+      height:740px;
       margin:auto;
-      padding:50px;
-      font-family: 'Georgia', serif;
-      background: linear-gradient(135deg, #ffffff, #f2f6fa);
-      border: 12px solid #0b3c5d;
+      padding:30px 50px;
+      font-family:'Georgia', serif;
+      background: linear-gradient(135deg, #ffffff, #f3f6f9);
+      border:10px solid #0b3c5d;
       box-sizing:border-box;
     ">
 
-      <!-- Bande décorative haut -->
+      <!-- Bande décorative -->
       <div style="
-        height:14px;
+        height:10px;
         background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-        margin-bottom:30px;
+        margin-bottom:15px;
       "></div>
 
       <!-- En-tête -->
-      <h3 style="text-align:center; color:#0b3c5d; margin-bottom:6px;">
+      <h3 style="text-align:center; color:#0b3c5d; margin:0; font-size:16px;">
         RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
       </h3>
-      <h4 style="text-align:center; color:#444; margin-top:0;">
-        Ministère de l’Enseignement
+      <h4 style="text-align:center; color:#444; margin:2px 0 8px; font-size:14px;">
+        Ministère de la Formation Professionnelle et Métier
       </h4>
 
-      <hr style="border:1px solid #d4af37; margin:25px 0;" />
+      <hr style="border:1px solid #d4af37; margin:10px 0;" />
 
       <!-- Académie -->
       <h1 style="
         text-align:center;
         color:#0b3c5d;
-        font-size:42px;
-        letter-spacing:2px;
-        margin-bottom:5px;
+        font-size:32px;
+        letter-spacing:1.5px;
+        margin:6px 0;
       ">
         LÉON ACADÉMIE
       </h1>
 
-      <p style="text-align:center; font-style:italic; color:#555;">
+      <p style="text-align:center; font-style:italic; color:#555; margin:0; font-size:13px;">
         Excellence • Discipline • Réussite
       </p>
 
       <!-- Titre -->
       <h2 style="
         text-align:center;
-        margin:40px 0;
-        font-size:34px;
+        margin:18px 0;
+        font-size:26px;
         color:#d4af37;
         text-transform:uppercase;
       ">
         Brevet de Réussite
       </h2>
 
-      <!-- Texte principal -->
-      <p style="font-size:19px; text-align:justify; line-height:1.7;">
+      <!-- Texte -->
+      <p style="font-size:15px; margin:8px 0; line-height:1.5;">
         Le présent brevet atteste que :
       </p>
 
       <h2 style="
         text-align:center;
         color:#0b3c5d;
-        margin:30px 0;
-        font-size:30px;
+        margin:14px 0;
+        font-size:22px;
       ">
-        ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}
+        ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
       </h2>
 
-      <p style="font-size:19px; text-align:justify; line-height:1.7;">
-        a satisfait avec succès aux exigences académiques de l’année académique
-        <strong>${annee}</strong> au sein de Léon Académie, et a obtenu les résultats suivants :
+      <p style="font-size:15px; margin:8px 0; line-height:1.5;">
+        a satisfait aux exigences académiques de l’année académique
+        <strong>${annee}</strong> au sein de Léon Académie avec les résultats suivants :
       </p>
 
-      <!-- Tableau résultats -->
+      <!-- Résultats -->
       <table style="
-        width:65%;
-        margin:40px auto;
+        width:55%;
+        margin:18px auto;
         border-collapse:collapse;
-        font-size:20px;
+        font-size:16px;
       ">
         <tr style="background:#0b3c5d; color:white;">
-          <td style="padding:14px;">Moyenne Générale</td>
-          <td style="padding:14px; text-align:center;">
+          <td style="padding:8px;">Moyenne Générale</td>
+          <td style="padding:8px; text-align:center;">
             ${pourcentage.toFixed(2)} %
           </td>
         </tr>
         <tr style="background:#eef3f8;">
-          <td style="padding:14px;">Mention</td>
+          <td style="padding:8px;">Mention</td>
           <td style="
-            padding:14px;
+            padding:8px;
             text-align:center;
             font-weight:bold;
             color:#d4af37;
@@ -495,7 +506,7 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
       </table>
 
       <!-- Conclusion -->
-      <p style="font-size:19px; text-align:justify; line-height:1.7;">
+      <p style="font-size:15px; margin:10px 0; line-height:1.5;">
         En foi de quoi, le présent brevet est délivré à l’intéressé(e) pour servir
         et valoir ce que de droit.
       </p>
@@ -504,34 +515,34 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
       <div style="
         display:flex;
         justify-content:space-between;
-        margin-top:70px;
-        font-size:18px;
+        margin-top:30px;
+        font-size:14px;
       ">
         <div>
-          <p>Fait à Kinshasa</p>
-          <p>Le ${new Date().toLocaleDateString()}</p>
+          <p style="margin:2px 0;">Fait à Kinshasa</p>
+          <p style="margin:2px 0;">Le ${new Date().toLocaleDateString()}</p>
         </div>
 
         <div style="text-align:center;">
-          <p><strong>Le Directeur</strong></p>
-          <div style="height:50px;"></div>
-          <p style="border-top:1px solid #000; padding-top:6px;">
+          <p style="margin:2px 0;"><strong>Le Directeur</strong></p>
+          <div style="height:25px;"></div>
+          <p style="margin:0; border-top:1px solid #000; padding-top:4px;">
             Signature & Cachet
           </p>
         </div>
       </div>
 
-      <!-- Bande décorative bas -->
+      <!-- Bande bas -->
       <div style="
-        height:12px;
+        height:8px;
         background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-        margin-top:45px;
+        margin-top:18px;
       "></div>
 
     </div>
     `;
 
-    const win = window.open("", "_blank", "width=1100,height=850");
+    const win = window.open("", "_blank", "width=1200,height=850");
     if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
 
     win.document.write(`
@@ -539,6 +550,10 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
         <head>
           <title>Brevet de Réussite</title>
           <style>
+            @page {
+              size: A4 landscape;
+              margin: 0;
+            }
             @media print {
               body { margin: 0; }
             }
@@ -557,6 +572,8 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
     toast.error("Erreur lors de l'impression du brevet");
   }
 };
+
+
 
 
 
