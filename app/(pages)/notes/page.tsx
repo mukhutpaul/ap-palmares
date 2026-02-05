@@ -245,6 +245,321 @@ export default function NotesClient() {
         }
     };
 
+    // =======================
+    // Impression Brevet
+    // =======================
+    // const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
+    //     try {
+    //         const notes = await getReleve(etudiantId, anneeId);
+    //         if (!notes.length) {
+    //             return toast.info("Aucune note pour cet étudiant et cette année");
+    //         }
+
+    //         const etudiant = notes[0].etudiant;
+    //         const annee = notes[0].anneeAcademique.annee;
+
+    //         // Calcul moyenne / pourcentage
+    //         const total = notes.reduce((sum, n) => sum + n.note, 0);
+    //         const max = notes.length * 20;
+    //         const pourcentage = (total / max) * 100;
+
+    //         // Mention
+    //         let mention = "";
+    //         if (pourcentage >= 80) mention = "Grande Distinction";
+    //         else if (pourcentage >= 70) mention = "Distinction";
+    //         else if (pourcentage >= 50) mention = "Satisfaction";
+    //         else mention = "Ajourné";
+
+    //         // HTML Brevet
+    //         const brevetHtml = `
+    // <div style="
+    //   width: 900px;
+    //   margin: auto;
+    //   padding: 40px;
+    //   font-family: 'Times New Roman', serif;
+    //   border: 6px double #000;
+    //   box-sizing: border-box;
+    // ">
+
+    //   <h3 style="text-align:center; margin-bottom:5px;">
+    //     RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
+    //   </h3>
+    //   <h2 style="text-align:center; margin-top:0;">
+    //     MINISTÈRE DE L’ENSEIGNEMENT
+    //   </h2>
+
+    //   <hr style="margin:20px 0;" />
+
+    //   <h1 style="text-align:center; color:#003366;">
+    //     LÉON ACADÉMIE
+    //   </h1>
+
+    //   <h2 style="text-align:center; margin-top:30px;">
+    //     BREVET DE RÉUSSITE
+    //   </h2>
+
+    //   <p style="font-size:18px; margin-top:40px; text-align:justify;">
+    //     Il est certifié par la présente que :
+    //   </p>
+
+    //   <h2 style="text-align:center; margin:20px 0;">
+    //     ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}
+    //   </h2>
+
+    //   <p style="font-size:18px; text-align:justify;">
+    //     a satisfait aux exigences académiques de l’année académique
+    //     <strong>${annee}</strong> et a obtenu les résultats suivants :
+    //   </p>
+
+    //   <table style="width:60%; margin:30px auto; font-size:18px;">
+    //     <tr>
+    //       <td><strong>Moyenne générale :</strong></td>
+    //       <td>${pourcentage.toFixed(2)} %</td>
+    //     </tr>
+    //     <tr>
+    //       <td><strong>Mention :</strong></td>
+    //       <td>${mention}</td>
+    //     </tr>
+    //   </table>
+
+    //   <p style="margin-top:40px; font-size:18px;">
+    //     En foi de quoi, le présent brevet lui est délivré pour servir et valoir
+    //     ce que de droit.
+    //   </p>
+
+    //   <div style="display:flex; justify-content:space-between; margin-top:60px;">
+    //     <div>
+    //       <p>Fait à __________________</p>
+    //       <p>Le ${new Date().toLocaleDateString()}</p>
+    //     </div>
+    //     <div style="text-align:center;">
+    //       <p><strong>Le Directeur</strong></p>
+    //       <br/><br/>
+    //       <p>______________________</p>
+    //     </div>
+    //   </div>
+
+    // </div>
+    // `;
+
+    //         const win = window.open("", "_blank", "width=1000,height=800");
+    //         if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
+
+    //         win.document.write(`
+    //   <html>
+    //     <head>
+    //       <title>Brevet de Réussite</title>
+    //       <style>
+    //         @media print {
+    //           body { margin: 0; }
+    //         }
+    //       </style>
+    //     </head>
+    //     <body>${brevetHtml}</body>
+    //   </html>
+    // `);
+
+    //         win.document.close();
+    //         win.focus();
+    //         win.print();
+
+    //     } catch (error) {
+    //         console.error(error);
+    //         toast.error("Erreur lors de l'impression du brevet");
+    //     }
+    // };
+
+    // =======================
+// Impression Brevet coloré
+// =======================
+const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
+  try {
+    const notes = await getReleve(etudiantId, anneeId);
+    if (!notes.length) {
+      return toast.info("Aucune note pour cet étudiant et cette année");
+    }
+
+    const etudiant = notes[0].etudiant;
+    const annee = notes[0].anneeAcademique.annee;
+
+    // Calcul moyenne / pourcentage
+    const total = notes.reduce((sum, n) => sum + n.note, 0);
+    const max = notes.length * 20;
+    const pourcentage = (total / max) * 100;
+
+    // Mention
+    let mention = "";
+    if (pourcentage >= 80) mention = "Grande Distinction";
+    else if (pourcentage >= 70) mention = "Distinction";
+    else if (pourcentage >= 50) mention = "Satisfaction";
+    else mention = "Ajourné";
+
+    // HTML du brevet
+    const brevetHtml = `
+    <div style="
+      width:1000px;
+      margin:auto;
+      padding:50px;
+      font-family: 'Georgia', serif;
+      background: linear-gradient(135deg, #ffffff, #f2f6fa);
+      border: 12px solid #0b3c5d;
+      box-sizing:border-box;
+    ">
+
+      <!-- Bande décorative haut -->
+      <div style="
+        height:14px;
+        background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
+        margin-bottom:30px;
+      "></div>
+
+      <!-- En-tête -->
+      <h3 style="text-align:center; color:#0b3c5d; margin-bottom:6px;">
+        RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
+      </h3>
+      <h4 style="text-align:center; color:#444; margin-top:0;">
+        Ministère de l’Enseignement
+      </h4>
+
+      <hr style="border:1px solid #d4af37; margin:25px 0;" />
+
+      <!-- Académie -->
+      <h1 style="
+        text-align:center;
+        color:#0b3c5d;
+        font-size:42px;
+        letter-spacing:2px;
+        margin-bottom:5px;
+      ">
+        LÉON ACADÉMIE
+      </h1>
+
+      <p style="text-align:center; font-style:italic; color:#555;">
+        Excellence • Discipline • Réussite
+      </p>
+
+      <!-- Titre -->
+      <h2 style="
+        text-align:center;
+        margin:40px 0;
+        font-size:34px;
+        color:#d4af37;
+        text-transform:uppercase;
+      ">
+        Brevet de Réussite
+      </h2>
+
+      <!-- Texte principal -->
+      <p style="font-size:19px; text-align:justify; line-height:1.7;">
+        Le présent brevet atteste que :
+      </p>
+
+      <h2 style="
+        text-align:center;
+        color:#0b3c5d;
+        margin:30px 0;
+        font-size:30px;
+      ">
+        ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}
+      </h2>
+
+      <p style="font-size:19px; text-align:justify; line-height:1.7;">
+        a satisfait avec succès aux exigences académiques de l’année académique
+        <strong>${annee}</strong> au sein de Léon Académie, et a obtenu les résultats suivants :
+      </p>
+
+      <!-- Tableau résultats -->
+      <table style="
+        width:65%;
+        margin:40px auto;
+        border-collapse:collapse;
+        font-size:20px;
+      ">
+        <tr style="background:#0b3c5d; color:white;">
+          <td style="padding:14px;">Moyenne Générale</td>
+          <td style="padding:14px; text-align:center;">
+            ${pourcentage.toFixed(2)} %
+          </td>
+        </tr>
+        <tr style="background:#eef3f8;">
+          <td style="padding:14px;">Mention</td>
+          <td style="
+            padding:14px;
+            text-align:center;
+            font-weight:bold;
+            color:#d4af37;
+          ">
+            ${mention}
+          </td>
+        </tr>
+      </table>
+
+      <!-- Conclusion -->
+      <p style="font-size:19px; text-align:justify; line-height:1.7;">
+        En foi de quoi, le présent brevet est délivré à l’intéressé(e) pour servir
+        et valoir ce que de droit.
+      </p>
+
+      <!-- Signatures -->
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        margin-top:70px;
+        font-size:18px;
+      ">
+        <div>
+          <p>Fait à Kinshasa</p>
+          <p>Le ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="text-align:center;">
+          <p><strong>Le Directeur</strong></p>
+          <div style="height:50px;"></div>
+          <p style="border-top:1px solid #000; padding-top:6px;">
+            Signature & Cachet
+          </p>
+        </div>
+      </div>
+
+      <!-- Bande décorative bas -->
+      <div style="
+        height:12px;
+        background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
+        margin-top:45px;
+      "></div>
+
+    </div>
+    `;
+
+    const win = window.open("", "_blank", "width=1100,height=850");
+    if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Brevet de Réussite</title>
+          <style>
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>${brevetHtml}</body>
+      </html>
+    `);
+
+    win.document.close();
+    win.focus();
+    win.print();
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Erreur lors de l'impression du brevet");
+  }
+};
+
+
+
 
 
 
@@ -288,6 +603,12 @@ export default function NotesClient() {
                                     <button className="btn btn-sm btn-warning" onClick={() => handleEditNote(n)}><LucideEdit2 size={16} /></button>
                                     <button className="btn btn-sm btn-error" onClick={() => handleDeleteNote(n.id)}><LucideTrash2 size={16} /></button>
                                     <button className="btn btn-sm btn-info" onClick={() => handlePrintReleve(n.etudiant.id, n.anneeAcademique.id)}><LucidePrinter size={16} /></button>
+                                    <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handlePrintBrevet(n.etudiant.id, n.anneeAcademique.id)}
+                                    >
+                                        🎓
+                                    </button>
                                 </td>
                             </tr>
                         ))}
