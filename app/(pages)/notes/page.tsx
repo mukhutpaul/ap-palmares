@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Select from "react-select";
@@ -8,9 +8,7 @@ import { LucideEdit2, LucideTrash2, LucidePrinter } from "lucide-react";
 import { useSession } from "next-auth/react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import { useRef } from "react";
-import html2canvas from "html2canvas";
-import "jspdf-autotable";
+import html2canvas from 'html2canvas-pro';
 
 import {
     addNote,
@@ -160,137 +158,92 @@ export default function NotesClient() {
     };
 
     // =======================
-    // Export PDF via API
-    //   // =======================
-    //   const handlePrintReleve = async (etudiantId: number, anneeId: number) => {
-    //     try {
-    //       const res = await fetch(`/api/releve?etudiantId=${etudiantId}&anneeId=${anneeId}`);
-    //       if (!res.ok) throw new Error("Erreur récupération relevé");
+    // PDF relevé sans colonnes Étudiant et Année
+    // =======================
+    const handlePrintReleve = async (etudiantId: number, anneeId: number) => {
+        try {
+            const releveNotes = await getReleve(etudiantId, anneeId);
+            if (!releveNotes.length) return toast.info("Aucune note pour cet étudiant et cette année");
 
-    //       const releveNotes: Note[] = await res.json();
-    //       console.log("Relevé reçu:", releveNotes);
+            const etudiant = releveNotes[0].etudiant;
+            const annee = releveNotes[0].anneeAcademique.annee;
 
-    //       if (!Array.isArray(releveNotes) || releveNotes.length === 0) {
-    //         return toast.info("Aucune note pour cet étudiant et cette année");
-    //       }
+            // Calcul du pourcentage
+            const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
+            const maxTotal = releveNotes.length * 20; // chaque note sur 20
+            const pourcentage = (totalObt / maxTotal) * 100;
 
-    //       // Mapping robuste pour éviter undefined
-    //       const releveNotesMapped = releveNotes.map(n => ({
-    //         matiere: n.matiere,
-    //         note: n.note,
-    //         etudiant: typeof n.etudiant === "object" ? n.etudiant : { nom: "", postnom: "", prenom: "" },
-    //         anneeAcademique: typeof n.anneeAcademique === "object" ? n.anneeAcademique : { annee: "" },
-    //       }));
+            // Détermination mention selon ton barème
+            let mention = "";
+            if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";       // Grande Distinction
+            else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";   // Distinction
+            else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";   // Satisfaction
+            else mention = "Ajourné";
 
-    //       console.log("Données pour PDF:", releveNotesMapped);
+            // HTML du relevé avec design universitaire
+            const tableHtml = `
+      <div style="font-family: 'Arial', sans-serif; width: 800px; margin: 0 auto; padding: 30px; box-sizing: border-box; border: 2px solid #004080; border-radius: 10px;">
+        <h1 style="text-align:center; color:#004080; margin-bottom: 10px;">Léon Académie</h1>
+        <h2 style="text-align:center; color:#004080; margin-bottom: 30px;">Relevé de Notes</h2>
 
-    //       const etudiant = releveNotesMapped[0].etudiant;
-    //       const annee = releveNotesMapped[0].anneeAcademique.annee;
+        <p><strong>Étudiant :</strong> ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}</p>
+        <p><strong>Année académique :</strong> ${annee}</p>
 
-    //       const doc = new jsPDF({ unit: "pt", format: "A4" });
-    //       const pageWidth = doc.internal.pageSize.getWidth();
+        <table cellspacing="0" cellpadding="10" style="width:100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; border-radius: 5px; overflow: hidden;">
+          <thead style="background-color:#004080; color:white;">
+            <tr>
+              <th style="width:70%; text-align:left;">Matière</th>
+              <th style="width:30%; text-align:center;">Note / 20</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${releveNotes.map((n, i) => `
+              <tr style="background-color:${i % 2 === 0 ? '#f0f8ff' : '#e6f2ff'}">
+                <td style="word-wrap: break-word;">${n.matiere}</td>
+                <td style="text-align:center;">${n.note.toFixed(2)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
 
-    //       // Title
-    //       doc.setFontSize(22);
-    //       doc.setFont("helvetica", "bold");
-    //       doc.text("Relevé de Notes", pageWidth / 2, 50, { align: "center" });
+        <p style="margin-top: 20px; font-size: 16px;"><strong>Moyenne :</strong> ${pourcentage.toFixed(2)} %</p>
+        <p style="font-size: 16px;"><strong>Mention :</strong> ${mention}</p>
 
-    //       // Student info
-    //       doc.setFontSize(14);
-    //       doc.setFont("helvetica", "normal");
-    //       doc.text(`Étudiant : ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}`, 40, 80);
-    //       doc.text(`Année académique : ${annee}`, 40, 100);
+        <p style="text-align:center; font-size: 10px; color: gray; margin-top: 30px;">
+          Léon Académie - ${new Date().toLocaleDateString()}
+        </p>
+      </div>
+    `;
 
-    //       // Table
-    //       const tableData = releveNotesMapped.map(n => [n.matiere, n.note]);
-    //       (doc as any).autoTable({
-    //         head: [["Matière", "Note"]],
-    //         body: tableData,
-    //         startY: 130,
-    //         theme: "grid",
-    //         headStyles: { fillColor: [30, 144, 255], textColor: 255, fontStyle: "bold", halign: "center" },
-    //         bodyStyles: { fontSize: 12 },
-    //         alternateRowStyles: { fillColor: [240, 248, 255] },
-    //         columnStyles: { 0: { cellWidth: 350 }, 1: { halign: "center" } },
-    //       });
+            // Fenêtre d'aperçu
+            const printWindow = window.open("", "_blank", "width=900,height=700");
+            if (!printWindow) return toast.error("Impossible d'ouvrir la fenêtre d'aperçu");
 
-    //       // Footer
-    //       const pageHeight = doc.internal.pageSize.getHeight();
-    //       doc.setFontSize(10);
-    //       doc.setTextColor(100);
-    //       doc.text(`Document généré automatiquement - ${new Date().toLocaleDateString()}`, pageWidth / 2, pageHeight - 20, { align: "center" });
+            printWindow.document.write(`
+      <html>
+        <head>
+          <title>Relevé de Notes</title>
+          <style>
+            @media print {
+              body { margin: 0; }
+              table { page-break-inside: auto; }
+              tr { page-break-inside: avoid; page-break-after: auto; }
+            }
+          </style>
+        </head>
+        <body>${tableHtml}</body>
+      </html>
+    `);
+            printWindow.document.close();
 
-    //       doc.save(`Releve_${etudiant.nom}_${annee}.pdf`);
+            // Imprimer après aperçu
+            printWindow.focus();
+            printWindow.print();
 
-    //     } catch (err) {
-    //       console.error(err);
-    //       toast.error("Impossible de générer le relevé");
-    //     }
-    //   };
-
-
-
-    // ...
-
-const handlePrintReleve = async (etudiantId: number, anneeId: number) => {
-  try {
-    // Récupération des notes filtrées
-    const releveNotes = await getReleve(etudiantId, anneeId);
-    if (!releveNotes.length) return toast.info("Aucune note pour cet étudiant et cette année");
-
-    const etudiant = releveNotes[0].etudiant;
-    const annee = releveNotes[0].anneeAcademique.annee;
-
-    if (!tableRef.current) return toast.error("Table introuvable pour le PDF");
-
-    // Capture du tableau en canvas
-    const canvas = await html2canvas(tableRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
-
-    // Création d’un objet Image pour récupérer dimensions
-    const img = new Image();
-    img.src = imgData;
-    img.onload = () => {
-      const doc = new jsPDF("p", "pt", "a4");
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-
-      // Titre
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.text("Relevé de Notes", pageWidth / 2, 40, { align: "center" });
-
-      // Infos étudiant
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Étudiant : ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}`, 40, 70);
-      doc.text(`Année académique : ${annee}`, 40, 90);
-
-      // Calcul ratio pour garder proportions
-      const pdfWidth = pageWidth - 80; // marge 40px
-      const pdfHeight = (img.height * pdfWidth) / img.width;
-
-      // Ajouter l'image de la table
-      doc.addImage(imgData, "PNG", 40, 110, pdfWidth, pdfHeight);
-
-      // Footer
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(
-        `Document généré automatiquement - ${new Date().toLocaleDateString()}`,
-        pageWidth / 2,
-        pageHeight - 20,
-        { align: "center" }
-      );
-
-      doc.save(`Releve_${etudiant.nom}_${annee}.pdf`);
+        } catch (err) {
+            console.error("Erreur génération PDF :", err);
+            toast.error("Impossible de générer le relevé");
+        }
     };
-  } catch (err) {
-    console.error("Erreur génération PDF :", err);
-    toast.error("Impossible de générer le relevé");
-  }
-};
-
 
 
 
@@ -314,14 +267,14 @@ const handlePrintReleve = async (etudiantId: number, anneeId: number) => {
             {filteredNotes.length === 0 ? (
                 <div className="text-center text-gray-500 py-10">Aucune note trouvée</div>
             ) : (
-                <table  ref={tableRef} className="table table-zebra w-full">
+                <table ref={tableRef} className="table table-zebra w-full">
                     <thead>
                         <tr>
                             <th>Etudiant</th>
                             <th>Matière</th>
                             <th>Note</th>
                             <th>Année</th>
-                            <th />
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
