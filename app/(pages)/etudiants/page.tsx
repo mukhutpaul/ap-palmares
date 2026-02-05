@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Select from "react-select";
 import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
-import { useSession } from "next-auth/react"; // Import de useSession pour récupérer l'utilisateur connecté
+import { useSession } from "next-auth/react";
 
 import {
   addEtudiant,
@@ -37,6 +37,7 @@ interface Etudiant {
   postnom: string;
   prenom: string;
   email: string;
+  sexe: string;
   classe: Classe;
 }
 
@@ -63,8 +64,7 @@ export default function EtudiantsClient() {
   const [filterClasse, setFilterClasse] = useState<SelectOption | null>(null);
   const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
 
-  // Récupérer la session NextAuth
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
 
   /* =======================
      Chargements initiaux
@@ -106,6 +106,7 @@ export default function EtudiantsClient() {
   ======================= */
   const filteredEtudiants = etudiants.filter((e) => {
     const s = search.toLowerCase();
+
     const matchSearch =
       e.nom.toLowerCase().includes(s) ||
       e.postnom.toLowerCase().includes(s) ||
@@ -135,26 +136,19 @@ export default function EtudiantsClient() {
   const handleAddEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedClasse) return toast.error("Sélectionnez une classe");
+    if (!session?.user?.id) return toast.error("Utilisateur non connecté");
 
     const formData = new FormData(e.currentTarget);
     formData.append("classeId", selectedClasse.value.toString());
-
-    // Vérification que l'utilisateur est connecté
-    if (!session || !session.user || !session.user.id) {
-      toast.error("Utilisateur non connecté");
-      return;
-    }
-
-    const createdById = session.user.id; // Utilisation de l'ID de l'utilisateur connecté
-    formData.append("createdById", createdById); // Ajouter l'ID de l'utilisateur à FormData
+    formData.append("createdById", session.user.id);
 
     try {
-      const created = await addEtudiant(formData); // Appeler l'action avec FormData mis à jour
+      const created = await addEtudiant(formData);
       setEtudiants((prev) => [created, ...prev]);
       setPopupOpen(false);
       toast.success("Étudiant ajouté");
     } catch (error) {
-      console.error("Erreur ajout étudiant", error);
+      console.error(error);
       toast.error("Erreur ajout étudiant");
     }
   };
@@ -171,9 +165,12 @@ export default function EtudiantsClient() {
   const handleUpdateEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedClasse || !selectedEtudiant) return;
+    if (!session?.user?.id) return toast.error("Utilisateur non connecté");
 
     const formData = new FormData(e.currentTarget);
+    formData.append("id", selectedEtudiant.id.toString());
     formData.append("classeId", selectedClasse.value.toString());
+    formData.append("createdById", session.user.id);
 
     try {
       const updated = await updateEtudiant(formData);
@@ -183,7 +180,7 @@ export default function EtudiantsClient() {
       setEditPopupOpen(false);
       toast.success("Étudiant modifié");
     } catch (error) {
-      console.error("Erreur modification étudiant", error);
+      console.error(error);
       toast.error("Erreur modification étudiant");
     }
   };
@@ -204,7 +201,7 @@ export default function EtudiantsClient() {
       setEtudiants((prev) => prev.filter((e) => e.id !== id));
       toast.success("Étudiant supprimé");
     } catch (error) {
-      console.error("Erreur suppression étudiant", error);
+      console.error(error);
       toast.error("Erreur suppression étudiant");
     }
   };
@@ -253,7 +250,9 @@ export default function EtudiantsClient() {
 
       {/* TABLEAU */}
       {filteredEtudiants.length === 0 ? (
-        <div className="text-center text-gray-500 py-10">Aucun étudiant trouvé</div>
+        <div className="text-center text-gray-500 py-10">
+          Aucun étudiant trouvé
+        </div>
       ) : (
         <table className="table table-zebra w-full">
           <thead>
@@ -262,6 +261,7 @@ export default function EtudiantsClient() {
               <th>Postnom</th>
               <th>Prénom</th>
               <th>Email</th>
+              <th>Sexe</th>
               <th>Classe</th>
               <th>Filière</th>
               <th />
@@ -274,6 +274,7 @@ export default function EtudiantsClient() {
                 <td>{e.postnom}</td>
                 <td>{e.prenom}</td>
                 <td>{e.email}</td>
+                <td>{e.sexe}</td>
                 <td>{e.classe.nom}</td>
                 <td>{e.classe.filiere?.nom ?? "-"}</td>
                 <td className="flex gap-2">
@@ -307,6 +308,12 @@ export default function EtudiantsClient() {
             <input name="prenom" placeholder="Prénom" className="input w-full mb-2" required />
             <input name="email" type="email" placeholder="Email" className="input w-full mb-2" required />
 
+            <select name="sexe" className="select w-full mb-2" required>
+              <option value="">Sexe</option>
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+            </select>
+
             <Select
               options={classeOptions}
               placeholder="Classe"
@@ -332,10 +339,20 @@ export default function EtudiantsClient() {
           <form className="modal-box" onSubmit={handleUpdateEtudiant}>
             <h3 className="font-bold mb-4">Modifier étudiant</h3>
 
-            <input name="nom" defaultValue={selectedEtudiant.nom} placeholder="Nom" className="input w-full mb-2" required />
-            <input name="postnom" defaultValue={selectedEtudiant.postnom} placeholder="Postnom" className="input w-full mb-2" required />
-            <input name="prenom" defaultValue={selectedEtudiant.prenom} placeholder="Prénom" className="input w-full mb-2" required />
-            <input name="email" defaultValue={selectedEtudiant.email} type="email" placeholder="Email" className="input w-full mb-2" required />
+            <input name="nom" defaultValue={selectedEtudiant.nom} className="input w-full mb-2" required />
+            <input name="postnom" defaultValue={selectedEtudiant.postnom} className="input w-full mb-2" required />
+            <input name="prenom" defaultValue={selectedEtudiant.prenom} className="input w-full mb-2" required />
+            <input name="email" defaultValue={selectedEtudiant.email} type="email" className="input w-full mb-2" required />
+
+            <select
+              name="sexe"
+              defaultValue={selectedEtudiant.sexe}
+              className="select w-full mb-2"
+              required
+            >
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+            </select>
 
             <Select
               options={classeOptions}
