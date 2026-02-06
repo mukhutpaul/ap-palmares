@@ -29,6 +29,7 @@ export default function ClassesClient() {
   const [selectedFiliere, setSelectedFiliere] = useState<{ value: number; label: string } | null>(null);
   const [sectionFilter, setSectionFilter] = useState<string>("");
   const [filiereFilter, setFiliereFilter] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -104,38 +105,45 @@ export default function ClassesClient() {
   const paginatedClasses = filteredClasses.slice(startIdx, endIdx);
 
   // Ajouter une classe
-  const handleAddClasse = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedFiliere) {
-      toast.error("Veuillez sélectionner une filière !");
-      return;
-    }
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    formData.append("filiereId", selectedFiliere.value.toString());
+const handleAddClasse = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (!selectedFiliere) {
+    toast.error("Veuillez sélectionner une filière !");
+    return;
+  }
 
-    try {
-      const newRaw = await addClasse(formData);
-      const newClasse: Classe = {
-        id: newRaw.id,
-        nom: newRaw.nom,
-        section: newRaw.section,
-        filiere: newRaw.filiere
-          ? { id: newRaw.filiere.id, nom: newRaw.filiere.nom }
-          : { id: newRaw.filiereId, nom: selectedFiliere.label },
-      };
-      setClasseList([newClasse, ...classeList]);
-      toast.success("Classe ajoutée avec succès !");
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-      setPopupOpen(false);
-      setSelectedFiliere(null);
-      form.reset();
-    } catch (err: any) {
-      console.error("Erreur lors de l'ajout :", err);
-      toast.error("Erreur lors de l'ajout : " + (err?.message || "Erreur inconnue"));
-    }
-  };
+  setIsAdding(true); // 👈 START loading
+
+  const form = e.target as HTMLFormElement;
+  const formData = new FormData(form);
+  formData.append("filiereId", selectedFiliere.value.toString());
+
+  try {
+    const newRaw = await addClasse(formData);
+
+    const newClasse: Classe = {
+      id: newRaw.id,
+      nom: newRaw.nom,
+      section: newRaw.section,
+      filiere: newRaw.filiere
+        ? { id: newRaw.filiere.id, nom: newRaw.filiere.nom }
+        : { id: newRaw.filiereId, nom: selectedFiliere.label },
+    };
+
+    setClasseList([newClasse, ...classeList]);
+    toast.success("Classe ajoutée avec succès !");
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
+    setPopupOpen(false);
+    setSelectedFiliere(null);
+    form.reset();
+  } catch (err: any) {
+    toast.error("Erreur lors de l'ajout");
+  } finally {
+    setIsAdding(false); // 👈 STOP loading (succès ou erreur)
+  }
+};
+
 
   // Supprimer une classe
   const handleDeleteClasse = async (id: number) => {
@@ -256,8 +264,16 @@ export default function ClassesClient() {
             ))}
           </select>
         </div>
+        <button
+          type="submit"
+          className={`btn btn-primary ${isAdding ? "loading" : ""}`}
+          disabled={isAdding}
+          onClick={() => setPopupOpen(true)}
+        >
+          {isAdding ? "Ajout..." : "Ajouter"}
+        </button>
 
-        <button className="btn btn-primary" onClick={() => setPopupOpen(true)}>Ajouter une classe</button>
+        {/* <button className="btn btn-primary" onClick={() => setPopupOpen(true)}>Ajouter une classe</button> */}
       </div>
 
       {/* Tableau */}

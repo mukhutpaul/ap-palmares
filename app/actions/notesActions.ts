@@ -100,9 +100,23 @@ export async function getEtudiants() {
   return prisma.etudiant.findMany({ orderBy: { nom: "asc" } });
 }
 
-export async function getAnneesAcademiques() {
+/* export async function getAnneesAcademiques() {
   return prisma.anneeAcademique.findMany({ orderBy: { annee: "desc" } });
+} */
+// app/actions/notesActions.ts
+
+
+export async function getAnneesAcademiques() {
+  const annees = await prisma.anneeAcademique.findMany({
+    orderBy: { annee: "desc" },
+  });
+  return annees.map((a) => ({
+    id: a.id,
+    annee: a.annee,
+    active: a.active,
+  }));
 }
+
 
 // ===============================
 // Récupérer le relevé d'un étudiant
@@ -144,4 +158,16 @@ export async function getReleve(etudiantId: number, anneeId: number): Promise<No
 
   return releve;
 }
+
+/* 
+export async function getAnneesAcademiques() {
+  const annees = await prisma.anneeAcademique.findMany({
+    orderBy: { annee: "desc" },
+  });
+  return annees.map((a) => ({
+    id: a.id,
+    annee: a.annee,
+    active: a.active,
+  }));
+} */
 

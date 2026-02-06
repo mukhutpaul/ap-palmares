@@ -64,7 +64,7 @@ const NavBar = () => {
     { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/filieres", label: "Filières", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/anneeAcad", label: "Sessions", auth: true, roles: ["USER", "ADMIN"] },
+
 
     // { href: "/annonces", label: "Annonces", auth: true, roles: ["USER", "ADMIN"] },
     // { href: "/evenements", label: "Evenements", auth: true, roles: ["USER", "ADMIN"] },
