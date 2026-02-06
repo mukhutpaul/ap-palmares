@@ -152,7 +152,7 @@ const NavBar = () => {
                 <User className='w-4 h-4' />
               </button>
             )}
-            <ul tabIndex="-1" className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
               <li><span><User className='w-4 h-4' /> {session?.user?.email}</span></li>
               <li><span><Settings className='w-4 h-4' /> Paramettre</span></li>
               <li>

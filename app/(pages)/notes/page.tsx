@@ -588,7 +588,7 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
             <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
 
             {/* Filtres et boutons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
                 <Select options={etudiantOptions} isClearable placeholder="Filtrer par étudiant" value={filterEtudiant} onChange={setFilterEtudiant} className="w-1/4" />
                 <Select options={anneeOptions} isClearable placeholder="Filtrer par année" value={filterAnnee} onChange={setFilterAnnee} className="w-1/4" />
                 <button className="btn btn-primary" onClick={handleOpenAddPopup}>Ajouter</button>
@@ -599,14 +599,15 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
             {filteredNotes.length === 0 ? (
                 <div className="text-center text-gray-500 py-10">Aucune note trouvée</div>
             ) : (
-                <table ref={tableRef} className="table table-zebra w-full">
-                    <thead>
+                <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
+                <table ref={tableRef} className="table w-full">
+                    <thead className="bg-base-200 text-sm">
                         <tr>
                             <th>Etudiant</th>
                             <th>Matière</th>
                             <th>Note</th>
                             <th>Année</th>
-                            <th>Actions</th>
+                            <th className="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -616,7 +617,8 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
                                 <td>{n.matiere}</td>
                                 <td>{n.note}</td>
                                 <td>{n.anneeAcademique.annee}</td>
-                                <td className="flex gap-2">
+                                <td className="text-center">
+                                  <div className="flex justify-center gap-2">
                                     <button className="btn btn-sm btn-warning" onClick={() => handleEditNote(n)}><LucideEdit2 size={16} /></button>
                                     <button className="btn btn-sm btn-error" onClick={() => handleDeleteNote(n.id)}><LucideTrash2 size={16} /></button>
                                     <button className="btn btn-sm btn-info" onClick={() => handlePrintReleve(n.etudiant.id, n.anneeAcademique.id)}><LucidePrinter size={16} /></button>
@@ -626,11 +628,13 @@ const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
                                     >
                                         🎓
                                     </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                 </div>
             )}
 
             {/* POPUP ADD */}
