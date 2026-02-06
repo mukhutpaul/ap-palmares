@@ -214,8 +214,10 @@ export default function EtudiantsClient() {
       <h1 className="text-3xl font-bold mb-6">Gestion des Étudiants</h1>
 
       {/* Filtres */}
-      <div className="flex gap-2 mb-4">
-        <div className="flex items-center border px-3 gap-2 w-1/3">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
           <LucideSearch size={18} />
           <input
             className="w-full"
@@ -224,6 +226,8 @@ export default function EtudiantsClient() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        </div>
+
 
         <Select
           options={classeOptions}
@@ -254,47 +258,51 @@ export default function EtudiantsClient() {
           Aucun étudiant trouvé
         </div>
       ) : (
-        <table className="table table-zebra w-full">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Postnom</th>
-              <th>Prénom</th>
-              <th>Email</th>
-              <th>Sexe</th>
-              <th>Classe</th>
-              <th>Filière</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEtudiants.map((e) => (
-              <tr key={e.id}>
-                <td>{e.nom}</td>
-                <td>{e.postnom}</td>
-                <td>{e.prenom}</td>
-                <td>{e.email}</td>
-                <td>{e.sexe}</td>
-                <td>{e.classe.nom}</td>
-                <td>{e.classe.filiere?.nom ?? "-"}</td>
-                <td className="flex gap-2">
-                  <button
-                    className="btn btn-sm btn-warning"
-                    onClick={() => openEditPopup(e)}
-                  >
-                    <LucideEdit2 size={16} />
-                  </button>
-                  <button
-                    className="btn btn-sm btn-error"
-                    onClick={() => handleDeleteEtudiant(e.id)}
-                  >
-                    <LucideTrash2 size={16} />
-                  </button>
-                </td>
+        <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
+          <table className="table w-full">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Postnom</th>
+                <th>Prénom</th>
+                <th>Email</th>
+                <th>Sexe</th>
+                <th>Classe</th>
+                <th>Filière</th>
+                <th className="text-center">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredEtudiants.map((e) => (
+                <tr key={e.id}>
+                  <td>{e.nom}</td>
+                  <td>{e.postnom}</td>
+                  <td>{e.prenom}</td>
+                  <td>{e.email}</td>
+                  <td>{e.sexe}</td>
+                  <td>{e.classe.nom}</td>
+                  <td>{e.classe.filiere?.nom ?? "-"}</td>
+                  <td className="text-center">
+                    <div className="flex justify-center gap-2">
+                    <button
+                      className="btn btn-xs btn-warning btn-outline"
+                      onClick={() => openEditPopup(e)}
+                    >
+                      <LucideEdit2 size={16} />
+                    </button>
+                    <button
+                      className="btn btn-xs btn-outline btn-error"
+                      onClick={() => handleDeleteEtudiant(e.id)}
+                    >
+                      <LucideTrash2 size={16} />
+                    </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* POPUP AJOUT */}

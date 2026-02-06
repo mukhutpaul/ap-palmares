@@ -2,6 +2,7 @@
 
 import { prisma } from "@/app/lib/prisma";
 import { revalidatePath } from "next/cache";
+import * as XLSX from "xlsx";
 
 // ===============================
 // TYPES
@@ -170,4 +171,64 @@ export async function getAnneesAcademiques() {
     active: a.active,
   }));
 } */
+
+
+export async function importNotesFromExcel(file: File) {
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+  for (const row of rows) {
+    const { Etudiant, Matiere, Note, Annee, createdById } = row;
+
+    // Parse Etudiant en nom, postnom, prenom
+    // Suppose que Etudiant = "Nom Postnom Prenom" ou "Nom Postnom Prenom K" (dernier mot en trop)
+    const parts = Etudiant.trim().split(" ");
+    const nom = parts[0];
+    const postnom = parts[1];
+    // Le prénom peut être plusieurs mots, on prend tout après les 2 premiers mots
+    const prenom = parts.slice(2).join(" ");
+
+    if (!nom || !postnom || !prenom) {
+      console.warn(`Impossible de parser Etudiant: "${Etudiant}"`);
+      continue; // passe cette ligne
+    }
+
+    // Trouver étudiant
+    const etudiant = await prisma.etudiant.findFirst({
+      where: { nom, postnom, prenom },
+    });
+    if (!etudiant) {
+      console.warn(`Étudiant non trouvé: ${Etudiant}`);
+      continue;
+    }
+
+    // Trouver année académique
+    const annee = await prisma.anneeAcademique.findFirst({
+      where: { annee: Annee },
+    });
+    if (!annee) {
+      console.warn(`Année académique non trouvée: ${Annee}`);
+      continue;
+    }
+
+    // Créer la note
+    try {
+      await prisma.note.create({
+        data: {
+          matiere: Matiere,
+          note: Number(Note),
+          etudiantId: etudiant.id,
+          anneeAcademiqueId: annee.id,
+          createdById: createdById,
+        },
+      });
+    } catch (e) {
+      console.error("Erreur création note:", e);
+    }
+  }
+}
+
+
 

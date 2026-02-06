@@ -111,26 +111,27 @@ export default function UsersPage() {
 
       {/* Recherche + Nouveau */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
         <input
           type="text"
           placeholder="Rechercher un utilisateur..."
-          className="input input-bordered w-full md:w-1/2"
+          className="w-full bg-transparent outline-none text-sm"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
-          autoComplete="off"
+      
         />
-
+        </div>
         <button className="btn btn-primary flex items-center gap-2" onClick={() => openPopup()}>
           <Plus size={18} /> Nouvel utilisateur
         </button>
       </div>
 
       {/* Tableau */}
-      <div className="overflow-x-auto">
-        <table className="table table-zebra w-full">
+      <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
+        <table className="table w-full">
           <thead>
             <tr>
               <th>Nom</th>
@@ -161,10 +162,10 @@ export default function UsersPage() {
                   <td>{u.role}</td>
                   <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="flex gap-2">
-                    <button className="btn btn-xs btn-info btn-square" onClick={() => openPopup(u)} title="Modifier">
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openPopup(u)} title="Modifier">
                       <Edit size={16} />
                     </button>
-                    <button className="btn btn-xs btn-error btn-square" onClick={() => handleDelete(u.id)} title="Supprimer">
+                    <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDelete(u.id)} title="Supprimer">
                       <Trash2 size={16} />
                     </button>
                   </td>

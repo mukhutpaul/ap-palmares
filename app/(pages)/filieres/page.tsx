@@ -146,19 +146,21 @@ export default function FilieresClient() {
       <h1 className="text-3xl font-bold mb-6">Gestion des Filières</h1>
 
       {/* Recherche + ajout */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center border rounded-lg px-3 py-2 gap-2 w-1/3">
-          <LucideSearch size={20} />
-          <input
-            type="text"
-            placeholder="Rechercher une filière..."
-            className="input input-ghost w-full"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1); // reset page à 1 lors d'une recherche
-            }}
-          />
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
+            <LucideSearch size={20} />
+            <input
+              type="text"
+              placeholder="Rechercher une filière..."
+              className="w-full bg-transparent outline-none text-sm"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1); // reset page à 1 lors d'une recherche
+              }}
+            />
+          </div>
         </div>
         <button className="btn btn-primary" onClick={() => setPopupOpen(true)}>
           Ajouter une filière
@@ -195,9 +197,9 @@ export default function FilieresClient() {
       )}
 
       {/* Tableau */}
-      <div className="overflow-x-auto">
-        <table className="table table-zebra w-full">
-          <thead>
+      <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
+        <table className="table w-full">
+          <thead className="bg-base-200 text-sm">
             <tr>
               <th>ID</th>
               <th>Nom</th>
@@ -211,11 +213,11 @@ export default function FilieresClient() {
                   <td>{f.id}</td>
                   <td>{f.nom}</td>
                   <td className="flex justify-center gap-2">
-                    <button className="btn btn-sm btn-warning flex items-center gap-1" onClick={() => openEditPopup(f)}>
-                      <LucideEdit2 size={16} /> Modifier
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(f)}>
+                      <LucideEdit2 size={14} />
                     </button>
-                    <button className="btn btn-sm btn-error flex items-center gap-1" onClick={() => handleDeleteFiliere(f.id)}>
-                      <LucideTrash2 size={16} /> Supprimer
+                    <button  className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteFiliere(f.id)}>
+                      <LucideTrash2 size={14} />
                     </button>
                   </td>
                 </tr>
