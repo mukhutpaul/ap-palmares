@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { getUsers, createUser, deleteUser, updateUser } from "@/app/actions/userActions";
 import Confetti from "react-confetti";
-import { toast } from "react-toastify";
-import { Edit, Trash2, Plus } from "lucide-react"; // ← Icônes Lucide
+import Swal from "sweetalert2"; // ← SweetAlert2
+import { Edit, Trash2, Plus } from "lucide-react";
 
 type Role = "ADMIN" | "ENSEIGNANT" | "USER";
 
@@ -40,7 +40,9 @@ export default function UsersPage() {
   };
 
   const filteredUsers = users.filter(
-    (u) => u.name?.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
+    (u) =>
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const paginatedUsers = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -59,7 +61,7 @@ export default function UsersPage() {
 
   const handleSave = async () => {
     if (!form.email || (!editingUser && !form.password)) {
-      toast.error("Email et mot de passe requis !");
+      alert("Email et mot de passe requis !"); // garde le toast ou alert simple
       return;
     }
 
@@ -69,26 +71,36 @@ export default function UsersPage() {
         setUsers((prev) =>
           prev.map((u) => (u.id === editingUser.id ? { ...u, name: form.name, email: form.email, role: form.role } : u))
         );
-        toast.success("Utilisateur modifié !");
+        alert("Utilisateur modifié !");
       } else {
         const created = await createUser(form);
         setUsers((prev) => [created, ...prev]);
         setShowConfetti(true);
-        toast.success("Utilisateur créé !");
+        alert("Utilisateur créé !");
         setTimeout(() => setShowConfetti(false), 5000);
       }
       setPopupOpen(false);
     } catch (err) {
-      toast.error("Erreur lors de l'enregistrement");
+      alert("Erreur lors de l'enregistrement");
       console.error(err);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Supprimer cet utilisateur ?")) return;
-    await deleteUser(id);
-    setUsers(users.filter((u) => u.id !== id));
-    toast.success("Utilisateur supprimé");
+    const result = await Swal.fire({
+      title: "Supprimer cet utilisateur ?",
+      text: "Cette action est irréversible.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Oui, supprimer",
+      cancelButtonText: "Annuler",
+    });
+
+    if (result.isConfirmed) {
+      await deleteUser(id);
+      setUsers(users.filter((u) => u.id !== id));
+      Swal.fire("Supprimé !", "Utilisateur supprimé", "success");
+    }
   };
 
   return (
@@ -104,8 +116,13 @@ export default function UsersPage() {
           placeholder="Rechercher un utilisateur..."
           className="input input-bordered w-full md:w-1/2"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          autoComplete="off"
         />
+
         <button className="btn btn-primary flex items-center gap-2" onClick={() => openPopup()}>
           <Plus size={18} /> Nouvel utilisateur
         </button>
@@ -144,18 +161,10 @@ export default function UsersPage() {
                   <td>{u.role}</td>
                   <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="flex gap-2">
-                    <button
-                      className="btn btn-xs btn-info btn-square"
-                      onClick={() => openPopup(u)}
-                      title="Modifier"
-                    >
+                    <button className="btn btn-xs btn-info btn-square" onClick={() => openPopup(u)} title="Modifier">
                       <Edit size={16} />
                     </button>
-                    <button
-                      className="btn btn-xs btn-error btn-square"
-                      onClick={() => handleDelete(u.id)}
-                      title="Supprimer"
-                    >
+                    <button className="btn btn-xs btn-error btn-square" onClick={() => handleDelete(u.id)} title="Supprimer">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -185,43 +194,17 @@ export default function UsersPage() {
       <input type="checkbox" id="user-popup" className="modal-toggle" checked={popupOpen} readOnly />
       <div className="modal">
         <div className="modal-box relative">
-          <label
-            htmlFor="user-popup"
-            className="btn btn-sm btn-circle absolute right-2 top-2"
-            onClick={() => setPopupOpen(false)}
-          >
+          <label htmlFor="user-popup" className="btn btn-sm btn-circle absolute right-2 top-2" onClick={() => setPopupOpen(false)}>
             ✕
           </label>
           <h3 className="text-lg font-bold mb-4">{editingUser ? "Modifier utilisateur" : "Créer utilisateur"}</h3>
           <div className="grid grid-cols-1 gap-2">
-            <input
-              type="text"
-              placeholder="Nom"
-              className="input input-bordered w-full"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              className="input input-bordered w-full"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
+            <input type="text" placeholder="Nom" className="input input-bordered w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input type="email" placeholder="Email" className="input input-bordered w-full" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             {!editingUser && (
-              <input
-                type="password"
-                placeholder="Mot de passe"
-                className="input input-bordered w-full"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <input type="password" placeholder="Mot de passe" className="input input-bordered w-full" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             )}
-            <select
-              className="select select-bordered w-full"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-            >
+            <select className="select select-bordered w-full" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
               <option value="USER">USER</option>
               <option value="ENSEIGNANT">ENSEIGNANT</option>
               <option value="ADMIN">ADMIN</option>
