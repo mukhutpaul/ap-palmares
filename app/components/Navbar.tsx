@@ -60,7 +60,7 @@ const NavBar = () => {
     { href: "/", label: "Accueil" },
     { href: "/dashboard", label: "Tableau de bord", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/etudiants", label: "Etudiants", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/user", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/filieres", label: "Filières", auth: true, roles: ["USER", "ADMIN"] },
