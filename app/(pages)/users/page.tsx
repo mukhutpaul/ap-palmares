@@ -5,6 +5,7 @@ import { getUsers, createUser, deleteUser, updateUser } from "@/app/actions/user
 import Confetti from "react-confetti";
 import Swal from "sweetalert2"; // ← SweetAlert2
 import { Edit, Trash2, Plus } from "lucide-react";
+import { toast } from "react-toastify";
 
 type Role = "ADMIN" | "ENSEIGNANT" | "USER";
 
@@ -71,12 +72,12 @@ export default function UsersPage() {
         setUsers((prev) =>
           prev.map((u) => (u.id === editingUser.id ? { ...u, name: form.name, email: form.email, role: form.role } : u))
         );
-        alert("Utilisateur modifié !");
+        toast.success("Utilisateur modifié !");
       } else {
         const created = await createUser(form);
         setUsers((prev) => [created, ...prev]);
         setShowConfetti(true);
-        alert("Utilisateur créé !");
+        toast.success("Utilisateur créé !");
         setTimeout(() => setShowConfetti(false), 5000);
       }
       setPopupOpen(false);
@@ -112,17 +113,17 @@ export default function UsersPage() {
       {/* Recherche + Nouveau */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
-        <input
-          type="text"
-          placeholder="Rechercher un utilisateur..."
-          className="w-full bg-transparent outline-none text-sm"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-      
-        />
+          <input
+            type="text"
+            placeholder="Rechercher un utilisateur..."
+            className="w-full bg-transparent outline-none text-sm"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+
+          />
         </div>
         <button className="btn btn-primary flex items-center gap-2" onClick={() => openPopup()}>
           <Plus size={18} /> Nouvel utilisateur
