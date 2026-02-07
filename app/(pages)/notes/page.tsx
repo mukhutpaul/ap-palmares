@@ -168,6 +168,200 @@ export default function NotesClient() {
     }
   };
 
+  const downloadHtmlAsPdf = async (
+    html: string,
+    filename: string,
+    landscape = false
+  ) => {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    document.body.appendChild(container);
+
+    const canvas = await html2canvas(container, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF({
+      orientation: landscape ? "landscape" : "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(filename);
+
+    document.body.removeChild(container);
+  };
+
+const handleDownloadBrevet = async (etudiantId: number, anneeId: number) => {
+  try {
+    const notes = await getReleve(etudiantId, anneeId);
+    if (!notes.length) {
+      return toast.info("Aucune note pour cet étudiant et cette année");
+    }
+
+    const etudiant = notes[0].etudiant;
+    const annee = notes[0].anneeAcademique.annee;
+
+    const total = notes.reduce((sum, n) => sum + n.note, 0);
+    const max = notes.length * 20;
+    const pourcentage = (total / max) * 100;
+
+    let mention = "";
+    if (pourcentage >= 80) mention = "Grande Distinction";
+    else if (pourcentage >= 70) mention = "Distinction";
+    else if (pourcentage >= 50) mention = "Satisfaction";
+    else mention = "Ajourné";
+
+    // HTML avec marges 2% autour et texte ajusté pour que la bordure du bas soit visible
+    const brevetHtml = `
+      <div style="
+        width:96%; /* 2% margin gauche/droite */
+        height:96%; /* 2% margin top/bottom */
+        margin:2% auto;
+        padding:25px 50px; /* padding légèrement réduit pour laisser plus d'espace */
+        font-family:'Georgia', serif;
+        font-size:15px; /* taille réduite pour contenu plus compact */
+        background: linear-gradient(135deg, #ffffff, #f3f6f9);
+        border:10px solid #0b3c5d;
+        box-sizing:border-box;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between; /* pour pousser le bas vers la bordure */
+      ">
+
+        <div>
+          <div style="
+            height:10px;
+            background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
+            margin-bottom:15px;
+          "></div>
+
+          <h3 style="text-align:center; color:#0b3c5d; margin:0; font-size:16px;">
+            RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
+          </h3>
+          <h4 style="text-align:center; color:#444; margin:2px 0 6px; font-size:14px;">
+            Ministère de la Formation Professionnelle et Métier
+          </h4>
+
+          <hr style="border:1px solid #d4af37; margin:8px 0;" />
+
+          <h1 style="
+            text-align:center;
+            color:#0b3c5d;
+            font-size:30px; /* réduit pour tenir dans la page */
+            letter-spacing:1.5px;
+            margin:4px 0;
+          ">
+            LÉON ACADÉMIE
+          </h1>
+
+          <p style="text-align:center; font-style:italic; color:#555; margin:0; font-size:13px;">
+            Excellence • Discipline • Réussite
+          </p>
+
+          <h2 style="
+            text-align:center;
+            margin:16px 0;
+            font-size:24px; /* réduit */
+            color:#d4af37;
+            text-transform:uppercase;
+          ">
+            Brevet de Réussite
+          </h2>
+
+          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
+            Le présent brevet atteste que :
+          </p>
+
+          <h2 style="
+            text-align:center;
+            color:#0b3c5d;
+            margin:10px 0;
+            font-size:20px; /* réduit */
+          ">
+            ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
+          </h2>
+
+          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
+            a satisfait aux exigences académiques de l’année académique
+            <strong>${annee}</strong> au sein de Léon Académie avec les résultats suivants :
+          </p>
+
+          <table style="
+            width:55%;
+            margin:12px auto;
+            border-collapse:collapse;
+            font-size:15px; /* réduit */
+          ">
+            <tr style="background:#0b3c5d; color:white;">
+              <td style="padding:8px;">Moyenne Générale</td>
+              <td style="padding:8px; text-align:center;">
+                ${pourcentage.toFixed(2)} %
+              </td>
+            </tr>
+            <tr style="background:#eef3f8;">
+              <td style="padding:8px;">Mention</td>
+              <td style="
+                padding:8px;
+                text-align:center;
+                font-weight:bold;
+                color:#d4af37;
+              ">
+                ${mention}
+              </td>
+            </tr>
+          </table>
+
+          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
+            En foi de quoi, le présent brevet est délivré à l’intéressé(e) pour servir
+            et valoir ce que de droit.
+          </p>
+        </div>
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          margin-top:20px;
+          font-size:14px;
+        ">
+          <div>
+            <p style="margin:2px 0;">Fait à Kinshasa</p>
+            <p style="margin:2px 0;">Le ${new Date().toLocaleDateString()}</p>
+          </div>
+
+          <div style="text-align:center;">
+            <p style="margin:2px 0;"><strong>Le Directeur</strong></p>
+            <div style="height:25px;"></div>
+            <p style="margin:0; border-top:1px solid #000; padding-top:4px;">
+              Signature & Cachet
+            </p>
+          </div>
+        </div>
+
+        <div style="
+          height:8px;
+          background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
+          margin-top:12px;
+        "></div>
+
+      </div>
+    `;
+
+    await downloadHtmlAsPdf(brevetHtml, "brevet-reussite.pdf", true);
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Erreur lors du téléchargement du brevet");
+  }
+};
+
+
+
   // =======================
   // Export Excel
   // =======================
@@ -270,6 +464,103 @@ export default function NotesClient() {
       toast.error("Impossible de générer le relevé");
     }
   };
+
+
+
+const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
+  try {
+    const releveNotes = await getReleve(etudiantId, anneeId);
+    if (!releveNotes.length) {
+      return toast.info("Aucune note pour cet étudiant et cette année");
+    }
+
+    const etudiant = releveNotes[0].etudiant;
+    const annee = releveNotes[0].anneeAcademique.annee;
+
+    const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
+    const maxTotal = releveNotes.length * 20;
+    const pourcentage = (totalObt / maxTotal) * 100;
+
+    let mention = "";
+    if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";
+    else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";
+    else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";
+    else mention = "Ajourné";
+
+    // Création d'un container parent avec padding en haut
+    const container = document.createElement("div");
+    container.style.width = "100%";
+    container.style.paddingTop = "80px"; // <-- espace en haut plus grand
+    container.style.boxSizing = "border-box"; // important pour le padding
+    container.style.backgroundColor = "white"; // éviter fonds transparents
+
+    // Contenu du relevé
+    const releveHTML = `
+      <div style="
+        font-family: Arial, sans-serif;
+        width: 96%;
+        margin: 0 auto; /* centrage horizontal */
+        padding: 30px;
+        border: 5px solid #004080;
+        border-radius: 10px;
+        font-size: 18pt;
+        line-height: 1.6;
+      ">
+        <h1 style="text-align:center; color:#004080; margin-bottom: 20px; font-size: 32pt;">Léon Académie</h1>
+        <h2 style="text-align:center; color:#004080; margin-bottom: 25px; font-size: 24pt;">Relevé de Notes</h2>
+
+        <p style="font-size: 18pt;"><strong>Étudiant :</strong> ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}</p>
+        <p style="font-size: 18pt;"><strong>Année académique :</strong> ${annee}</p>
+
+        <table cellspacing="0" cellpadding="12" style="width:100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; font-size: 18pt;">
+          <thead style="background-color:#004080; color:white;">
+            <tr>
+              <th style="width:70%; text-align:left;">Matière</th>
+              <th style="width:30%; text-align:center;">Note / 20</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${releveNotes.map((n, i) => `
+              <tr style="background-color:${i % 2 === 0 ? '#f0f8ff' : '#e6f2ff'}">
+                <td style="word-wrap: break-word; font-size: 18pt;">${n.matiere}</td>
+                <td style="text-align:center; font-size: 18pt;">${n.note.toFixed(2)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+
+        <p style="margin-top: 25px; font-size: 18pt;"><strong>Moyenne :</strong> ${pourcentage.toFixed(2)} %</p>
+        <p style="font-size: 18pt;"><strong>Mention :</strong> ${mention}</p>
+
+        <p style="text-align:center; font-size: 12pt; color: gray; margin-top: 30px;">
+          Léon Académie - ${new Date().toLocaleDateString()}
+        </p>
+      </div>
+    `;
+
+    container.innerHTML = releveHTML;
+
+    document.body.appendChild(container); // nécessaire pour html2canvas
+
+    // Génération du canvas avec scale élevé pour texte lisible
+    const canvas = await html2canvas(container, { scale: 3, backgroundColor: "#ffffff" });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "pt", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("releve-notes.pdf");
+
+    document.body.removeChild(container); // nettoyage
+  } catch (err) {
+    console.error("Erreur téléchargement relevé :", err);
+    toast.error("Impossible de télécharger le relevé");
+  }
+};
+
+
 
   // =======================
   // Impression Brevet
@@ -652,13 +943,32 @@ export default function NotesClient() {
                   <td className="text-center">
                     <div className="flex justify-center gap-2">
                       <button className="btn btn-xs btn-warning btn-outline" onClick={() => handleEditNote(n)}><LucideEdit2 size={16} /></button>
-                      <button  className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteNote(n.id)}><LucideTrash2 size={16} /></button>
+                      <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteNote(n.id)}><LucideTrash2 size={16} /></button>
                       <button className="btn btn-xs btn-outline btn-info" onClick={() => handlePrintReleve(n.etudiant.id, n.anneeAcademique.id)}><LucidePrinter size={16} /></button>
                       <button
                         className="btn btn-xs btn-outline btn-success"
                         onClick={() => handlePrintBrevet(n.etudiant.id, n.anneeAcademique.id)}
                       >
                         🎓
+                      </button>
+                      <button
+                        className="btn btn-xs btn-outline btn-primary"
+                        onClick={() => handleDownloadBrevet(
+                          n.etudiant.id,
+                          n.anneeAcademique.id
+                        )}
+                      >
+                        ⬇️🎓
+                      </button>
+
+                      <button
+                        className="btn btn-xs btn-outline btn-primary"
+                        onClick={() => handleDownloadReleve(
+                          n.etudiant.id,
+                          n.anneeAcademique.id
+                        )}
+                      >
+                        ⬇️ Relevé
                       </button>
                     </div>
                   </td>
