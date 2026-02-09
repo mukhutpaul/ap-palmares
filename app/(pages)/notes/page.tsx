@@ -134,6 +134,7 @@ export default function NotesClient() {
     }
   };
 
+  const BREVE_CODE_OFFICIEL = "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
 
   const handleUpdateNote = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -197,168 +198,134 @@ export default function NotesClient() {
     document.body.removeChild(container);
   };
 
-const handleDownloadBrevet = async (etudiantId: number, anneeId: number) => {
-  try {
-    const notes = await getReleve(etudiantId, anneeId);
-    if (!notes.length) {
-      return toast.info("Aucune note pour cet étudiant et cette année");
-    }
+  const handleDownloadBrevet = async (etudiantId: number, anneeId: number) => {
+    try {
+      const notes = await getReleve(etudiantId, anneeId);
+      if (!notes.length) {
+        return toast.info("Aucune note pour cet étudiant et cette année");
+      }
 
-    const etudiant = notes[0].etudiant;
-    const annee = notes[0].anneeAcademique.annee;
+      const etudiant = notes[0].etudiant;
+      const annee = notes[0].anneeAcademique.annee;
 
-    const total = notes.reduce((sum, n) => sum + n.note, 0);
-    const max = notes.length * 20;
-    const pourcentage = (total / max) * 100;
+      const total = notes.reduce((sum, n) => sum + n.note, 0);
+      const max = notes.length * 20;
+      const pourcentage = (total / max) * 100;
 
-    let mention = "";
-    if (pourcentage >= 80) mention = "Grande Distinction";
-    else if (pourcentage >= 70) mention = "Distinction";
-    else if (pourcentage >= 50) mention = "Satisfaction";
-    else mention = "Ajourné";
+      let mention = "";
+      if (pourcentage >= 80) mention = "Grande Distinction";
+      else if (pourcentage >= 70) mention = "Distinction";
+      else if (pourcentage >= 50) mention = "Satisfaction";
+      else mention = "Ajourné";
 
-    // HTML avec marges 2% autour et texte ajusté pour que la bordure du bas soit visible
-    const brevetHtml = `
-      <div style="
-        width:96%; /* 2% margin gauche/droite */
-        height:96%; /* 2% margin top/bottom */
-        margin:2% auto;
-        padding:25px 50px; /* padding légèrement réduit pour laisser plus d'espace */
-        font-family:'Georgia', serif;
-        font-size:15px; /* taille réduite pour contenu plus compact */
-        background: linear-gradient(135deg, #ffffff, #f3f6f9);
-        border:10px solid #0b3c5d;
-        box-sizing:border-box;
-        display:flex;
-        flex-direction:column;
-        justify-content:space-between; /* pour pousser le bas vers la bordure */
-      ">
+const brevetHtml = `
+<div style="
+  width:210mm;
+  height:297mm;
+  padding:15mm 15mm;
+  font-family:'Times New Roman', serif;
+  background:#f2f2f2;
+  position:relative;
+  box-sizing:border-box;
+  overflow:hidden;
+">
 
-        <div>
-          <div style="
-            height:10px;
-            background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-            margin-bottom:15px;
-          "></div>
+  <!-- Bande décorative gauche ondulée sur toute la page -->
+  <svg style="position:absolute; top:0; left:0; width:35mm; height:100%;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1f5e3b"/>
+        <stop offset="100%" stop-color="#c9a64d"/>
+      </linearGradient>
+    </defs>
+    <path d="
+      M0,0
+      C25,30 35,100 35,148
+      C35,196 25,267 0,297
+      L0,0
+      Z
+    " fill="url(#grad)"/>
+  </svg>
 
-          <h3 style="text-align:center; color:#0b3c5d; margin:0; font-size:16px;">
-            RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
-          </h3>
-          <h4 style="text-align:center; color:#444; margin:2px 0 6px; font-size:14px;">
-            Ministère de la Formation Professionnelle et Métier
-          </h4>
+  <!-- Contenu principal -->
+  <div style="
+    position:relative;
+    z-index:1;
+    height:100%;
+    padding-left:10mm; /* Texte reculé légèrement moins, proche du bord */
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  ">
 
-          <hr style="border:1px solid #d4af37; margin:8px 0;" />
+    <!-- En-tête -->
+    <div style="text-align:center;">
+      <h2 style="margin:0;font-size:20px;">CENTRE DE FORMATION PROFESSIONNELLE ET METIERS</h2>
+      <p style="margin:1px 0;font-weight:bold;font-size:18px;">« LEON ACADEMY »</p>
+      <img src="/logo-leon.png" style="width:100px;margin:5px auto;" />
+      <p style="font-size:11px;font-weight:bold;margin:2px 0;">${BREVE_CODE_OFFICIEL}</p>
+    </div>
 
-          <h1 style="
-            text-align:center;
-            color:#0b3c5d;
-            font-size:30px; /* réduit pour tenir dans la page */
-            letter-spacing:1.5px;
-            margin:4px 0;
-          ">
-            LÉON ACADÉMIE
-          </h1>
+    <!-- Titre -->
+    <div style="
+      background:#c9a64d; 
+      padding:6px 10px; 
+      margin:10px auto; 
+      text-align:center; 
+      font-weight:bold; 
+      font-size:14px; 
+      width:fit-content; 
+      letter-spacing:0.3px;
+    ">
+      ATTESTATION TENANT LIEU DE CERTIFICAT<br/>D’APTITUDE PROFESSIONNELLE
+    </div>
 
-          <p style="text-align:center; font-style:italic; color:#555; margin:0; font-size:13px;">
-            Excellence • Discipline • Réussite
-          </p>
+    <!-- Texte principal -->
+    <div style="font-size:12px; line-height:1.4; flex-grow:1;">
+      <p style="text-align:justify;margin:5px 0;">
+        Nous soussignons la Direction du centre de formation Professionnelle et Métiers <strong>« Léon Academy »</strong>, certifions que :
+      </p>
 
-          <h2 style="
-            text-align:center;
-            margin:16px 0;
-            font-size:24px; /* réduit */
-            color:#d4af37;
-            text-transform:uppercase;
-          ">
-            Brevet de Réussite
-          </h2>
+      <p style="text-align:center;font-size:15px;font-weight:bold;color:#1f5e3b;margin:8px 0;">
+        ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
+      </p>
 
-          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
-            Le présent brevet atteste que :
-          </p>
+      <p style="text-align:justify;margin:5px 0;">
+        a suivi, du <strong>19 mai 2025</strong> au <strong>19 août 2025</strong>, une formation professionnelle en <strong>CAISSE</strong>, comprenant <strong>60 heures de théorie</strong> et <strong>180 heures de pratique</strong>, axée sur la gestion de la caisse et des transactions financières, le service et la relation clientèle, les connaissances des produits et le merchandising, la sécurité et les procédures, ainsi que l’utilisation des outils informatiques.
+      </p>
 
-          <h2 style="
-            text-align:center;
-            color:#0b3c5d;
-            margin:10px 0;
-            font-size:20px; /* réduit */
-          ">
-            ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
-          </h2>
+      <p style="text-align:justify;margin:5px 0;">
+        Elle a satisfait aux épreuves d’évaluation avec la mention <strong style="color:#1f5e3b;">BIEN</strong>, soit <strong>${pourcentage.toFixed(0)} %</strong>.
+      </p>
 
-          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
-            a satisfait aux exigences académiques de l’année académique
-            <strong>${annee}</strong> au sein de Léon Académie avec les résultats suivants :
-          </p>
+      <p style="text-align:justify;margin:5px 0;">
+        En foi de quoi, nous lui délivrons la présente attestation pour servir et valoir ce que de droit.
+      </p>
 
-          <table style="
-            width:55%;
-            margin:12px auto;
-            border-collapse:collapse;
-            font-size:15px; /* réduit */
-          ">
-            <tr style="background:#0b3c5d; color:white;">
-              <td style="padding:8px;">Moyenne Générale</td>
-              <td style="padding:8px; text-align:center;">
-                ${pourcentage.toFixed(2)} %
-              </td>
-            </tr>
-            <tr style="background:#eef3f8;">
-              <td style="padding:8px;">Mention</td>
-              <td style="
-                padding:8px;
-                text-align:center;
-                font-weight:bold;
-                color:#d4af37;
-              ">
-                ${mention}
-              </td>
-            </tr>
-          </table>
-
-          <p style="font-size:15px; margin:6px 0; line-height:1.4;">
-            En foi de quoi, le présent brevet est délivré à l’intéressé(e) pour servir
-            et valoir ce que de droit.
-          </p>
-        </div>
-
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          margin-top:20px;
-          font-size:14px;
-        ">
-          <div>
-            <p style="margin:2px 0;">Fait à Kinshasa</p>
-            <p style="margin:2px 0;">Le ${new Date().toLocaleDateString()}</p>
-          </div>
-
-          <div style="text-align:center;">
-            <p style="margin:2px 0;"><strong>Le Directeur</strong></p>
-            <div style="height:25px;"></div>
-            <p style="margin:0; border-top:1px solid #000; padding-top:4px;">
-              Signature & Cachet
-            </p>
-          </div>
-        </div>
-
-        <div style="
-          height:8px;
-          background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-          margin-top:12px;
-        "></div>
-
+        <!-- Pied de page -->
+    <div style="text-align:right;font-size:12px;margin-top:12px;">
+      <div>Fait à Kinshasa, le ${new Date().toLocaleDateString()}</div>
+      
+      <div style="margin-top:15px;">
+        <div style="margin-top:3px;border-top:1px solid #000;width:140px;margin-left:auto;"></div>
+        <strong style="display:block;margin-left:auto;width:140px;text-align:center;">Le Directeur</strong>
       </div>
-    `;
+    </div>
+    </div>
 
-    await downloadHtmlAsPdf(brevetHtml, "brevet-reussite.pdf", true);
+  
 
-  } catch (error) {
-    console.error(error);
-    toast.error("Erreur lors du téléchargement du brevet");
-  }
-};
+  </div>
+</div>
+`;
+
+      await downloadHtmlAsPdf(brevetHtml, "brevet-reussite.pdf", true);
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du téléchargement du brevet");
+    }
+  };
 
 
 
@@ -467,35 +434,35 @@ const handleDownloadBrevet = async (etudiantId: number, anneeId: number) => {
 
 
 
-const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
-  try {
-    const releveNotes = await getReleve(etudiantId, anneeId);
-    if (!releveNotes.length) {
-      return toast.info("Aucune note pour cet étudiant et cette année");
-    }
+  const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
+    try {
+      const releveNotes = await getReleve(etudiantId, anneeId);
+      if (!releveNotes.length) {
+        return toast.info("Aucune note pour cet étudiant et cette année");
+      }
 
-    const etudiant = releveNotes[0].etudiant;
-    const annee = releveNotes[0].anneeAcademique.annee;
+      const etudiant = releveNotes[0].etudiant;
+      const annee = releveNotes[0].anneeAcademique.annee;
 
-    const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
-    const maxTotal = releveNotes.length * 20;
-    const pourcentage = (totalObt / maxTotal) * 100;
+      const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
+      const maxTotal = releveNotes.length * 20;
+      const pourcentage = (totalObt / maxTotal) * 100;
 
-    let mention = "";
-    if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";
-    else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";
-    else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";
-    else mention = "Ajourné";
+      let mention = "";
+      if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";
+      else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";
+      else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";
+      else mention = "Ajourné";
 
-    // Création d'un container parent avec padding en haut
-    const container = document.createElement("div");
-    container.style.width = "100%";
-    container.style.paddingTop = "80px"; // <-- espace en haut plus grand
-    container.style.boxSizing = "border-box"; // important pour le padding
-    container.style.backgroundColor = "white"; // éviter fonds transparents
+      // Création d'un container parent avec padding en haut
+      const container = document.createElement("div");
+      container.style.width = "100%";
+      container.style.paddingTop = "80px"; // <-- espace en haut plus grand
+      container.style.boxSizing = "border-box"; // important pour le padding
+      container.style.backgroundColor = "white"; // éviter fonds transparents
 
-    // Contenu du relevé
-    const releveHTML = `
+      // Contenu du relevé
+      const releveHTML = `
       <div style="
         font-family: Arial, sans-serif;
         width: 96%;
@@ -538,163 +505,31 @@ const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
       </div>
     `;
 
-    container.innerHTML = releveHTML;
+      container.innerHTML = releveHTML;
 
-    document.body.appendChild(container); // nécessaire pour html2canvas
+      document.body.appendChild(container); // nécessaire pour html2canvas
 
-    // Génération du canvas avec scale élevé pour texte lisible
-    const canvas = await html2canvas(container, { scale: 3, backgroundColor: "#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
+      // Génération du canvas avec scale élevé pour texte lisible
+      const canvas = await html2canvas(container, { scale: 3, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/png");
 
-    const pdf = new jsPDF("p", "pt", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("releve-notes.pdf");
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("releve-notes.pdf");
 
-    document.body.removeChild(container); // nettoyage
-  } catch (err) {
-    console.error("Erreur téléchargement relevé :", err);
-    toast.error("Impossible de télécharger le relevé");
-  }
-};
+      document.body.removeChild(container); // nettoyage
+    } catch (err) {
+      console.error("Erreur téléchargement relevé :", err);
+      toast.error("Impossible de télécharger le relevé");
+    }
+  };
 
 
 
-  // =======================
-  // Impression Brevet
-  // =======================
-  // const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
-  //     try {
-  //         const notes = await getReleve(etudiantId, anneeId);
-  //         if (!notes.length) {
-  //             return toast.info("Aucune note pour cet étudiant et cette année");
-  //         }
 
-  //         const etudiant = notes[0].etudiant;
-  //         const annee = notes[0].anneeAcademique.annee;
-
-  //         // Calcul moyenne / pourcentage
-  //         const total = notes.reduce((sum, n) => sum + n.note, 0);
-  //         const max = notes.length * 20;
-  //         const pourcentage = (total / max) * 100;
-
-  //         // Mention
-  //         let mention = "";
-  //         if (pourcentage >= 80) mention = "Grande Distinction";
-  //         else if (pourcentage >= 70) mention = "Distinction";
-  //         else if (pourcentage >= 50) mention = "Satisfaction";
-  //         else mention = "Ajourné";
-
-  //         // HTML Brevet
-  //         const brevetHtml = `
-  // <div style="
-  //   width: 900px;
-  //   margin: auto;
-  //   padding: 40px;
-  //   font-family: 'Times New Roman', serif;
-  //   border: 6px double #000;
-  //   box-sizing: border-box;
-  // ">
-
-  //   <h3 style="text-align:center; margin-bottom:5px;">
-  //     RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
-  //   </h3>
-  //   <h2 style="text-align:center; margin-top:0;">
-  //     MINISTÈRE DE L’ENSEIGNEMENT
-  //   </h2>
-
-  //   <hr style="margin:20px 0;" />
-
-  //   <h1 style="text-align:center; color:#003366;">
-  //     LÉON ACADÉMIE
-  //   </h1>
-
-  //   <h2 style="text-align:center; margin-top:30px;">
-  //     BREVET DE RÉUSSITE
-  //   </h2>
-
-  //   <p style="font-size:18px; margin-top:40px; text-align:justify;">
-  //     Il est certifié par la présente que :
-  //   </p>
-
-  //   <h2 style="text-align:center; margin:20px 0;">
-  //     ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}
-  //   </h2>
-
-  //   <p style="font-size:18px; text-align:justify;">
-  //     a satisfait aux exigences académiques de l’année académique
-  //     <strong>${annee}</strong> et a obtenu les résultats suivants :
-  //   </p>
-
-  //   <table style="width:60%; margin:30px auto; font-size:18px;">
-  //     <tr>
-  //       <td><strong>Moyenne générale :</strong></td>
-  //       <td>${pourcentage.toFixed(2)} %</td>
-  //     </tr>
-  //     <tr>
-  //       <td><strong>Mention :</strong></td>
-  //       <td>${mention}</td>
-  //     </tr>
-  //   </table>
-
-  //   <p style="margin-top:40px; font-size:18px;">
-  //     En foi de quoi, le présent brevet lui est délivré pour servir et valoir
-  //     ce que de droit.
-  //   </p>
-
-  //   <div style="display:flex; justify-content:space-between; margin-top:60px;">
-  //     <div>
-  //       <p>Fait à __________________</p>
-  //       <p>Le ${new Date().toLocaleDateString()}</p>
-  //     </div>
-  //     <div style="text-align:center;">
-  //       <p><strong>Le Directeur</strong></p>
-  //       <br/><br/>
-  //       <p>______________________</p>
-  //     </div>
-  //   </div>
-
-  // </div>
-  // `;
-
-  //         const win = window.open("", "_blank", "width=1000,height=800");
-  //         if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
-
-  //         win.document.write(`
-  //   <html>
-  //     <head>
-  //       <title>Brevet de Réussite</title>
-  //       <style>
-  //         @media print {
-  //           body { margin: 0; }
-  //         }
-  //       </style>
-  //     </head>
-  //     <body>${brevetHtml}</body>
-  //   </html>
-  // `);
-
-  //         win.document.close();
-  //         win.focus();
-  //         win.print();
-
-  //     } catch (error) {
-  //         console.error(error);
-  //         toast.error("Erreur lors de l'impression du brevet");
-  //     }
-  // };
-
-  // =======================
-  // Impression Brevet coloré
-  // =======================
-  // =======================
-  // Impression Brevet paysage
-  // =======================
-  // =======================
-  // Impression Brevet paysage (compact)
-  // =======================
   const formatPrenom = (prenom: string) => {
     if (!prenom) return "";
     return prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
@@ -723,141 +558,67 @@ const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
 
       // HTML du brevet (format paysage compact)
       const brevetHtml = `
-    <div style="
-      width:1120px;
-      height:740px;
-      margin:auto;
-      padding:30px 50px;
-      font-family:'Georgia', serif;
-      background: linear-gradient(135deg, #ffffff, #f3f6f9);
-      border:10px solid #0b3c5d;
-      box-sizing:border-box;
-    ">
+<div style="
+  width:96%;
+  margin:2% auto;
+  padding:40px;
+  font-family:Arial, sans-serif;
+  background:#e5e5e5;
+  border:2px solid #999;
+">
 
-      <!-- Bande décorative -->
-      <div style="
-        height:10px;
-        background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-        margin-bottom:15px;
-      "></div>
+  <h2 style="text-align:center;margin:0;">
+    CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+  </h2>
+  <p style="text-align:center;margin:4px 0;">
+    « LEON ACADEMY »
+  </p>
 
-      <!-- En-tête -->
-      <h3 style="text-align:center; color:#0b3c5d; margin:0; font-size:16px;">
-        RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
-      </h3>
-      <h4 style="text-align:center; color:#444; margin:2px 0 8px; font-size:14px;">
-        Ministère de la Formation Professionnelle et Métier
-      </h4>
+  <p style="text-align:center;font-weight:bold;">
+    ${codeBrevet}
+  </p>
 
-      <hr style="border:1px solid #d4af37; margin:10px 0;" />
+  <h3 style="
+    text-align:center;
+    background:#d4af37;
+    padding:8px;
+    margin:20px auto;
+    width:fit-content;
+  ">
+    ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
+    D’APTITUDE PROFESSIONNELLE
+  </h3>
 
-      <!-- Académie -->
-      <h1 style="
-        text-align:center;
-        color:#0b3c5d;
-        font-size:32px;
-        letter-spacing:1.5px;
-        margin:6px 0;
-      ">
-        LÉON ACADÉMIE
-      </h1>
+  <p>
+    Nous soussignons la Direction du centre de formation Professionnelle
+    et Métiers « Léon Academy », certifions que :
+  </p>
 
-      <p style="text-align:center; font-style:italic; color:#555; margin:0; font-size:13px;">
-        Excellence • Discipline • Réussite
-      </p>
+  <p style="text-align:center;font-weight:bold;font-size:18px;">
+    ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
+  </p>
 
-      <!-- Titre -->
-      <h2 style="
-        text-align:center;
-        margin:18px 0;
-        font-size:26px;
-        color:#d4af37;
-        text-transform:uppercase;
-      ">
-        Brevet de Réussite
-      </h2>
+  <p>
+    a suivi la formation et a satisfait aux épreuves d’évaluation
+    avec la mention <strong>BIEN</strong>
+    soit <strong>${pourcentage.toFixed(0)} %</strong>.
+  </p>
 
-      <!-- Texte -->
-      <p style="font-size:15px; margin:8px 0; line-height:1.5;">
-        Le présent brevet atteste que :
-      </p>
+  <p>
+    En foi de quoi, nous lui délivrons la présente attestation.
+  </p>
 
-      <h2 style="
-        text-align:center;
-        color:#0b3c5d;
-        margin:14px 0;
-        font-size:22px;
-      ">
-        ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
-      </h2>
+  <p style="margin-top:40px;">
+    Fait à Kinshasa le ${new Date().toLocaleDateString()}
+  </p>
 
-      <p style="font-size:15px; margin:8px 0; line-height:1.5;">
-        a satisfait aux exigences académiques de l’année académique
-        <strong>${annee}</strong> au sein de Léon Académie avec les résultats suivants :
-      </p>
+  <div style="text-align:right;margin-top:60px;">
+    <strong>Le Directeur</strong>
+    <div style="margin-top:40px;border-top:1px solid #000;width:200px;"></div>
+  </div>
+</div>
+`;
 
-      <!-- Résultats -->
-      <table style="
-        width:55%;
-        margin:18px auto;
-        border-collapse:collapse;
-        font-size:16px;
-      ">
-        <tr style="background:#0b3c5d; color:white;">
-          <td style="padding:8px;">Moyenne Générale</td>
-          <td style="padding:8px; text-align:center;">
-            ${pourcentage.toFixed(2)} %
-          </td>
-        </tr>
-        <tr style="background:#eef3f8;">
-          <td style="padding:8px;">Mention</td>
-          <td style="
-            padding:8px;
-            text-align:center;
-            font-weight:bold;
-            color:#d4af37;
-          ">
-            ${mention}
-          </td>
-        </tr>
-      </table>
-
-      <!-- Conclusion -->
-      <p style="font-size:15px; margin:10px 0; line-height:1.5;">
-        En foi de quoi, le présent brevet est délivré à l’intéressé(e) pour servir
-        et valoir ce que de droit.
-      </p>
-
-      <!-- Signatures -->
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        margin-top:30px;
-        font-size:14px;
-      ">
-        <div>
-          <p style="margin:2px 0;">Fait à Kinshasa</p>
-          <p style="margin:2px 0;">Le ${new Date().toLocaleDateString()}</p>
-        </div>
-
-        <div style="text-align:center;">
-          <p style="margin:2px 0;"><strong>Le Directeur</strong></p>
-          <div style="height:25px;"></div>
-          <p style="margin:0; border-top:1px solid #000; padding-top:4px;">
-            Signature & Cachet
-          </p>
-        </div>
-      </div>
-
-      <!-- Bande bas -->
-      <div style="
-        height:8px;
-        background: linear-gradient(to right, #0b3c5d, #d4af37, #0b3c5d);
-        margin-top:18px;
-      "></div>
-
-    </div>
-    `;
 
       const win = window.open("", "_blank", "width=1200,height=850");
       if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
