@@ -107,7 +107,7 @@ export async function deleteEtudiant(id: number) {
 // ===============================
 export async function getEtudiants() {
   return prisma.etudiant.findMany({
-    include: { classe: { include: { filiere: true } } },
+    // include: { classe: { include: { filiere: true } } },
     orderBy: { id: "desc" },
   });
 }
