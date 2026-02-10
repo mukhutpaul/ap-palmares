@@ -230,23 +230,24 @@ const brevetHtml = `
   overflow:hidden;
 ">
 
-  <!-- Bande décorative gauche ondulée sur toute la page -->
-  <svg style="position:absolute; top:0; left:0; width:35mm; height:100%;" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1f5e3b"/>
-        <stop offset="100%" stop-color="#c9a64d"/>
-      </linearGradient>
-    </defs>
-    <path d="
-      M0,0
-      C25,30 35,100 35,148
-      C35,196 25,267 0,297
-      L0,0
-      Z
-    " fill="url(#grad)"/>
-  </svg>
+<!-- Filigrane logo -->
+<img
+  src="/format1.png"
+  alt="Filigrane"
+  style="
+    position:absolute;
+    top:30%;
+    left:15%;
+    transform:translate(-50%, -50%);
+    width:300px;
+    height: 520px;
+    opacity:20;
+    z-index:0;
+    pointer-events:none;
+  "
+/>
 
+  
   <!-- Contenu principal -->
   <div style="
     position:relative;
