@@ -23,6 +23,105 @@ enum Role {
 // MODELS
 // ===============================
 
+// model User {
+//   id        String   @id @default(cuid())
+//   name      String?
+//   email     String   @unique
+//   password  String
+//   role      Role     @default(USER)
+//   createdAt DateTime @default(now())
+
+//   // Relations (audit)
+//   etudiants         Etudiant[]
+//   classes           Classe[]
+//   filieres          Filiere[]
+//   notes             Note[]
+// }
+
+// -------------------------------
+
+// model Etudiant {
+//   id      Int    @id @default(autoincrement())
+//   nom     String
+//   postnom String
+//   prenom  String
+//   email   String @unique
+//   sexe    String
+
+//   classe   Classe @relation(fields: [classeId], references: [id])
+//   classeId Int
+
+//   notes Note[]
+
+//   createdBy   User   @relation(fields: [createdById], references: [id])
+//   createdById String
+
+//   createdAt DateTime @default(now())
+// }
+
+// // -------------------------------
+
+// model Classe {
+//   id      Int    @id @default(autoincrement())
+//   nom     String
+//   section String
+
+//   filiere   Filiere @relation(fields: [filiereId], references: [id])
+//   filiereId Int
+
+//   etudiants Etudiant[]
+
+//   createdBy   User   @relation(fields: [createdById], references: [id])
+//   createdById String
+
+//   createdAt DateTime @default(now())
+// }
+
+// // -------------------------------
+
+// model Filiere {
+//   id  Int    @id @default(autoincrement())
+//   nom String
+
+//   classes Classe[]
+
+//   createdBy   User   @relation(fields: [createdById], references: [id])
+//   createdById String
+
+//   createdAt DateTime @default(now())
+// }
+
+// // -------------------------------
+
+// model AnneeAcademique {
+//   id     Int     @id @default(autoincrement())
+//   annee  String  @unique
+//   active Boolean @default(false)
+
+//   notes Note[]  // Relation vers les notes
+
+//   createdAt DateTime @default(now())
+// }
+
+// // -------------------------------
+
+// model Note {
+//   id      Int    @id @default(autoincrement())
+//   matiere String
+//   note    Float
+
+//   etudiant   Etudiant       @relation(fields: [etudiantId], references: [id])
+//   etudiantId Int
+
+//   anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+//   anneeAcademiqueId Int
+
+//   createdBy   User   @relation(fields: [createdById], references: [id])
+//   createdById String
+
+//   createdAt DateTime @default(now())
+// }
+
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -31,11 +130,10 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now())
 
-  // Relations (audit)
-  etudiants         Etudiant[]
-  classes           Classe[]
-  filieres          Filiere[]
-  notes             Note[]
+  etudiants Etudiant[]
+  classes   Classe[]
+  filieres  Filiere[]
+  notes     Note[]
 }
 
 // -------------------------------
@@ -48,10 +146,8 @@ model Etudiant {
   email   String @unique
   sexe    String
 
-  classe   Classe @relation(fields: [classeId], references: [id])
-  classeId Int
-
-  notes Note[]
+  classes Classe[]
+  notes   Note[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -62,14 +158,18 @@ model Etudiant {
 // -------------------------------
 
 model Classe {
-  id      Int    @id @default(autoincrement())
-  nom     String
-  section String
+  id  Int    @id @default(autoincrement())
+  nom String
 
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-  filiereId Int
+  // Relations optionnelles pour permettre la migration
+  filiere   Filiere? @relation(fields: [filiereId], references: [id])
+  filiereId Int?
 
-  etudiants Etudiant[]
+  etudiant   Etudiant? @relation(fields: [etudiantId], references: [id])
+  etudiantId Int?
+
+  session   Session? @relation(fields: [sessionId], references: [id])
+  sessionId Int?
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -80,10 +180,12 @@ model Classe {
 // -------------------------------
 
 model Filiere {
-  id  Int    @id @default(autoincrement())
-  nom String
+  id          Int    @id @default(autoincrement())
+  nom         String
+  description String?
 
   classes Classe[]
+  notes   Note[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -98,7 +200,21 @@ model AnneeAcademique {
   annee  String  @unique
   active Boolean @default(false)
 
-  notes Note[]  // Relation vers les notes
+  notes Note[]
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  designation String
+  dateDebut   DateTime
+  dateFin     DateTime
+
+  notes   Note[]
+  classes Classe[]
 
   createdAt DateTime @default(now())
 }
@@ -110,11 +226,17 @@ model Note {
   matiere String
   note    Float
 
-  etudiant   Etudiant       @relation(fields: [etudiantId], references: [id])
-  etudiantId Int
+  etudiant   Etudiant? @relation(fields: [etudiantId], references: [id])
+  etudiantId Int?
 
-  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
-  anneeAcademiqueId Int
+  anneeAcademique   AnneeAcademique? @relation(fields: [anneeAcademiqueId], references: [id])
+  anneeAcademiqueId Int?
+
+  filiere   Filiere? @relation(fields: [filiereId], references: [id])
+  filiereId Int?
+
+  session   Session? @relation(fields: [sessionId], references: [id])
+  sessionId Int?
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
