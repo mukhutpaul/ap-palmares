@@ -125,7 +125,7 @@ export default function UsersPage() {
 
           />
         </div>
-        <button className="btn btn-primary flex items-center gap-2" onClick={() => openPopup()}>
+        <button className="btn btn-accent flex items-center gap-2" onClick={() => openPopup()}>
           <Plus size={18} /> Nouvel utilisateur
         </button>
       </div>
@@ -213,7 +213,7 @@ export default function UsersPage() {
             </select>
           </div>
           <div className="modal-action">
-            <button className="btn btn-primary" onClick={handleSave}>
+            <button className="btn btn-accent" onClick={handleSave}>
               {editingUser ? "Enregistrer" : "Créer"}
             </button>
           </div>

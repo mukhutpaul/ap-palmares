@@ -69,7 +69,7 @@ export default function EtudiantsClient() {
       .catch(() => toast.error("Impossible de charger les étudiants"));
   }, []);
 
- 
+
 
   /* =======================
      Options Select
@@ -172,17 +172,17 @@ export default function EtudiantsClient() {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
-          <LucideSearch size={18} />
-          <input
-            className="w-full"
-            placeholder="Recherche..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+            <LucideSearch size={18} />
+            <input
+              className="w-full"
+              placeholder="Recherche..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
 
-        <button className="btn btn-primary" onClick={handleOpenAddPopup}>
+        <button className="btn btn-accent" onClick={handleOpenAddPopup}>
           Ajouter
         </button>
       </div>
@@ -215,18 +215,18 @@ export default function EtudiantsClient() {
                   <td>{e.sexe}</td>
                   <td className="text-center">
                     <div className="flex justify-center gap-2">
-                    <button
-                      className="btn btn-xs btn-warning btn-outline"
-                      onClick={() => openEditPopup(e)}
-                    >
-                      <LucideEdit2 size={16} />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-outline btn-error"
-                      onClick={() => handleDeleteEtudiant(e.id)}
-                    >
-                      <LucideTrash2 size={16} />
-                    </button>
+                      <button
+                        className="btn btn-xs btn-warning btn-outline"
+                        onClick={() => openEditPopup(e)}
+                      >
+                        <LucideEdit2 size={16} />
+                      </button>
+                      <button
+                        className="btn btn-xs btn-outline btn-error"
+                        onClick={() => handleDeleteEtudiant(e.id)}
+                      >
+                        <LucideTrash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -239,64 +239,162 @@ export default function EtudiantsClient() {
       {/* POPUP AJOUT */}
       {popupOpen && (
         <dialog className="modal modal-open">
-          <form className="modal-box" onSubmit={handleAddEtudiant}>
-            <h3 className="font-bold mb-4">Ajouter étudiant</h3>
+          <div className="modal-box relative max-w-lg p-8 rounded-2xl shadow-2xl">
 
-            <input name="nom" placeholder="Nom" className="input w-full mb-2" required />
-            <input name="postnom" placeholder="Postnom" className="input w-full mb-2" required />
-            <input name="prenom" placeholder="Prénom" className="input w-full mb-2" required />
-            <input name="email" type="email" placeholder="Email" className="input w-full mb-2" required />
+            {/* Bouton fermer (croix) */}
+            <button
+              type="button"
+              onClick={() => setPopupOpen(false)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-red-500 transition"
+            >
+              ✕
+            </button>
 
-            <select name="sexe" className="select w-full mb-2" required>
-              <option value="">Sexe</option>
-              <option value="M">Masculin</option>
-              <option value="F">Féminin</option>
-            </select>
+            <h3 className="text-2xl font-bold mb-6 text-center">
+              Ajouter un étudiant
+            </h3>
 
-            <div className="modal-action">
-              <button type="button" className="btn" onClick={() => setPopupOpen(false)}>
-                Annuler
-              </button>
-              <button type="submit" className="btn btn-primary">
+            <form onSubmit={handleAddEtudiant} className="space-y-4">
+
+              <input
+                name="nom"
+                placeholder="Nom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="postnom"
+                placeholder="Postnom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="prenom"
+                placeholder="Prénom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="email"
+                type="email"
+                placeholder="Email"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <select
+                name="sexe"
+                className="select select-bordered w-full rounded-xl"
+                required
+              >
+                <option value="">Sélectionner le sexe</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+
+              <button
+                type="submit"
+                className="btn btn-accent w-full mt-4 rounded-xl text-lg"
+              >
                 Enregistrer
               </button>
-            </div>
+
+            </form>
+          </div>
+
+          {/* Background overlay */}
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setPopupOpen(false)}>close</button>
           </form>
         </dialog>
       )}
 
+
+      {/* POPUP EDIT */}
       {/* POPUP EDIT */}
       {editPopupOpen && selectedEtudiant && (
         <dialog className="modal modal-open">
-          <form className="modal-box" onSubmit={handleUpdateEtudiant}>
-            <h3 className="font-bold mb-4">Modifier étudiant</h3>
+          <div className="modal-box relative max-w-lg p-8 rounded-2xl shadow-2xl">
 
-            <input name="nom" defaultValue={selectedEtudiant.nom} className="input w-full mb-2" required />
-            <input name="postnom" defaultValue={selectedEtudiant.postnom} className="input w-full mb-2" required />
-            <input name="prenom" defaultValue={selectedEtudiant.prenom} className="input w-full mb-2" required />
-            <input name="email" defaultValue={selectedEtudiant.email} type="email" className="input w-full mb-2" required />
-
-            <select
-              name="sexe"
-              defaultValue={selectedEtudiant.sexe}
-              className="select w-full mb-2"
-              required
+            {/* Bouton fermer (croix) */}
+            <button
+              type="button"
+              onClick={() => setEditPopupOpen(false)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-red-500 transition"
             >
-              <option value="M">Masculin</option>
-              <option value="F">Féminin</option>
-            </select>
+              ✕
+            </button>
 
-            <div className="modal-action">
-              <button type="button" className="btn" onClick={() => setEditPopupOpen(false)}>
-                Annuler
-              </button>
-              <button type="submit" className="btn btn-primary">
+            <h3 className="text-2xl font-bold mb-6 text-center">
+              Modifier un étudiant
+            </h3>
+
+            <form onSubmit={handleUpdateEtudiant} className="space-y-4">
+              <input type="hidden" name="id" value={selectedEtudiant.id} />
+
+              <input
+                name="nom"
+                defaultValue={selectedEtudiant.nom}
+                placeholder="Nom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="postnom"
+                defaultValue={selectedEtudiant.postnom}
+                placeholder="Postnom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="prenom"
+                defaultValue={selectedEtudiant.prenom}
+                placeholder="Prénom"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <input
+                name="email"
+                defaultValue={selectedEtudiant.email}
+                type="email"
+                placeholder="Email"
+                className="input input-bordered w-full rounded-xl"
+                required
+              />
+
+              <select
+                name="sexe"
+                defaultValue={selectedEtudiant.sexe}
+                className="select select-bordered w-full rounded-xl"
+                required
+              >
+                <option value="">Sélectionner le sexe</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+
+              <button
+                type="submit"
+                className="btn btn-accent w-full mt-4 rounded-xl text-lg"
+              >
                 Enregistrer
               </button>
-            </div>
+            </form>
+          </div>
+
+          {/* Background overlay */}
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setEditPopupOpen(false)}>close</button>
           </form>
         </dialog>
       )}
+
     </div>
   );
 }
