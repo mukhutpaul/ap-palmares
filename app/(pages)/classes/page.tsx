@@ -155,21 +155,29 @@ export default function ClassesClient(
 
 
 
+  let filteredClasses = classeList.filter((c) => {
+    const matchesSearch = c.nom.toLowerCase().includes(search.toLowerCase());
+    const matchesFiliere = filiereFilter === "" || c.filiere?.nom === filiereFilter;
+    const matchesSession = sessionFilter === "" || c.session?.nom === sessionFilter;
 
-  let filteredClasses = classeList.filter(
-    (c) =>
-    (c.nom.toLowerCase().includes(search.toLowerCase()) ||
-      (filiereFilter === "" || c.filiere?.nom === filiereFilter) &&
-      (sessionFilter === "" || c.session?.nom === sessionFilter))
-  );
+    return matchesSearch && matchesFiliere && matchesSession;
+  });
 
-  if (filiereSortAsc !== null) {
-    filteredClasses.sort((a, b) =>
-      filiereSortAsc
-        ? (a.filiere?.nom ?? "").localeCompare(b.filiere?.nom ?? "")
-        : (b.filiere?.nom ?? "").localeCompare(a.filiere?.nom ?? "")
-    );
-  }
+  // let filteredClasses = classeList.filter(
+  //   (c) =>
+  //   (c.nom.toLowerCase().includes(search.toLowerCase()) ||
+  //     (filiereFilter === "" || c.filiere?.nom === filiereFilter) &&
+  //     (sessionFilter === "" || c.session?.nom === sessionFilter))
+  // );
+
+  // if (filiereSortAsc !== null) {
+  //   filteredClasses.sort((a, b) =>
+  //     filiereSortAsc
+  //       ? (a.filiere?.nom ?? "").localeCompare(b.filiere?.nom ?? "")
+  //       : (b.filiere?.nom ?? "").localeCompare(a.filiere?.nom ?? "")
+  //   );
+  // }
+
 
   const totalPages = Math.ceil(filteredClasses.length / itemsPerPage);
   const paginatedClasses = filteredClasses.slice(
@@ -404,7 +412,9 @@ export default function ClassesClient(
           >
             <option value="">Toutes sessions</option>
             {sessions.map((s) => (
-              <option key={s.id}>{s.designation}-{s.dateDebut.toLocaleDateString()}-{s.dateFin.toLocaleDateString()}</option>
+              <option key={s.id} value={s.designation}>
+                {s.designation} - {s.dateDebut.toLocaleDateString()} - {s.dateFin.toLocaleDateString()}
+              </option>
             ))}
           </select>
         </div>
