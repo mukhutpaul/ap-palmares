@@ -345,48 +345,77 @@ export default function ClassesClient() {
       {popupOpen && (
         <dialog className="modal modal-open">
           <form
-            className="modal-box rounded-2xl max-w-md flex flex-col gap-4"
+            className="modal-box relative rounded-2xl max-w-md flex flex-col gap-6 p-8"
             onSubmit={handleAddClasse}
           >
-            <h3 className="text-xl font-semibold">
+            {/* Bouton Annuler en croix */}
+            <button
+              type="button"
+              className="absolute top-4 right-4 btn btn-ghost btn-sm rounded-full hover:bg-gray-200"
+              onClick={() => setPopupOpen(false)}
+            >
+              ✕
+            </button>
+
+            {/* Titre */}
+            <h3 className="text-2xl font-bold text-gray-800">
               Ajouter une classe
             </h3>
+            <p className="text-gray-500 text-sm">
+              Remplissez les informations ci-dessous pour créer une nouvelle classe.
+            </p>
 
+            {/* Nom de la classe */}
             <input
               name="nom"
               className="input input-bordered w-full"
-              placeholder="Nom"
-              required
-            />
-            <input
-              name="section"
-              className="input input-bordered w-full"
-              placeholder="Section"
+              placeholder="Nom de la classe"
               required
             />
 
+            {/* Sélection de l'étudiant */}
+            <Select
+              options={etudiantOptions} // tableau d'étudiants { value: id, label: nom }
+              value={selectedEtudiant}
+              onChange={(opt) => setSelectedEtudiant(opt)}
+              placeholder="Sélectionner un étudiant"
+              className="w-full"
+            />
+
+            {/* Sélection de la filière */}
             <Select
               options={filiereOptions}
               value={selectedFiliere}
               onChange={(opt) => setSelectedFiliere(opt)}
               placeholder="Sélectionner une filière"
+              className="w-full"
             />
 
-            <div className="modal-action">
+            {/* Sélection de la session */}
+            <Select
+              options={sessionOptions}
+              value={selectedSession}
+              onChange={(opt) => setSelectedSession(opt)}
+              placeholder="Sélectionner une session"
+              className="w-full"
+            />
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 mt-4">
               <button
                 type="button"
-                className="btn btn-ghost"
+                className="btn btn-outline"
                 onClick={() => setPopupOpen(false)}
               >
                 Annuler
               </button>
-              <button className="btn btn-primary">
-                Ajouter
-              </button>
+              <button className="btn btn-primary">Ajouter</button>
             </div>
           </form>
         </dialog>
       )}
+
+
 
       {/* POPUP MODIFIER */}
       {editPopupOpen && selectedClasse && (

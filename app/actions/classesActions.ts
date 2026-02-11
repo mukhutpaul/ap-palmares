@@ -5,14 +5,16 @@ import { revalidatePath } from "next/cache";
 
 /**
  * Ajouter une classe
- * @param formData FormData contenant { nom, section, filiereId }
+ * @param formData FormData contenant { nom, section, filiereId, sessionId }
  */
 export async function addClasse(formData: FormData) {
   const nom = formData.get("nom")?.toString();
-  const section = formData.get("section")?.toString();
   const filiereId = Number(formData.get("filiereId"));
+  const sessionId = Number(formData.get("sessionId"));
 
-  if (!nom || !section || !filiereId) throw new Error("Nom, section et filière sont obligatoires");
+  if (!nom || !filiereId || !sessionId) {
+    throw new Error("Nom, section, filière et session sont obligatoires");
+  }
 
   // Crée ou récupère un utilisateur par défaut
   const user = await prisma.user.upsert({
@@ -21,7 +23,7 @@ export async function addClasse(formData: FormData) {
     create: {
       name: "Admin",
       email: "default@admin.com",
-      password: "test123", // ⚠️ hasher en production
+      password: "test123", // ⚠️ à hasher en production
       role: "ADMIN",
     },
   });
@@ -30,10 +32,11 @@ export async function addClasse(formData: FormData) {
   const classe = await prisma.classe.create({
     data: {
       nom,
-      section,
-      filiereId,
-      createdById: user.id,
+      filiere: { connect: { id: filiereId } },
+      session: { connect: { id: sessionId } },
+      createdBy: { connect: { email: "default@admin.com" } }
     },
+    include: { filiere: true, session: true },
   });
 
   revalidatePath("/classes");
@@ -43,33 +46,16 @@ export async function addClasse(formData: FormData) {
 
 /**
  * Modifier une classe
- * @param formData FormData contenant { id, nom, section, filiereId }
+ * @param formData FormData contenant { id, nom, section, filiereId, sessionId }
  */
-// export async function updateClasse(formData: FormData) {
-//   const id = Number(formData.get("id"));
-//   const nom = formData.get("nom")?.toString();
-//   const section = formData.get("section")?.toString();
-//   const filiereId = Number(formData.get("filiereId"));
-
-//   if (!id || !nom || !section || !filiereId) throw new Error("Toutes les informations sont requises");
-
-//   const classe = await prisma.classe.update({
-//     where: { id },
-//     data: { nom, section, filiereId },
-//   });
-
-//   revalidatePath("/classes");
-
-//   return classe;
-// }
-
 export async function updateClasse(formData: FormData) {
   const id = Number(formData.get("id"));
   const nom = formData.get("nom")?.toString();
   const section = formData.get("section")?.toString();
   const filiereId = Number(formData.get("filiereId"));
+  const sessionId = Number(formData.get("sessionId"));
 
-  if (!id || !nom || !section || !filiereId) {
+  if (!id || !nom || !section || !filiereId || !sessionId) {
     throw new Error("Tous les champs sont obligatoires");
   }
 
@@ -77,15 +63,16 @@ export async function updateClasse(formData: FormData) {
     where: { id },
     data: {
       nom,
-      section,
-      filiere: { connect: { id: filiereId } }, // Connecte la filière via l'ID
+      filiere: { connect: { id: filiereId } },
+      session: { connect: { id: sessionId } },
     },
-    include: { filiere: true }, // Inclut la filière dans la réponse
+    include: { filiere: true, session: true },
   });
+
+  revalidatePath("/classes");
 
   return updatedClasse;
 }
-
 
 /**
  * Supprimer une classe
@@ -106,9 +93,23 @@ export async function deleteClasse(id: number) {
  */
 export async function getClasses() {
   const classes = await prisma.classe.findMany({
-    include: { filiere: true }, // inclut le nom de la filière
+    include: { filiere: true, session: true },
     orderBy: { id: "desc" },
   });
   return classes;
 }
 
+export async function getSessions() {
+  const sessions = await prisma.session.findMany({
+    orderBy: { id: "desc" },
+  });
+  return sessions;
+}
+
+export async function getEtudiants() {
+  const etudiants = await prisma.etudiant.findMany({
+    orderBy: { id: "asc" },
+  });
+
+  return etudiants;
+}
