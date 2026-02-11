@@ -114,9 +114,9 @@ export default function UsersPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
           <input
-            type="text"
             placeholder="Rechercher un utilisateur..."
             className="w-full bg-transparent outline-none text-sm"
+            autoComplete="off"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -133,7 +133,7 @@ export default function UsersPage() {
       {/* Tableau */}
       <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
         <table className="table w-full">
-          <thead>
+          <thead className="bg-base-200 text-sm">
             <tr>
               <th>Nom</th>
               <th>Email</th>

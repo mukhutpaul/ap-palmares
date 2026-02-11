@@ -160,7 +160,7 @@ export default function FilieresClient() {
       {/* TABLEAU */}
       <div className="overflow-x-auto rounded-xl border shadow">
         <table className="table w-full">
-          <thead>
+          <thead className="bg-base-200 text-sm">
             <tr>
               <th>ID</th>
               <th>Nom</th>

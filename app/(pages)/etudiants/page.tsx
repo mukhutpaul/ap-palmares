@@ -195,7 +195,7 @@ export default function EtudiantsClient() {
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
           <table className="table w-full">
-            <thead>
+            <thead className="bg-base-200 text-sm">
               <tr>
                 <th>Nom</th>
                 <th>Postnom</th>
