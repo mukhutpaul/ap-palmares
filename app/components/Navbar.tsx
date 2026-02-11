@@ -41,7 +41,7 @@ const NavBar = () => {
       if (!session?.user) return
       if (e.detail.userId !== session.user.id) {
         setNotifications(prev => prev + 1)
-        notificationSound.current?.play().catch(() => {})
+        notificationSound.current?.play().catch(() => { })
       }
     }
 
@@ -60,10 +60,13 @@ const NavBar = () => {
     { href: "/", label: "Accueil" },
     { href: "/dashboard", label: "Tableau de bord", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/etudiants", label: "Etudiants", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/filieres", label: "Filières", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/sessions", label: "Sessions", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
+
+
 
 
     // { href: "/annonces", label: "Annonces", auth: true, roles: ["USER", "ADMIN"] },

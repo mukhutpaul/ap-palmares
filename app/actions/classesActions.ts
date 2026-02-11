@@ -7,14 +7,20 @@ import { revalidatePath } from "next/cache";
  * Ajouter une classe
  * @param formData FormData contenant { nom, section, filiereId, sessionId }
  */
+/**
+ * Ajouter une classe
+ * @param formData FormData contenant { nom, filiereId, sessionId, etudiantId }
+ */
 export async function addClasse(formData: FormData) {
-  const nom = formData.get("nom")?.toString();
+  // Récupère les données du formulaire
+  const nom = formData.get("nom")?.toString().trim();
   const filiereId = Number(formData.get("filiereId"));
   const sessionId = Number(formData.get("sessionId"));
   const etudiantId = Number(formData.get("etudiantId"));
 
-  if (!nom || !filiereId || !sessionId || etudiantId) {
-    throw new Error("Nom, étudiant, filière et session sont obligatoires");
+  // Vérifie que tous les champs sont valides
+  if (!nom || !filiereId || !sessionId || !etudiantId || isNaN(filiereId) || isNaN(sessionId) || isNaN(etudiantId)) {
+    throw new Error("Nom, étudiant, filière et session sont obligatoires et doivent être valides.");
   }
 
   // Crée ou récupère un utilisateur par défaut
@@ -29,6 +35,15 @@ export async function addClasse(formData: FormData) {
     },
   });
 
+  // Vérifie que l'étudiant existe
+  const etudiantExists = await prisma.etudiant.findUnique({
+    where: { id: etudiantId },
+  });
+
+  if (!etudiantExists) {
+    throw new Error("L'étudiant spécifié n'existe pas !");
+  }
+
   // Crée la classe
   const classe = await prisma.classe.create({
     data: {
@@ -36,11 +51,12 @@ export async function addClasse(formData: FormData) {
       filiere: { connect: { id: filiereId } },
       session: { connect: { id: sessionId } },
       etudiant: { connect: { id: etudiantId } },
-      createdBy: { connect: { email: "default@admin.com" } }
+      createdBy: { connect: { email: "default@admin.com" } },
     },
-    include: { filiere: true, session: true },
+    include: { filiere: true, session: true, etudiant: true },
   });
 
+  // Revalide le cache
   revalidatePath("/classes");
 
   return classe;
@@ -48,19 +64,30 @@ export async function addClasse(formData: FormData) {
 
 /**
  * Modifier une classe
- * @param formData FormData contenant { id, nom, section, filiereId, sessionId }
+ * @param formData FormData contenant { id, nom, filiereId, sessionId, etudiantId }
  */
 export async function updateClasse(formData: FormData) {
   const id = Number(formData.get("id"));
-  const nom = formData.get("nom")?.toString();
+  const nom = formData.get("nom")?.toString().trim();
   const filiereId = Number(formData.get("filiereId"));
   const sessionId = Number(formData.get("sessionId"));
   const etudiantId = Number(formData.get("etudiantId"));
 
-  if (!id || !nom || !etudiantId || !filiereId || !sessionId) {
-    throw new Error("Tous les champs sont obligatoires");
+  // Vérification
+  if (!id || !nom || !filiereId || !sessionId || !etudiantId || isNaN(id) || isNaN(filiereId) || isNaN(sessionId) || isNaN(etudiantId)) {
+    throw new Error("Tous les champs sont obligatoires et doivent être valides.");
   }
 
+  // Vérifie que l'étudiant existe
+  const etudiantExists = await prisma.etudiant.findUnique({
+    where: { id: etudiantId },
+  });
+
+  if (!etudiantExists) {
+    throw new Error("L'étudiant spécifié n'existe pas !");
+  }
+
+  // Met à jour la classe
   const updatedClasse = await prisma.classe.update({
     where: { id },
     data: {
@@ -69,7 +96,7 @@ export async function updateClasse(formData: FormData) {
       session: { connect: { id: sessionId } },
       etudiant: { connect: { id: etudiantId } },
     },
-    include: { filiere: true, session: true,etudiant:true },
+    include: { filiere: true, session: true, etudiant: true },
   });
 
   revalidatePath("/classes");
