@@ -11,9 +11,10 @@ export async function addClasse(formData: FormData) {
   const nom = formData.get("nom")?.toString();
   const filiereId = Number(formData.get("filiereId"));
   const sessionId = Number(formData.get("sessionId"));
+  const etudiantId = Number(formData.get("etudiantId"));
 
-  if (!nom || !filiereId || !sessionId) {
-    throw new Error("Nom, section, filière et session sont obligatoires");
+  if (!nom || !filiereId || !sessionId || etudiantId) {
+    throw new Error("Nom, étudiant, filière et session sont obligatoires");
   }
 
   // Crée ou récupère un utilisateur par défaut
@@ -34,6 +35,7 @@ export async function addClasse(formData: FormData) {
       nom,
       filiere: { connect: { id: filiereId } },
       session: { connect: { id: sessionId } },
+      etudiant: { connect: { id: etudiantId } },
       createdBy: { connect: { email: "default@admin.com" } }
     },
     include: { filiere: true, session: true },
@@ -51,11 +53,11 @@ export async function addClasse(formData: FormData) {
 export async function updateClasse(formData: FormData) {
   const id = Number(formData.get("id"));
   const nom = formData.get("nom")?.toString();
-  const section = formData.get("section")?.toString();
   const filiereId = Number(formData.get("filiereId"));
   const sessionId = Number(formData.get("sessionId"));
+  const etudiantId = Number(formData.get("etudiantId"));
 
-  if (!id || !nom || !section || !filiereId || !sessionId) {
+  if (!id || !nom || !etudiantId || !filiereId || !sessionId) {
     throw new Error("Tous les champs sont obligatoires");
   }
 
@@ -65,8 +67,9 @@ export async function updateClasse(formData: FormData) {
       nom,
       filiere: { connect: { id: filiereId } },
       session: { connect: { id: sessionId } },
+      etudiant: { connect: { id: etudiantId } },
     },
-    include: { filiere: true, session: true },
+    include: { filiere: true, session: true,etudiant:true },
   });
 
   revalidatePath("/classes");
@@ -93,7 +96,7 @@ export async function deleteClasse(id: number) {
  */
 export async function getClasses() {
   const classes = await prisma.classe.findMany({
-    include: { filiere: true, session: true },
+    include: { filiere: true, session: true, etudiant: true },
     orderBy: { id: "desc" },
   });
   return classes;
@@ -113,3 +116,18 @@ export async function getEtudiants() {
 
   return etudiants;
 }
+
+/**
+ * Récupérer un étudiant par son ID
+ * @param id number
+ */
+export async function getEtudiantById(id: number) {
+  if (!id) throw new Error("ID étudiant manquant");
+
+  const etudiant = await prisma.etudiant.findUnique({
+    where: { id },
+  });
+
+  return etudiant; // renvoie null si non trouvé
+}
+

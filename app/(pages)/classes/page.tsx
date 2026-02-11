@@ -7,6 +7,7 @@ import {
   getClasses,
   getSessions,
   getEtudiants,
+  getEtudiantById,
 } from "@/app/actions/classesActions";
 import { getFilieres } from "@/app/actions/filieresActions";// Nouveau : récupérer les sessions
 import { useState, useEffect } from "react";
@@ -28,7 +29,7 @@ type Classe = {
   nom: string;
   filiere: { id: number; nom: string } | null;
   session: { id: number; nom: string } | null;
-  etudiantId: number | null; // <-- ajouter ici
+  etudiant: { id: number; nom: string; postnom: string; prenom: string } | null // <-- ajouter ici
   createdById: string;
   createdAt: Date;
 };
@@ -102,7 +103,14 @@ export default function ClassesClient() {
             session: c.session
               ? { id: c.session.id, nom: c.session.designation } // map "designation" -> "nom"
               : null,
-            etudiantId: c.etudiantId ?? null, // si ton modèle Classe contient cet Id
+            etudiant: c.etudiant
+              ? {
+                id: c.etudiant.id,
+                nom: c.etudiant.nom,
+                postnom: c.etudiant.postnom,
+                prenom: c.etudiant.prenom,
+              }
+              : null,
             createdById: c.createdById,
             createdAt: new Date(c.createdAt),
           }))
@@ -174,10 +182,15 @@ export default function ClassesClient() {
     setIsAdding(true);
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+
     formData.append("filiereId", selectedFiliere.value.toString());
     formData.append("sessionId", selectedSession.value.toString());
     try {
+      let student = null
       const newRaw = await addClasse(formData);
+      if (newRaw.etudiantId !== null && newRaw.etudiantId !== undefined) {
+        student = await getEtudiantById(newRaw.etudiantId);
+      }
 
       setClasseList((prev) => [
         {
@@ -189,12 +202,13 @@ export default function ClassesClient() {
           session: newRaw.session
             ? { id: newRaw.session.id, nom: newRaw.session.designation }
             : null,
-          etudiantId: newRaw.etudiantId ?? null,  // si applicable
+          etudiant: student ?? null,// ✅ null autorisé si pas d'étudiant
           createdById: newRaw.createdById,
           createdAt: new Date(newRaw.createdAt),
         },
         ...prev,
       ]);
+
 
       toast.success("Classe ajoutée !");
       setPopupOpen(false);
@@ -237,6 +251,11 @@ export default function ClassesClient() {
 
     try {
       const updatedRaw = await updateClasse(formData);
+       let student = null
+   
+      if (updatedRaw.etudiantId !== null && updatedRaw.etudiantId !== undefined) {
+        student = await getEtudiantById(updatedRaw.etudiantId);
+      }
 
       const updatedClasse: Classe = {
         id: updatedRaw.id,
@@ -247,7 +266,7 @@ export default function ClassesClient() {
         session: updatedRaw.session
           ? { id: updatedRaw.session.id, nom: updatedRaw.session.designation }
           : null,
-        etudiantId: updatedRaw.etudiantId,  // <-- ici on garde juste l'id
+        etudiant: student,  // <-- ici on garde juste l'id
         createdById: updatedRaw.createdById,
         createdAt: updatedRaw.createdAt,
       };
@@ -347,11 +366,11 @@ export default function ClassesClient() {
         </div>
 
         <button
-          className={`btn btn-primary rounded-xl px-6 ${isAdding ? "loading" : ""
+          className={`btn btn-accent rounded-xl px-6 ${isAdding ? "loading" : ""
             }`}
           onClick={() => setPopupOpen(true)}
         >
-          + Ajouter une classe
+          + Inscrire un étudiant
         </button>
       </div>
 
@@ -361,8 +380,8 @@ export default function ClassesClient() {
           <thead className="bg-base-200 text-sm">
             <tr>
               <th>ID</th>
-              <th>Nom</th>
-              <th>Section</th>
+              <th>Nom Classe</th>
+              <th>Etudiant</th>
               <th>
                 <div
                   className="flex items-center gap-1 cursor-pointer select-none"
@@ -384,6 +403,7 @@ export default function ClassesClient() {
                 <tr key={c.id}>
                   <td>{c.id}</td>
                   <td>{c.nom}</td>
+                  <td>{c.etudiant?.nom ?? "Inconnue"} {c.etudiant?.postnom ?? "Inconnue"} {c.etudiant?.prenom ?? "Inconnue"} </td>
                   <td>{c.filiere?.nom ?? "Inconnue"}</td>
                   <td>{c.session?.nom ?? "Inconnue"}</td>
                   <td className="text-center">
@@ -439,27 +459,30 @@ export default function ClassesClient() {
       {popupOpen && (
         <dialog className="modal modal-open">
           <form
-            className="modal-box rounded-2xl max-w-md flex flex-col gap-6 relative"
+            className="modal-box rounded-3xl max-w-lg w-full p-8 flex flex-col gap-5 relative"
             onSubmit={handleAddClasse}
           >
             {/* Bouton fermer en X */}
             <button
               type="button"
-              className="btn btn-ghost btn-sm absolute right-3 top-3"
+              className="btn btn-ghost btn-sm absolute right-4 top-4"
               onClick={() => setPopupOpen(false)}
             >
               ✕
             </button>
 
-            <h3 className="text-xl font-semibold text-center">Ajouter une classe</h3>
+            {/* Titre */}
+            <h3 className="text-2xl font-bold text-center mb-4">
+              Ajouter une classe
+            </h3>
 
+            {/* Champs texte */}
             <input
               name="nom"
               className="input input-bordered w-full"
               placeholder="Nom"
               required
             />
-
             <input
               name="section"
               className="input input-bordered w-full"
@@ -467,6 +490,7 @@ export default function ClassesClient() {
               required
             />
 
+            {/* Sélect filière */}
             <Select
               options={filiereOptions}
               value={selectedFiliere}
@@ -474,6 +498,7 @@ export default function ClassesClient() {
               placeholder="Sélectionner une filière"
             />
 
+            {/* Sélect session */}
             <Select
               options={sessionOptions}
               value={selectedSession}
@@ -481,17 +506,18 @@ export default function ClassesClient() {
               placeholder="Sélectionner une session"
             />
 
-            {/* Zone étudiants */}
+            {/* Sélect multi étudiants */}
             <Select
-              options={etudiantOptions} // Assurez-vous d'avoir un tableau {value, label} pour les étudiants
+              options={etudiantOptions}
               value={selectedStudents}
               onChange={(opt) => setSelectedStudents(opt)}
               placeholder="Sélectionner des étudiants"
               isMulti
             />
 
-            <div className="modal-action justify-center mt-4">
-              <button type="submit" className="btn btn-accent w-full">
+            {/* Bouton Ajouter */}
+            <div className="modal-action justify-center mt-6">
+              <button type="submit" className="btn btn-accent w-full text-lg">
                 Ajouter
               </button>
             </div>
