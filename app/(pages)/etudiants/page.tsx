@@ -12,8 +12,6 @@ import {
   updateEtudiant,
   deleteEtudiant,
   getEtudiants,
-  getClasses,
-  getFilieres,
 } from "@/app/actions/etudiantsActions";
 
 /* =======================
@@ -38,7 +36,6 @@ interface Etudiant {
   prenom: string;
   email: string;
   sexe: string;
-  classe: Classe;
 }
 
 interface SelectOption {
@@ -51,14 +48,11 @@ interface SelectOption {
 ======================= */
 export default function EtudiantsClient() {
   const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
-  const [classes, setClasses] = useState<Classe[]>([]);
-  const [filieres, setFilieres] = useState<Filiere[]>([]);
-
   const [popupOpen, setPopupOpen] = useState(false);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
 
   const [selectedEtudiant, setSelectedEtudiant] = useState<Etudiant | null>(null);
-  const [selectedClasse, setSelectedClasse] = useState<SelectOption | null>(null);
+
 
   const [search, setSearch] = useState("");
   const [filterClasse, setFilterClasse] = useState<SelectOption | null>(null);
@@ -75,32 +69,11 @@ export default function EtudiantsClient() {
       .catch(() => toast.error("Impossible de charger les étudiants"));
   }, []);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [c, f] = await Promise.all([getClasses(), getFilieres()]);
-        setClasses(c);
-        setFilieres(f);
-      } catch {
-        toast.error("Erreur chargement classes / filières");
-      }
-    };
-    load();
-  }, []);
+ 
 
   /* =======================
      Options Select
   ======================= */
-  const classeOptions: SelectOption[] = classes.map((c) => ({
-    value: c.id,
-    label: `${c.nom}${c.filiere ? ` (${c.filiere.nom})` : ""}`,
-  }));
-
-  const filiereOptions: SelectOption[] = filieres.map((f) => ({
-    value: f.id,
-    label: f.nom,
-  }));
-
   /* =======================
      Filtrage
   ======================= */
@@ -113,33 +86,21 @@ export default function EtudiantsClient() {
       e.prenom.toLowerCase().includes(s) ||
       e.email.toLowerCase().includes(s);
 
-    const matchClasse = filterClasse ? e.classe.id === filterClasse.value : true;
-    const matchFiliere = filterFiliere
-      ? e.classe.filiere?.id === filterFiliere.value
-      : true;
-
-    return matchSearch && matchClasse && matchFiliere;
+    return matchSearch
   });
 
   /* =======================
      Actions
   ======================= */
   const handleOpenAddPopup = () => {
-    if (classes.length === 0) {
-      toast.info("Les classes ne sont pas encore chargées");
-      return;
-    }
-    setSelectedClasse(null);
     setPopupOpen(true);
   };
 
   const handleAddEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedClasse) return toast.error("Sélectionnez une classe");
     if (!session?.user?.id) return toast.error("Utilisateur non connecté");
 
     const formData = new FormData(e.currentTarget);
-    formData.append("classeId", selectedClasse.value.toString());
     formData.append("createdById", session.user.id);
 
     try {
@@ -155,21 +116,14 @@ export default function EtudiantsClient() {
 
   const openEditPopup = (e: Etudiant) => {
     setSelectedEtudiant(e);
-    setSelectedClasse({
-      value: e.classe.id,
-      label: `${e.classe.nom}${e.classe.filiere ? ` (${e.classe.filiere.nom})` : ""}`,
-    });
     setEditPopupOpen(true);
   };
 
   const handleUpdateEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedClasse || !selectedEtudiant) return;
     if (!session?.user?.id) return toast.error("Utilisateur non connecté");
 
     const formData = new FormData(e.currentTarget);
-    formData.append("id", selectedEtudiant.id.toString());
-    formData.append("classeId", selectedClasse.value.toString());
     formData.append("createdById", session.user.id);
 
     try {
@@ -228,25 +182,6 @@ export default function EtudiantsClient() {
         </div>
         </div>
 
-
-        <Select
-          options={classeOptions}
-          isClearable
-          placeholder="Classe"
-          className="w-1/4"
-          value={filterClasse}
-          onChange={(v) => setFilterClasse(v)}
-        />
-
-        <Select
-          options={filiereOptions}
-          isClearable
-          placeholder="Filière"
-          className="w-1/4"
-          value={filterFiliere}
-          onChange={(v) => setFilterFiliere(v)}
-        />
-
         <button className="btn btn-primary" onClick={handleOpenAddPopup}>
           Ajouter
         </button>
@@ -267,8 +202,6 @@ export default function EtudiantsClient() {
                 <th>Prénom</th>
                 <th>Email</th>
                 <th>Sexe</th>
-                <th>Classe</th>
-                <th>Filière</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
@@ -280,8 +213,6 @@ export default function EtudiantsClient() {
                   <td>{e.prenom}</td>
                   <td>{e.email}</td>
                   <td>{e.sexe}</td>
-                  <td>{e.classe.nom}</td>
-                  <td>{e.classe.filiere?.nom ?? "-"}</td>
                   <td className="text-center">
                     <div className="flex justify-center gap-2">
                     <button
@@ -322,13 +253,6 @@ export default function EtudiantsClient() {
               <option value="F">Féminin</option>
             </select>
 
-            <Select
-              options={classeOptions}
-              placeholder="Classe"
-              value={selectedClasse}
-              onChange={(v) => setSelectedClasse(v)}
-            />
-
             <div className="modal-action">
               <button type="button" className="btn" onClick={() => setPopupOpen(false)}>
                 Annuler
@@ -361,13 +285,6 @@ export default function EtudiantsClient() {
               <option value="M">Masculin</option>
               <option value="F">Féminin</option>
             </select>
-
-            <Select
-              options={classeOptions}
-              placeholder="Classe"
-              value={selectedClasse}
-              onChange={(v) => setSelectedClasse(v)}
-            />
 
             <div className="modal-action">
               <button type="button" className="btn" onClick={() => setEditPopupOpen(false)}>

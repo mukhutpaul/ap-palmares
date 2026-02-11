@@ -22,10 +22,9 @@ export async function addEtudiant(formData: FormData) {
   const prenom = formData.get("prenom")?.toString();
   const email = formData.get("email")?.toString();
   const sexe = formData.get("sexe")?.toString();
-  const classeId = Number(formData.get("classeId"));
   const createdById = String(formData.get("createdById"));
 
-  if (!nom || !postnom || !prenom || !email || !sexe || !classeId) {
+  if (!nom || !postnom || !prenom || !email || !sexe) {
     throw new Error("Tous les champs sont obligatoires");
   }
 
@@ -36,10 +35,8 @@ export async function addEtudiant(formData: FormData) {
       prenom,
       email,
       sexe,
-      classeId,
       createdById,
     },
-    include: { classe: { include: { filiere: true } } },
   });
 
   revalidatePath("/etudiants");
@@ -65,10 +62,9 @@ export async function updateEtudiant(formData: FormData) {
   const prenom = formData.get("prenom")?.toString();
   const email = formData.get("email")?.toString();
   const sexe = formData.get("sexe")?.toString();
-  const classeId = Number(formData.get("classeId"));
   const createdById = String(formData.get("createdById"));
 
-  if (!id || !nom || !postnom || !prenom || !email || !sexe || !classeId) {
+  if (!id || !nom || !postnom || !prenom || !email || !sexe) {
     throw new Error("Tous les champs sont obligatoires");
   }
 
@@ -80,10 +76,8 @@ export async function updateEtudiant(formData: FormData) {
       prenom,
       email,
       sexe,
-      classeId,
       createdById,
     },
-    include: { classe: { include: { filiere: true } } },
   });
 
   revalidatePath("/etudiants");
@@ -119,8 +113,7 @@ export async function getEtudiantById(id: number) {
   if (!id) throw new Error("ID manquant");
 
   const etudiant = await prisma.etudiant.findUnique({
-    where: { id },
-    include: { classe: { include: { filiere: true } } },
+    where: { id }
   });
 
   if (!etudiant) throw new Error("Étudiant non trouvé");
