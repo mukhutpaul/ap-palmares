@@ -5,8 +5,10 @@ import {
   deleteClasse,
   updateClasse,
   getClasses,
+  getSessions,
+  getEtudiants,
 } from "@/app/actions/classesActions";
-import { getFilieres } from "@/app/actions/filieresActions";
+import { getFilieres } from "@/app/actions/filieresActions";// Nouveau : récupérer les sessions
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import ReactConfetti from "react-confetti";
@@ -18,15 +20,19 @@ import {
   LucideChevronDown,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { Filiere } from "@prisma/client";
-import Select from "react-select";
+import { Filiere, Session } from "@prisma/client";
+import Select, { MultiValue } from "react-select";
 
-interface Classe {
+type Classe = {
   id: number;
   nom: string;
-  section: string;
-  filiere: { id: number; nom: string };
-}
+  filiere: { id: number; nom: string } | null;
+  session: { id: number; nom: string } | null;
+  etudiantId: number | null; // <-- ajouter ici
+  createdById: string;
+  createdAt: Date;
+};
+
 
 export default function ClassesClient() {
   const [popupOpen, setPopupOpen] = useState(false);
@@ -36,13 +42,22 @@ export default function ClassesClient() {
 
   const [classeList, setClasseList] = useState<Classe[]>([]);
   const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]); // Nouveau
   const [search, setSearch] = useState("");
+
   const [selectedClasse, setSelectedClasse] = useState<Classe | null>(null);
   const [selectedFiliere, setSelectedFiliere] =
     useState<{ value: number; label: string } | null>(null);
+  const [selectedSession, setSelectedSession] =
+    useState<{ value: number; label: string } | null>(null); // Nouveau
 
   const [sectionFilter, setSectionFilter] = useState("");
   const [filiereFilter, setFiliereFilter] = useState("");
+  const [sessionFilter, setSessionFilter] = useState(""); // Nouveau
+  const [etudiantOptions, setEtudiantOptions] = useState<{ value: number; label: string }[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<MultiValue<{ value: number; label: string }>>([]);
+
+
   const [isAdding, setIsAdding] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,26 +77,48 @@ export default function ClassesClient() {
   }, []);
 
   useEffect(() => {
+    getEtudiants()
+      .then((etudiants) => {
+        setEtudiantOptions(
+          etudiants.map((e: any) => ({
+            value: e.id,
+            label: e.nom, // ou e.prenom + " " + e.nom si tu veux le nom complet
+          }))
+        );
+      })
+      .catch(() => toast.error("Impossible de charger les étudiants"));
+  }, []);
+
+  useEffect(() => {
     getClasses()
       .then((classesRaw: any[]) =>
         setClasseList(
           classesRaw.map((c) => ({
             id: c.id,
             nom: c.nom,
-            section: c.section,
             filiere: c.filiere
               ? { id: c.filiere.id, nom: c.filiere.nom }
-              : { id: 0, nom: "Inconnue" },
+              : null,
+            session: c.session
+              ? { id: c.session.id, nom: c.session.designation } // map "designation" -> "nom"
+              : null,
+            etudiantId: c.etudiantId ?? null, // si ton modèle Classe contient cet Id
+            createdById: c.createdById,
+            createdAt: new Date(c.createdAt),
           }))
         )
       )
       .catch(() => toast.error("Impossible de charger les classes"));
   }, []);
 
+
   useEffect(() => {
     getFilieres()
       .then(setFilieres)
       .catch(() => toast.error("Impossible de charger les filières"));
+    getSessions()
+      .then(setSessions)
+      .catch(() => toast.error("Impossible de charger les sessions"));
   }, []);
 
   /* ---------------- DATA ---------------- */
@@ -91,23 +128,25 @@ export default function ClassesClient() {
     label: f.nom,
   }));
 
-  const sections = Array.from(
-    new Set(classeList.map((c) => c.section))
-  ).sort();
+  const sessionOptions = sessions.map((s) => ({
+    value: s.id,
+    label: s.designation,
+  }));
+
+
 
   let filteredClasses = classeList.filter(
     (c) =>
-      (c.nom.toLowerCase().includes(search.toLowerCase()) ||
-        c.section.toLowerCase().includes(search.toLowerCase())) &&
-      (sectionFilter === "" || c.section === sectionFilter) &&
-      (filiereFilter === "" || c.filiere.nom === filiereFilter)
+    (c.nom.toLowerCase().includes(search.toLowerCase()) ||
+      (filiereFilter === "" || c.filiere?.nom === filiereFilter) &&
+      (sessionFilter === "" || c.session?.nom === sessionFilter))
   );
 
   if (filiereSortAsc !== null) {
     filteredClasses.sort((a, b) =>
       filiereSortAsc
-        ? a.filiere.nom.localeCompare(b.filiere.nom)
-        : b.filiere.nom.localeCompare(a.filiere.nom)
+        ? (a.filiere?.nom ?? "").localeCompare(b.filiere?.nom ?? "")
+        : (b.filiere?.nom ?? "").localeCompare(a.filiere?.nom ?? "")
     );
   }
 
@@ -127,8 +166,8 @@ export default function ClassesClient() {
 
   const handleAddClasse = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedFiliere) {
-      toast.error("Veuillez sélectionner une filière !");
+    if (!selectedFiliere || !selectedSession) {
+      toast.error("Veuillez sélectionner la filière et la session !");
       return;
     }
 
@@ -136,30 +175,99 @@ export default function ClassesClient() {
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     formData.append("filiereId", selectedFiliere.value.toString());
-
+    formData.append("sessionId", selectedSession.value.toString());
     try {
       const newRaw = await addClasse(formData);
+
       setClasseList((prev) => [
         {
           id: newRaw.id,
           nom: newRaw.nom,
-          section: newRaw.section,
-          filiere: newRaw.filiere,
+          filiere: newRaw.filiere
+            ? { id: newRaw.filiere.id, nom: newRaw.filiere.nom }
+            : null,
+          session: newRaw.session
+            ? { id: newRaw.session.id, nom: newRaw.session.designation }
+            : null,
+          etudiantId: newRaw.etudiantId ?? null,  // si applicable
+          createdById: newRaw.createdById,
+          createdAt: new Date(newRaw.createdAt),
         },
         ...prev,
       ]);
+
       toast.success("Classe ajoutée !");
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2500);
       setPopupOpen(false);
       setSelectedFiliere(null);
-      form.reset();
+      setSelectedSession(null);
+      setSelectedStudents([]);
     } catch {
-      toast.error("Erreur lors de l'ajout");
-    } finally {
-      setIsAdding(false);
+      toast.error("Erreur lors de l'ajout de la classe");
+    }
+
+  };
+
+  const openEditPopup = (classe: Classe) => {
+    setSelectedClasse(classe);
+    setSelectedFiliere(
+      classe.filiere
+        ? { value: classe.filiere.id, label: classe.filiere.nom }
+        : null
+    );
+    setSelectedSession(
+      classe.session
+        ? { value: classe.session.id, label: classe.session.nom }
+        : null
+    );
+    setEditPopupOpen(true);
+  };
+
+  const handleUpdateClasse = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedClasse || !selectedFiliere || !selectedSession || !selectedStudents) {
+      toast.error("Veuillez remplir tous les champs !");
+      return;
+    }
+
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    formData.append("filiereId", selectedFiliere.value.toString());
+    formData.append("sessionId", selectedSession.value.toString());
+    formData.append("etudiantId", selectedStudents.values.toString());
+
+    try {
+      const updatedRaw = await updateClasse(formData);
+
+      const updatedClasse: Classe = {
+        id: updatedRaw.id,
+        nom: updatedRaw.nom,
+        filiere: updatedRaw.filiere
+          ? { id: updatedRaw.filiere.id, nom: updatedRaw.filiere.nom }
+          : null,
+        session: updatedRaw.session
+          ? { id: updatedRaw.session.id, nom: updatedRaw.session.designation }
+          : null,
+        etudiantId: updatedRaw.etudiantId,  // <-- ici on garde juste l'id
+        createdById: updatedRaw.createdById,
+        createdAt: updatedRaw.createdAt,
+      };
+
+      setClasseList((prev) =>
+        prev.map((c) => (c.id === updatedClasse.id ? updatedClasse : c))
+      );
+
+      toast.success("Classe modifiée !");
+      setEditPopupOpen(false);
+      setSelectedClasse(null);
+      setSelectedFiliere(null);
+      setSelectedSession(null);
+      setSelectedStudents([]);
+    } catch {
+      toast.error("Erreur lors de la modification");
     }
   };
+
+
 
   const handleDeleteClasse = async (id: number) => {
     const result = await Swal.fire({
@@ -175,15 +283,6 @@ export default function ClassesClient() {
       setClasseList((prev) => prev.filter((c) => c.id !== id));
       toast.success("Classe supprimée !");
     }
-  };
-
-  const openEditPopup = (classe: Classe) => {
-    setSelectedClasse(classe);
-    setSelectedFiliere({
-      value: classe.filiere.id,
-      label: classe.filiere.nom,
-    });
-    setEditPopupOpen(true);
   };
 
   /* ---------------- UI ---------------- */
@@ -226,23 +325,23 @@ export default function ClassesClient() {
 
           <select
             className="select select-bordered select-sm rounded-xl w-48"
-            value={sectionFilter}
-            onChange={(e) => setSectionFilter(e.target.value)}
-          >
-            <option value="">Toutes sections</option>
-            {sections.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-
-          <select
-            className="select select-bordered select-sm rounded-xl w-48"
             value={filiereFilter}
             onChange={(e) => setFiliereFilter(e.target.value)}
           >
             <option value="">Toutes filières</option>
             {filieres.map((f) => (
               <option key={f.id}>{f.nom}</option>
+            ))}
+          </select>
+
+          <select
+            className="select select-bordered select-sm rounded-xl w-48"
+            value={sessionFilter}
+            onChange={(e) => setSessionFilter(e.target.value)}
+          >
+            <option value="">Toutes sessions</option>
+            {sessions.map((s) => (
+              <option key={s.id}>{s.designation}-{s.dateDebut.toLocaleDateString()}-{s.dateFin.toLocaleDateString()}</option>
             ))}
           </select>
         </div>
@@ -271,11 +370,10 @@ export default function ClassesClient() {
                 >
                   Filière
                   {filiereSortAsc === true && <LucideChevronUp size={14} />}
-                  {filiereSortAsc === false && (
-                    <LucideChevronDown size={14} />
-                  )}
+                  {filiereSortAsc === false && <LucideChevronDown size={14} />}
                 </div>
               </th>
+              <th>Session</th>
               <th className="text-center">Actions</th>
             </tr>
           </thead>
@@ -286,11 +384,8 @@ export default function ClassesClient() {
                 <tr key={c.id}>
                   <td>{c.id}</td>
                   <td>{c.nom}</td>
-                  <td>{c.section}</td>
-
-                  {/* ✅ Correction ici */}
                   <td>{c.filiere?.nom ?? "Inconnue"}</td>
-
+                  <td>{c.session?.nom ?? "Inconnue"}</td>
                   <td className="text-center">
                     <div className="flex justify-center gap-2">
                       <button
@@ -311,13 +406,12 @@ export default function ClassesClient() {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
+                <td colSpan={6} className="text-center py-6 text-gray-500">
                   Aucune classe trouvée
                 </td>
               </tr>
             )}
           </tbody>
-
         </table>
       </div>
 
@@ -345,76 +439,65 @@ export default function ClassesClient() {
       {popupOpen && (
         <dialog className="modal modal-open">
           <form
-            className="modal-box relative rounded-2xl max-w-md flex flex-col gap-6 p-8"
+            className="modal-box rounded-2xl max-w-md flex flex-col gap-6 relative"
             onSubmit={handleAddClasse}
           >
-            {/* Bouton Annuler en croix */}
+            {/* Bouton fermer en X */}
             <button
               type="button"
-              className="absolute top-4 right-4 btn btn-ghost btn-sm rounded-full hover:bg-gray-200"
+              className="btn btn-ghost btn-sm absolute right-3 top-3"
               onClick={() => setPopupOpen(false)}
             >
               ✕
             </button>
 
-            {/* Titre */}
-            <h3 className="text-2xl font-bold text-gray-800">
-              Ajouter une classe
-            </h3>
-            <p className="text-gray-500 text-sm">
-              Remplissez les informations ci-dessous pour créer une nouvelle classe.
-            </p>
+            <h3 className="text-xl font-semibold text-center">Ajouter une classe</h3>
 
-            {/* Nom de la classe */}
             <input
               name="nom"
               className="input input-bordered w-full"
-              placeholder="Nom de la classe"
+              placeholder="Nom"
               required
             />
 
-            {/* Sélection de l'étudiant */}
-            <Select
-              options={etudiantOptions} // tableau d'étudiants { value: id, label: nom }
-              value={selectedEtudiant}
-              onChange={(opt) => setSelectedEtudiant(opt)}
-              placeholder="Sélectionner un étudiant"
-              className="w-full"
+            <input
+              name="section"
+              className="input input-bordered w-full"
+              placeholder="Section"
+              required
             />
 
-            {/* Sélection de la filière */}
             <Select
               options={filiereOptions}
               value={selectedFiliere}
               onChange={(opt) => setSelectedFiliere(opt)}
               placeholder="Sélectionner une filière"
-              className="w-full"
             />
 
-            {/* Sélection de la session */}
             <Select
               options={sessionOptions}
               value={selectedSession}
               onChange={(opt) => setSelectedSession(opt)}
               placeholder="Sélectionner une session"
-              className="w-full"
             />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => setPopupOpen(false)}
-              >
-                Annuler
+            {/* Zone étudiants */}
+            <Select
+              options={etudiantOptions} // Assurez-vous d'avoir un tableau {value, label} pour les étudiants
+              value={selectedStudents}
+              onChange={(opt) => setSelectedStudents(opt)}
+              placeholder="Sélectionner des étudiants"
+              isMulti
+            />
+
+            <div className="modal-action justify-center mt-4">
+              <button type="submit" className="btn btn-accent w-full">
+                Ajouter
               </button>
-              <button className="btn btn-primary">Ajouter</button>
             </div>
           </form>
         </dialog>
       )}
-
 
 
       {/* POPUP MODIFIER */}
@@ -424,9 +507,7 @@ export default function ClassesClient() {
             className="modal-box rounded-2xl max-w-md flex flex-col gap-4"
             onSubmit={handleUpdateClasse}
           >
-            <h3 className="text-xl font-semibold">
-              Modifier la classe
-            </h3>
+            <h3 className="text-xl font-semibold">Modifier la classe</h3>
 
             <input type="hidden" name="id" value={selectedClasse.id} />
 
@@ -436,17 +517,17 @@ export default function ClassesClient() {
               className="input input-bordered w-full"
               required
             />
-            <input
-              name="section"
-              defaultValue={selectedClasse.section}
-              className="input input-bordered w-full"
-              required
-            />
 
             <Select
               options={filiereOptions}
               value={selectedFiliere}
               onChange={(opt) => setSelectedFiliere(opt)}
+            />
+
+            <Select
+              options={sessionOptions}
+              value={selectedSession}
+              onChange={(opt) => setSelectedSession(opt)}
             />
 
             <div className="modal-action">
@@ -457,9 +538,7 @@ export default function ClassesClient() {
               >
                 Annuler
               </button>
-              <button className="btn btn-warning">
-                Modifier
-              </button>
+              <button className="btn btn-warning">Modifier</button>
             </div>
           </form>
         </dialog>
