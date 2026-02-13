@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Select from "react-select";
-import { LucideTrash2 } from "lucide-react";
+import { FileDown, FileUp, LucideTrash2, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas-pro";
@@ -618,7 +618,7 @@ export default function NotesClient() {
       <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
 
       {/* TOOLBAR */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+      {/* <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3 w-full">
           <div className="form-control">
             <label className="label">
@@ -712,17 +712,131 @@ export default function NotesClient() {
             Import Excel
           </label>
         </div>
+      </div> */}
+
+      <div className="bg-base-100 p-8 rounded-3xl shadow-lg mb-8 space-y-8">
+
+        {/* ================= TOP : ACTION BUTTONS ================= */}
+        <div className="flex flex-wrap gap-4 justify-between items-center border-b pb-6">
+
+
+          <div className="flex flex-wrap gap-3">
+
+            <button
+              className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
+              onClick={() => setPopupOpen(true)}
+            >
+              <Plus size={18} />
+              Ajouter une note
+            </button>
+
+            <button
+              className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
+              onClick={handleExportExcel}
+            >
+              <FileDown size={18} />
+              Export Excel
+            </button>
+
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleImportExcel}
+              className="hidden"
+              id="importExcel"
+            />
+
+            <label
+              htmlFor="importExcel"
+              className="btn btn-outline btn-secondary rounded-2xl flex items-center gap-2 px-6 cursor-pointer hover:scale-105 transition"
+            >
+              <FileUp size={18} />
+              Import Excel
+            </label>
+
+          </div>
+        </div>
+
+        {/* ================= BOTTOM : FILTERS ================= */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-base-content/70">
+            Filtres
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            {/* Étudiant */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">Étudiant</span>
+              </label>
+              <Select
+                options={etudiantOptions}
+                isClearable
+                placeholder="Sélectionner"
+                onChange={(opt) => {
+                  setFilterEtudiant(opt);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Année */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">Année</span>
+              </label>
+              <Select
+                options={anneeOptions}
+                isClearable
+                placeholder="Sélectionner"
+                onChange={(opt) => {
+                  setFilterAnnee(opt);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Session */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">Session</span>
+              </label>
+              <Select
+                options={sessionOptions}
+                isClearable
+                placeholder="Sélectionner"
+                onChange={(opt) => {
+                  setFilterSession(opt);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Filière */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">Filière</span>
+              </label>
+              <Select
+                options={filiereOptions}
+                isClearable
+                placeholder="Sélectionner"
+                onChange={(opt) => {
+                  setFilterFiliere(opt);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+          </div>
+        </div>
       </div>
 
+
+
       {/* SEARCH */}
-      <div className="mb-4">
-        <input
-          className="input input-bordered w-full"
-          placeholder="Rechercher une matière..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+
 
       {/* MOYENNE GÉNÉRALE */}
       <div className="mb-4 flex items-center justify-between">
