@@ -5,28 +5,79 @@ import { revalidatePath } from "next/cache";
 import * as XLSX from "xlsx";
 
 // ===============================
-// TYPES
+// CALCUL MOYENNE + MENTION
 // ===============================
-interface NoteData {
-  matiere: string;
-  note: number;
-  etudiantId: number;
-  anneeAcademiqueId: number;
-  createdById: string;
+async function calculateMoyenne(
+  etudiantId: number,
+  anneeAcademiqueId: number,
+  sessionId: number,
+  filiereId: number
+) {
+  const notes = await prisma.note.findMany({
+    where: {
+      etudiantId,
+      anneeAcademiqueId,
+      sessionId,
+      filiereId,
+    },
+  });
+
+  if (!notes.length) return { moyenne: 0, pourcentage: 0, mention: "Ajourné" };
+
+  const total = notes.reduce((sum, n) => sum + n.note, 0);
+  const max = notes.length * 20;
+  const pourcentage = (total / max) * 100;
+
+  let mention = "Ajourné";
+  if (pourcentage >= 80) mention = "Grande Distinction";
+  else if (pourcentage >= 70) mention = "Distinction";
+  else if (pourcentage >= 50) mention = "Satisfaction";
+
+  return {
+    moyenne: total / notes.length,
+    pourcentage,
+    mention,
+  };
 }
 
 // ===============================
-// Ajouter une note
+// ADD NOTE
 // ===============================
 export async function addNote(formData: FormData) {
   const matiere = formData.get("matiere")?.toString();
   const note = Number(formData.get("note"));
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
+  const sessionId = Number(formData.get("sessionId"));
+  const filiereId = Number(formData.get("filiereId"));
   const createdById = String(formData.get("createdById"));
 
-  if (!matiere || !note || !etudiantId || !anneeAcademiqueId)
+  if (
+    !matiere ||
+    isNaN(note) ||
+    !etudiantId ||
+    !anneeAcademiqueId ||
+    !sessionId ||
+    !filiereId
+  )
     throw new Error("Tous les champs sont obligatoires");
+
+  // 🔥 Empêcher doublon
+  const existing = await prisma.note.findFirst({
+    where: {
+      matiere,
+      etudiantId,
+      anneeAcademiqueId,
+      sessionId,
+      filiereId,
+    },
+  });
+
+  if (existing) {
+    throw new Error(
+      "Une note existe déjà pour cette matière, session et filière."
+    );
+  }
 
   const newNote = await prisma.note.create({
     data: {
@@ -34,20 +85,27 @@ export async function addNote(formData: FormData) {
       note,
       etudiantId,
       anneeAcademiqueId,
+      sessionId,
+      filiereId,
       createdById,
     },
     include: {
       etudiant: true,
       anneeAcademique: true,
+      session: true,
+      filiere: true,
     },
   });
+
+  // 🔥 Calcul à la volée (sans update en base)
+  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
 
   revalidatePath("/notes");
   return newNote;
 }
 
 // ===============================
-// Modifier une note
+// UPDATE NOTE
 // ===============================
 export async function updateNote(formData: FormData) {
   const id = Number(formData.get("id"));
@@ -55,180 +113,159 @@ export async function updateNote(formData: FormData) {
   const note = Number(formData.get("note"));
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
+  const sessionId = Number(formData.get("sessionId"));
+  const filiereId = Number(formData.get("filiereId"));
   const createdById = String(formData.get("createdById"));
 
-  if (!id || !matiere || !note || !etudiantId || !anneeAcademiqueId)
+  if (
+    !id ||
+    !matiere ||
+    isNaN(note) ||
+    !etudiantId ||
+    !anneeAcademiqueId ||
+    !sessionId ||
+    !filiereId
+  )
     throw new Error("Tous les champs sont obligatoires");
 
-  const updatedNote = await prisma.note.update({
-    where: { id },
-    data: { matiere, note, etudiantId, anneeAcademiqueId, createdById },
-    include: {
-      etudiant: true,
-      anneeAcademique: true,
+  // 🔥 Empêcher doublon (sauf la note actuelle)
+  const existing = await prisma.note.findFirst({
+    where: {
+      id: { not: id },
+      matiere,
+      etudiantId,
+      anneeAcademiqueId,
+      sessionId,
+      filiereId,
     },
   });
 
+  if (existing) {
+    throw new Error(
+      "Une note existe déjà pour cette matière, session et filière."
+    );
+  }
+
+  const updated = await prisma.note.update({
+    where: { id },
+    data: {
+      matiere,
+      note,
+      etudiantId,
+      anneeAcademiqueId,
+      sessionId,
+      filiereId,
+      createdById,
+    },
+    include: {
+      etudiant: true,
+      anneeAcademique: true,
+      session: true,
+      filiere: true,
+    },
+  });
+
+  // 🔥 Calcul à la volée (sans update en base)
+  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+
   revalidatePath("/notes");
-  return updatedNote;
+  return updated;
 }
 
 // ===============================
-// Supprimer une note
+// DELETE
 // ===============================
 export async function deleteNote(id: number) {
-  if (!id) throw new Error("ID manquant pour la suppression");
   await prisma.note.delete({ where: { id } });
   revalidatePath("/notes");
-  return { message: "Note supprimée avec succès" };
+  return { message: "Supprimé" };
 }
 
 // ===============================
-// Récupérer toutes les notes
+// GET NOTES
 // ===============================
 export async function getNotes() {
-  const notes = await prisma.note.findMany({
-    include: { etudiant: true, anneeAcademique: true },
+  return prisma.note.findMany({
+    include: {
+      etudiant: true,
+      anneeAcademique: true,
+      session: true,
+      filiere: true,
+    },
     orderBy: { id: "desc" },
   });
-  return notes;
 }
 
 // ===============================
-// Récupérer les étudiants et années
+// GET RELEVE
 // ===============================
-export async function getEtudiants() {
-  return prisma.etudiant.findMany({ orderBy: { nom: "asc" } });
-}
-
-/* export async function getAnneesAcademiques() {
-  return prisma.anneeAcademique.findMany({ orderBy: { annee: "desc" } });
-} */
-// app/actions/notesActions.ts
-
-
-export async function getAnneesAcademiques() {
-  const annees = await prisma.anneeAcademique.findMany({
-    orderBy: { annee: "desc" },
+export async function getReleve(
+  etudiantId: number,
+  anneeAcademiqueId: number,
+  sessionId: number,
+  filiereId: number
+) {
+  const notes = await prisma.note.findMany({
+    where: {
+      etudiantId,
+      anneeAcademiqueId,
+      sessionId,
+      filiereId,
+    },
+    include: {
+      etudiant: true,
+      anneeAcademique: true,
+      session: true,
+      filiere: true,
+    },
+    orderBy: { matiere: "asc" },
   });
-  return annees.map((a) => ({
-    id: a.id,
-    annee: a.annee,
-    active: a.active,
-  }));
-}
 
-
-// ===============================
-// Récupérer le relevé d'un étudiant
-// ===============================
-// export async function getReleve(etudiantId: number, anneeAcademiqueId?: number) {
-//   if (!etudiantId) throw new Error("ID de l'étudiant manquant");
-
-//   // Construction de la condition
-//   const where: any = { etudiantId };
-//   if (anneeAcademiqueId) where.anneeAcademiqueId = anneeAcademiqueId;
-
-//   const releve = await prisma.note.findMany({
-//     where,
-//     include: {
-//       etudiant: true,
-//       anneeAcademique: true,
-//     },
-//     orderBy: { matiere: "asc" },
-//   });
-
-//   return releve;
-// }
-
-
-interface Etudiant { id: number; nom: string; postnom: string; prenom: string; }
-interface Annee { id: number; annee: string; }
-interface Note { id: number; matiere: string; note: number; etudiant: Etudiant; anneeAcademique: Annee; }
-
-export async function getReleve(etudiantId: number, anneeId: number): Promise<Note[]> {
-  const notes = await getNotes();
-
-  // filtre les notes correctement
-  const releve = notes.filter(
-    (n) => n.etudiant?.id === etudiantId && n.anneeAcademique?.id === anneeId
+  const stats = await calculateMoyenne(
+    etudiantId,
+    anneeAcademiqueId,
+    sessionId,
+    filiereId
   );
 
-  // debug : log côté serveur
-  console.log("Relevé récupéré :", releve);
-
-  return releve;
+  return {
+    notes,
+    stats,
+  };
 }
 
-/* 
+// ===============================
+// GET ETUDIANTS
+// ===============================
+export async function getEtudiants() {
+  return prisma.etudiant.findMany({
+    orderBy: { nom: "asc" },
+  });
+}
+
+// ===============================
+// GET SESSIONS
+// ===============================
+export async function getSessions() {
+  return prisma.session.findMany({
+    orderBy: { dateDebut: "desc" },
+  });
+}
+
+// ===============================
+// GET FILIERES
+// ===============================
+export async function getFilieres() {
+  return prisma.filiere.findMany({
+    orderBy: { nom: "asc" },
+  });
+}
+
+// ===============================
+// GET ANNEES ACADEMIQUES
+// ===============================
 export async function getAnneesAcademiques() {
-  const annees = await prisma.anneeAcademique.findMany({
+  return prisma.anneeAcademique.findMany({
     orderBy: { annee: "desc" },
   });
-  return annees.map((a) => ({
-    id: a.id,
-    annee: a.annee,
-    active: a.active,
-  }));
-} */
-
-
-export async function importNotesFromExcel(file: File) {
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows: any[] = XLSX.utils.sheet_to_json(sheet);
-
-  for (const row of rows) {
-    const { Etudiant, Matiere, Note, Annee, createdById } = row;
-
-    // Parse Etudiant en nom, postnom, prenom
-    // Suppose que Etudiant = "Nom Postnom Prenom" ou "Nom Postnom Prenom K" (dernier mot en trop)
-    const parts = Etudiant.trim().split(" ");
-    const nom = parts[0];
-    const postnom = parts[1];
-    // Le prénom peut être plusieurs mots, on prend tout après les 2 premiers mots
-    const prenom = parts.slice(2).join(" ");
-
-    if (!nom || !postnom || !prenom) {
-      console.warn(`Impossible de parser Etudiant: "${Etudiant}"`);
-      continue; // passe cette ligne
-    }
-
-    // Trouver étudiant
-    const etudiant = await prisma.etudiant.findFirst({
-      where: { nom, postnom, prenom },
-    });
-    if (!etudiant) {
-      console.warn(`Étudiant non trouvé: ${Etudiant}`);
-      continue;
-    }
-
-    // Trouver année académique
-    const annee = await prisma.anneeAcademique.findFirst({
-      where: { annee: Annee },
-    });
-    if (!annee) {
-      console.warn(`Année académique non trouvée: ${Annee}`);
-      continue;
-    }
-
-    // Créer la note
-    try {
-      await prisma.note.create({
-        data: {
-          matiere: Matiere,
-          note: Number(Note),
-          etudiantId: etudiant.id,
-          anneeAcademiqueId: annee.id,
-          createdById: createdById,
-        },
-      });
-    } catch (e) {
-      console.error("Erreur création note:", e);
-    }
-  }
 }
-
-
-

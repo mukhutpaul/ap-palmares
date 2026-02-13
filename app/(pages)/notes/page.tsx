@@ -4,779 +4,638 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Select from "react-select";
-import { LucideEdit2, LucideTrash2, LucidePrinter } from "lucide-react";
+import { LucideTrash2, LucideSearch } from "lucide-react";
 import { useSession } from "next-auth/react";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import html2canvas from 'html2canvas-pro';
+import html2canvas from "html2canvas-pro";
 
 import {
   addNote,
   updateNote,
   deleteNote,
   getNotes,
+  getReleve,
   getEtudiants,
   getAnneesAcademiques,
-  getReleve,
-  importNotesFromExcel,
-
+  getSessions,
+  getFilieres,
 } from "@/app/actions/notesActions";
 
-// ===============================
-// TYPES
-// ===============================
-interface Etudiant { id: number; nom: string; postnom: string; prenom: string; }
-interface Annee { id: number; annee: string; }
-interface Note { id: number; matiere: string; note: number; etudiant: Etudiant; anneeAcademique: Annee; }
-interface SelectOption { value: number; label: string; }
+interface SelectOption {
+  value: number;
+  label: string;
+}
 
-// ===============================
-// COMPONENT
-// ===============================
 export default function NotesClient() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
-  const [annees, setAnnees] = useState<Annee[]>([]);
+  const { data: session } = useSession();
 
-  const [popupOpen, setPopupOpen] = useState(false);
-  const [editPopupOpen, setEditPopupOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-
-  const [selectedEtudiant, setSelectedEtudiant] = useState<SelectOption | null>(null);
-  const [selectedAnnee, setSelectedAnnee] = useState<SelectOption | null>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [etudiants, setEtudiants] = useState<any[]>([]);
+  const [annees, setAnnees] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [filieres, setFilieres] = useState<any[]>([]);
 
   const [filterEtudiant, setFilterEtudiant] = useState<SelectOption | null>(null);
   const [filterAnnee, setFilterAnnee] = useState<SelectOption | null>(null);
+  const [filterSession, setFilterSession] = useState<SelectOption | null>(null);
+  const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
 
-  const { data: session } = useSession();
+  const [selectedNote, setSelectedNote] = useState<any>(null);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [editPopupOpen, setEditPopupOpen] = useState(false);
+
+  const [selectedEtudiant, setSelectedEtudiant] = useState<SelectOption | null>(null);
+  const [selectedAnnee, setSelectedAnnee] = useState<SelectOption | null>(null);
+  const [selectedSession, setSelectedSession] = useState<SelectOption | null>(null);
+  const [selectedFiliere, setSelectedFiliere] = useState<SelectOption | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const tableRef = useRef<HTMLTableElement>(null);
 
-  // =======================
-  // Chargements initiaux
-  // =======================
+  // =====================
+  // LOAD DATA
+  // =====================
   useEffect(() => {
-    getNotes().then(setNotes).catch(() => toast.error("Impossible de charger les notes"));
-    getEtudiants().then(setEtudiants).catch(() => toast.error("Erreur chargement étudiants"));
-    getAnneesAcademiques().then(setAnnees).catch(() => toast.error("Erreur chargement années"));
+    async function load() {
+      setNotes(await getNotes());
+      setEtudiants(await getEtudiants());
+      setAnnees(await getAnneesAcademiques());
+      setSessions(await getSessions());
+      setFilieres(await getFilieres());
+    }
+    load();
   }, []);
 
-  // =======================
-  // Options Select
-  // =======================
-  const etudiantOptions = etudiants.map((e) => ({
+  // =====================
+  // OPTIONS
+  // =====================
+  const etudiantOptions = etudiants.map(e => ({
     value: e.id,
     label: `${e.nom} ${e.postnom} ${e.prenom}`,
   }));
 
-  const anneeOptions = annees.map((a) => ({ value: a.id, label: a.annee }));
+  const anneeOptions = annees.map(a => ({
+    value: a.id,
+    label: a.annee,
+  }));
 
-  // =======================
-  // Filtrage
-  // =======================
-  const filteredNotes = notes.filter((n) => {
-    const matchEtudiant = filterEtudiant ? n.etudiant.id === filterEtudiant.value : true;
-    const matchAnnee = filterAnnee ? n.anneeAcademique.id === filterAnnee.value : true;
-    return matchEtudiant && matchAnnee;
-  });
+  const formatDate = (d: string) => {
+    const date = new Date(d);
+    return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}/${date.getFullYear()}`;
+  };
 
-  // =======================
-  // Actions
-  // =======================
-  const handleOpenAddPopup = () => { setSelectedEtudiant(null); setSelectedAnnee(null); setPopupOpen(true); };
+  const sessionOptions = sessions.map((s) => ({
+    value: s.id,
+    label:
+      s.dateDebut && s.dateFin
+        ? `${formatDate(s.dateDebut)} - ${formatDate(s.dateFin)}`
+        : `Session ${s.id}`,
+  }));
 
-  const handleAddNote = async (e: React.FormEvent<HTMLFormElement>) => {
+
+  const filiereOptions = filieres.map(f => ({
+    value: f.id,
+    label: f.nom,
+  }));
+
+  // =====================
+  // FILTER
+  // =====================
+  const filteredNotes = notes
+    .filter(n =>
+      (!filterEtudiant || n.etudiant.id === filterEtudiant.value) &&
+      (!filterAnnee || n.anneeAcademique.id === filterAnnee.value) &&
+      (!filterSession || n.session?.id === filterSession.value) &&
+      (!filterFiliere || n.filiere?.id === filterFiliere.value)
+    )
+    .filter(n =>
+      !search ||
+      n.matiere.toLowerCase().includes(search.toLowerCase())
+    );
+
+  // pagination
+  const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
+  const paginatedNotes = filteredNotes.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // =====================
+  // ADD NOTE
+  // =====================
+  const handleAddNote = async (e: any) => {
     e.preventDefault();
-    if (!selectedEtudiant || !selectedAnnee || !session?.user?.id) return toast.error("Tous les champs sont obligatoires");
+    if (!session?.user?.id) return;
+
+    const matiere = e.currentTarget.matiere.value.trim();
+
+    // anti doublon (matiere/session/filiere)
+    const already = notes.find(n =>
+      n.matiere.toLowerCase() === matiere.toLowerCase() &&
+      n.session?.id === selectedSession?.value &&
+      n.filiere?.id === selectedFiliere?.value
+    );
+    if (already) {
+      return toast.error("Doublon détecté (matière + session + filière)");
+    }
 
     const formData = new FormData(e.currentTarget);
-    formData.append("etudiantId", selectedEtudiant.value.toString());
-    formData.append("anneeAcademiqueId", selectedAnnee.value.toString());
+    formData.append("etudiantId", String(selectedEtudiant?.value));
+    formData.append("anneeAcademiqueId", String(selectedAnnee?.value));
+    formData.append("sessionId", String(selectedSession?.value));
+    formData.append("filiereId", String(selectedFiliere?.value));
     formData.append("createdById", session.user.id);
 
     try {
       const created = await addNote(formData);
-      setNotes((prev) => [created, ...prev]);
-      setPopupOpen(false);
+      setNotes(prev => [created, ...prev]);
       toast.success("Note ajoutée");
-    } catch {
-      toast.error("Erreur ajout note");
+      setPopupOpen(false);
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
-  const handleEditNote = (note: Note) => {
+  // =====================
+  // EDIT NOTE
+  // =====================
+  const openEditPopup = (note: any) => {
     setSelectedNote(note);
-    setSelectedEtudiant({ value: note.etudiant.id, label: `${note.etudiant.nom} ${note.etudiant.postnom} ${note.etudiant.prenom}` });
-    setSelectedAnnee({ value: note.anneeAcademique.id, label: note.anneeAcademique.annee });
+
+    setSelectedEtudiant({
+      value: note.etudiant.id,
+      label: `${note.etudiant.nom} ${note.etudiant.postnom} ${note.etudiant.prenom}`,
+    });
+
+    setSelectedAnnee({
+      value: note.anneeAcademique.id,
+      label: note.anneeAcademique.annee,
+    });
+
+    setSelectedSession({
+      value: note.session?.id,
+      label: note.session?.designation ?? note.session?.nom,
+    });
+
+    setSelectedFiliere({
+      value: note.filiere?.id,
+      label: note.filiere?.nom,
+    });
+
     setEditPopupOpen(true);
   };
 
-  // =======================
-  // Import Excel
-  // =======================
-  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
-    const file = e.target.files[0];
-    if (!session?.user?.id) return toast.error("Utilisateur non connecté");
-
-    try {
-      await importNotesFromExcel(file);
-      // Recharge les notes après import
-      const updatedNotes = await getNotes();
-      setNotes(updatedNotes);
-      toast.success("Importation réussie !");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur lors de l'importation des notes");
-    } finally {
-      // Reset input pour pouvoir réimporter le même fichier si nécessaire
-      e.target.value = "";
-    }
-  };
-
-  const BREVE_CODE_OFFICIEL = "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
-
-  const handleUpdateNote = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEditNote = async (e: any) => {
     e.preventDefault();
-    if (!selectedNote || !selectedEtudiant || !selectedAnnee || !session?.user?.id) return;
+    if (!selectedNote) return;
+
+    const matiere = e.currentTarget.matiere.value.trim();
+
+    // anti doublon (matiere/session/filiere) sauf la note actuelle
+    const already = notes.find(n =>
+      n.id !== selectedNote.id &&
+      n.matiere.toLowerCase() === matiere.toLowerCase() &&
+      n.session?.id === selectedSession?.value &&
+      n.filiere?.id === selectedFiliere?.value
+    );
+    if (already) {
+      return toast.error("Doublon détecté (matière + session + filière)");
+    }
 
     const formData = new FormData(e.currentTarget);
-    formData.append("id", selectedNote.id.toString());
-    formData.append("etudiantId", selectedEtudiant.value.toString());
-    formData.append("anneeAcademiqueId", selectedAnnee.value.toString());
-    formData.append("createdById", session.user.id);
+    formData.append("id", String(selectedNote.id));
+    formData.append("etudiantId", String(selectedEtudiant?.value));
+    formData.append("anneeAcademiqueId", String(selectedAnnee?.value));
+    formData.append("sessionId", String(selectedSession?.value));
+    formData.append("filiereId", String(selectedFiliere?.value));
 
     try {
       const updated = await updateNote(formData);
-      setNotes((prev) => prev.map((n) => n.id === updated.id ? updated : n));
-      setEditPopupOpen(false);
+      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
       toast.success("Note modifiée");
-    } catch {
-      toast.error("Erreur modification note");
+      setEditPopupOpen(false);
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
+  // =====================
+  // DELETE
+  // =====================
   const handleDeleteNote = async (id: number) => {
-    const res = await Swal.fire({ title: "Supprimer cette note ?", icon: "warning", showCancelButton: true, confirmButtonText: "Oui", cancelButtonText: "Non" });
+    const res = await Swal.fire({
+      title: "Supprimer ?",
+      icon: "warning",
+      showCancelButton: true,
+    });
     if (!res.isConfirmed) return;
 
-    try {
-      await deleteNote(id);
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-      toast.success("Note supprimée");
-    } catch {
-      toast.error("Erreur suppression note");
-    }
+    await deleteNote(id);
+    setNotes(prev => prev.filter(n => n.id !== id));
+    toast.success("Supprimé");
   };
 
-  const downloadHtmlAsPdf = async (
-    html: string,
-    filename: string,
-    landscape = false
-  ) => {
+  // =====================
+  // DOWNLOAD BREVET
+  // =====================
+  const handleDownloadBrevet = async (note: any) => {
+    if (!note?.etudiant?.id || !note?.anneeAcademique?.id || !note?.session?.id || !note?.filiere?.id) {
+      return toast.error("Impossible de générer le brevet (données manquantes)");
+    }
+
+    const { notes: releveNotes, stats } = await getReleve(
+      note.etudiant.id,
+      note.anneeAcademique.id,
+      note.session.id,
+      note.filiere.id
+    );
+
+    if (!releveNotes?.length) return toast.info("Aucune note");
+
+    const firstNote = releveNotes[0];
+    if (!firstNote) return toast.error("Aucune note disponible");
+
+    if (!firstNote.etudiant) {
+      return toast.error("Étudiant non défini pour cette note.");
+    }
+
+    if (!firstNote.session) {
+      return toast.error("Session non définie.");
+    }
+
+    if (!firstNote.filiere) {
+      return toast.error("Filière non définie.");
+    }
+
+    const etudiant = firstNote.etudiant;
+    const sessionData = firstNote.session;
+    const filiere = firstNote.filiere;
+
+    const dateDebut = new Date(sessionData.dateDebut).toLocaleDateString();
+    const dateFin = new Date(sessionData.dateFin).toLocaleDateString();
+
+    const html = `
+    <div style="width:210mm;height:297mm;padding:20mm;font-family:'Times New Roman';">
+      <h2 style="text-align:center;">CENTRE DE FORMATION PROFESSIONNELLE</h2>
+      <h3 style="text-align:center;">« LEON ACADEMY »</h3>
+
+      <h3 style="text-align:center;background:#c9a64d;padding:10px;">
+        ATTESTATION TENANT LIEU DE CERTIFICAT
+      </h3>
+
+      <p>
+      Nous certifions que :
+      </p>
+
+      <h2 style="text-align:center;color:#1f5e3b;">
+        ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}
+      </h2>
+
+      <p>
+      a suivi du <strong>${dateDebut}</strong> au <strong>${dateFin}</strong>
+      une formation en <strong>${filiere.nom.toUpperCase()}</strong>,
+      comprenant <strong>${filiere.nombreHt} heures de théorie</strong> et
+      <strong>${filiere.nombreHp} heures de pratique</strong>,
+      ${filiere.description}.
+      </p>
+
+      <p>
+      Mention : <strong>${stats.mention}</strong> (${stats.pourcentage.toFixed(0)}%)
+      </p>
+
+      <p style="margin-top:40px;text-align:right;">
+      Fait le ${new Date().toLocaleDateString()}
+      </p>
+    </div>
+    `;
+
     const container = document.createElement("div");
     container.innerHTML = html;
-    container.style.position = "fixed";
-    container.style.left = "-9999px";
     document.body.appendChild(container);
 
-    const canvas = await html2canvas(container, { scale: 2 });
+    const canvas = await html2canvas(container, { scale: 3 });
     const imgData = canvas.toDataURL("image/png");
 
-    const pdf = new jsPDF({
-      orientation: landscape ? "landscape" : "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(filename);
+    const pdf = new jsPDF("p", "mm", "a4");
+    pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+    pdf.save("brevet.pdf");
 
     document.body.removeChild(container);
   };
 
-  const handleDownloadBrevet = async (etudiantId: number, anneeId: number) => {
-    try {
-      const notes = await getReleve(etudiantId, anneeId);
-      if (!notes.length) {
-        return toast.info("Aucune note pour cet étudiant et cette année");
-      }
-
-      const etudiant = notes[0].etudiant;
-      const annee = notes[0].anneeAcademique.annee;
-
-      const total = notes.reduce((sum, n) => sum + n.note, 0);
-      const max = notes.length * 20;
-      const pourcentage = (total / max) * 100;
-
-      let mention = "";
-      if (pourcentage >= 80) mention = "Grande Distinction";
-      else if (pourcentage >= 70) mention = "Distinction";
-      else if (pourcentage >= 50) mention = "Satisfaction";
-      else mention = "Ajourné";
-
-const brevetHtml = `
-<div style="
-  width:210mm;
-  height:297mm;
-  padding:15mm 15mm;
-  font-family:'Times New Roman', serif;
-  background:#f2f2f2;
-  position:relative;
-  box-sizing:border-box;
-  overflow:hidden;
-">
-
-<!-- Filigrane logo -->
-<img
-  src="/format1.png"
-  alt="Filigrane"
-  style="
-    position:absolute;
-    top:30%;
-    left:15%;
-    transform:translate(-50%, -50%);
-    width:300px;
-    height: 520px;
-    opacity:20;
-    z-index:0;
-    pointer-events:none;
-  "
-/>
-
-  
-  <!-- Contenu principal -->
-  <div style="
-    position:relative;
-    z-index:1;
-    height:100%;
-    padding-left:10mm; /* Texte reculé légèrement moins, proche du bord */
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-  ">
-
-    <!-- En-tête -->
-    <div style="text-align:center;">
-      <h2 style="margin:0;font-size:20px;">CENTRE DE FORMATION PROFESSIONNELLE ET METIERS</h2>
-      <p style="margin:1px 0;font-weight:bold;font-size:18px;">« LEON ACADEMY »</p>
-      <img src="/logo-leon.png" style="width:100px;margin:5px auto;" />
-      <p style="font-size:11px;font-weight:bold;margin:2px 0;">${BREVE_CODE_OFFICIEL}</p>
-    </div>
-
-    <!-- Titre -->
-    <div style="
-      background:#c9a64d; 
-      padding:6px 10px; 
-      margin:10px auto; 
-      text-align:center; 
-      font-weight:bold; 
-      font-size:14px; 
-      width:fit-content; 
-      letter-spacing:0.3px;
-    ">
-      ATTESTATION TENANT LIEU DE CERTIFICAT<br/>D’APTITUDE PROFESSIONNELLE
-    </div>
-
-    <!-- Texte principal -->
-    <div style="font-size:12px; line-height:1.4; flex-grow:1;">
-      <p style="text-align:justify;margin:5px 0;">
-        Nous soussignons la Direction du centre de formation Professionnelle et Métiers <strong>« Léon Academy »</strong>, certifions que :
-      </p>
-
-      <p style="text-align:center;font-size:15px;font-weight:bold;color:#1f5e3b;margin:8px 0;">
-        ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
-      </p>
-
-      <p style="text-align:justify;margin:5px 0;">
-        a suivi, du <strong>19 mai 2025</strong> au <strong>19 août 2025</strong>, une formation professionnelle en <strong>CAISSE</strong>, comprenant <strong>60 heures de théorie</strong> et <strong>180 heures de pratique</strong>, axée sur la gestion de la caisse et des transactions financières, le service et la relation clientèle, les connaissances des produits et le merchandising, la sécurité et les procédures, ainsi que l’utilisation des outils informatiques.
-      </p>
-
-      <p style="text-align:justify;margin:5px 0;">
-        Elle a satisfait aux épreuves d’évaluation avec la mention <strong style="color:#1f5e3b;">BIEN</strong>, soit <strong>${pourcentage.toFixed(0)} %</strong>.
-      </p>
-
-      <p style="text-align:justify;margin:5px 0;">
-        En foi de quoi, nous lui délivrons la présente attestation pour servir et valoir ce que de droit.
-      </p>
-
-        <!-- Pied de page -->
-    <div style="text-align:right;font-size:12px;margin-top:12px;">
-      <div>Fait à Kinshasa, le ${new Date().toLocaleDateString()}</div>
-      
-      <div style="margin-top:15px;">
-        <div style="margin-top:3px;border-top:1px solid #000;width:140px;margin-left:auto;"></div>
-        <strong style="display:block;margin-left:auto;width:140px;text-align:center;">Le Directeur</strong>
-      </div>
-    </div>
-    </div>
-
-  
-
-  </div>
-</div>
-`;
-
-      await downloadHtmlAsPdf(brevetHtml, "brevet-reussite.pdf", true);
-
-    } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors du téléchargement du brevet");
-    }
-  };
-
-
-
-  // =======================
-  // Export Excel
-  // =======================
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredNotes.map(n => ({
-      Etudiant: `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}`,
-      Matiere: n.matiere,
-      Note: n.note,
-      Annee: n.anneeAcademique.annee,
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Notes");
-    XLSX.writeFile(wb, "notes.xlsx");
-  };
-
-  // =======================
-  // PDF relevé sans colonnes Étudiant et Année
-  // =======================
-  const handlePrintReleve = async (etudiantId: number, anneeId: number) => {
-    try {
-      const releveNotes = await getReleve(etudiantId, anneeId);
-      if (!releveNotes.length) return toast.info("Aucune note pour cet étudiant et cette année");
-
-      const etudiant = releveNotes[0].etudiant;
-      const annee = releveNotes[0].anneeAcademique.annee;
-
-      // Calcul du pourcentage
-      const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
-      const maxTotal = releveNotes.length * 20; // chaque note sur 20
-      const pourcentage = (totalObt / maxTotal) * 100;
-
-      // Détermination mention selon ton barème
-      let mention = "";
-      if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";       // Grande Distinction
-      else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";   // Distinction
-      else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";   // Satisfaction
-      else mention = "Ajourné";
-
-      // HTML du relevé avec design universitaire
-      const tableHtml = `
-      <div style="font-family: 'Arial', sans-serif; width: 800px; margin: 0 auto; padding: 30px; box-sizing: border-box; border: 2px solid #004080; border-radius: 10px;">
-        <h1 style="text-align:center; color:#004080; margin-bottom: 10px;">Léon Académie</h1>
-        <h2 style="text-align:center; color:#004080; margin-bottom: 30px;">Relevé de Notes</h2>
-
-        <p><strong>Étudiant :</strong> ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}</p>
-        <p><strong>Année académique :</strong> ${annee}</p>
-
-        <table cellspacing="0" cellpadding="10" style="width:100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; border-radius: 5px; overflow: hidden;">
-          <thead style="background-color:#004080; color:white;">
-            <tr>
-              <th style="width:70%; text-align:left;">Matière</th>
-              <th style="width:30%; text-align:center;">Note / 20</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${releveNotes.map((n, i) => `
-              <tr style="background-color:${i % 2 === 0 ? '#f0f8ff' : '#e6f2ff'}">
-                <td style="word-wrap: break-word;">${n.matiere}</td>
-                <td style="text-align:center;">${n.note.toFixed(2)}</td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
-
-        <p style="margin-top: 20px; font-size: 16px;"><strong>Moyenne :</strong> ${pourcentage.toFixed(2)} %</p>
-        <p style="font-size: 16px;"><strong>Mention :</strong> ${mention}</p>
-
-        <p style="text-align:center; font-size: 10px; color: gray; margin-top: 30px;">
-          Léon Académie - ${new Date().toLocaleDateString()}
-        </p>
-      </div>
-    `;
-
-      // Fenêtre d'aperçu
-      const printWindow = window.open("", "_blank", "width=900,height=700");
-      if (!printWindow) return toast.error("Impossible d'ouvrir la fenêtre d'aperçu");
-
-      printWindow.document.write(`
-      <html>
-        <head>
-          <title>Relevé de Notes</title>
-          <style>
-            @media print {
-              body { margin: 0; }
-              table { page-break-inside: auto; }
-              tr { page-break-inside: avoid; page-break-after: auto; }
-            }
-          </style>
-        </head>
-        <body>${tableHtml}</body>
-      </html>
-    `);
-      printWindow.document.close();
-
-      // Imprimer après aperçu
-      printWindow.focus();
-      printWindow.print();
-
-    } catch (err) {
-      console.error("Erreur génération PDF :", err);
-      toast.error("Impossible de générer le relevé");
-    }
-  };
-
-
-
-  const handleDownloadReleve = async (etudiantId: number, anneeId: number) => {
-    try {
-      const releveNotes = await getReleve(etudiantId, anneeId);
-      if (!releveNotes.length) {
-        return toast.info("Aucune note pour cet étudiant et cette année");
-      }
-
-      const etudiant = releveNotes[0].etudiant;
-      const annee = releveNotes[0].anneeAcademique.annee;
-
-      const totalObt = releveNotes.reduce((sum, n) => sum + n.note, 0);
-      const maxTotal = releveNotes.length * 20;
-      const pourcentage = (totalObt / maxTotal) * 100;
-
-      let mention = "";
-      if (pourcentage >= 80 && pourcentage <= 99) mention = "GD";
-      else if (pourcentage >= 70 && pourcentage <= 79) mention = "D";
-      else if (pourcentage >= 50 && pourcentage <= 69) mention = "S";
-      else mention = "Ajourné";
-
-      // Création d'un container parent avec padding en haut
-      const container = document.createElement("div");
-      container.style.width = "100%";
-      container.style.paddingTop = "80px"; // <-- espace en haut plus grand
-      container.style.boxSizing = "border-box"; // important pour le padding
-      container.style.backgroundColor = "white"; // éviter fonds transparents
-
-      // Contenu du relevé
-      const releveHTML = `
-      <div style="
-        font-family: Arial, sans-serif;
-        width: 96%;
-        margin: 0 auto; /* centrage horizontal */
-        padding: 30px;
-        border: 5px solid #004080;
-        border-radius: 10px;
-        font-size: 18pt;
-        line-height: 1.6;
-      ">
-        <h1 style="text-align:center; color:#004080; margin-bottom: 20px; font-size: 32pt;">Léon Académie</h1>
-        <h2 style="text-align:center; color:#004080; margin-bottom: 25px; font-size: 24pt;">Relevé de Notes</h2>
-
-        <p style="font-size: 18pt;"><strong>Étudiant :</strong> ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}</p>
-        <p style="font-size: 18pt;"><strong>Année académique :</strong> ${annee}</p>
-
-        <table cellspacing="0" cellpadding="12" style="width:100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; font-size: 18pt;">
-          <thead style="background-color:#004080; color:white;">
-            <tr>
-              <th style="width:70%; text-align:left;">Matière</th>
-              <th style="width:30%; text-align:center;">Note / 20</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${releveNotes.map((n, i) => `
-              <tr style="background-color:${i % 2 === 0 ? '#f0f8ff' : '#e6f2ff'}">
-                <td style="word-wrap: break-word; font-size: 18pt;">${n.matiere}</td>
-                <td style="text-align:center; font-size: 18pt;">${n.note.toFixed(2)}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-
-        <p style="margin-top: 25px; font-size: 18pt;"><strong>Moyenne :</strong> ${pourcentage.toFixed(2)} %</p>
-        <p style="font-size: 18pt;"><strong>Mention :</strong> ${mention}</p>
-
-        <p style="text-align:center; font-size: 12pt; color: gray; margin-top: 30px;">
-          Léon Académie - ${new Date().toLocaleDateString()}
-        </p>
-      </div>
-    `;
-
-      container.innerHTML = releveHTML;
-
-      document.body.appendChild(container); // nécessaire pour html2canvas
-
-      // Génération du canvas avec scale élevé pour texte lisible
-      const canvas = await html2canvas(container, { scale: 3, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "pt", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("releve-notes.pdf");
-
-      document.body.removeChild(container); // nettoyage
-    } catch (err) {
-      console.error("Erreur téléchargement relevé :", err);
-      toast.error("Impossible de télécharger le relevé");
-    }
-  };
-
-
-
-
-  const formatPrenom = (prenom: string) => {
-    if (!prenom) return "";
-    return prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
-  };
-  const handlePrintBrevet = async (etudiantId: number, anneeId: number) => {
-    try {
-      const notes = await getReleve(etudiantId, anneeId);
-      if (!notes.length) {
-        return toast.info("Aucune note pour cet étudiant et cette année");
-      }
-
-      const etudiant = notes[0].etudiant;
-      const annee = notes[0].anneeAcademique.annee;
-
-      // Calcul moyenne / pourcentage
-      const total = notes.reduce((sum, n) => sum + n.note, 0);
-      const max = notes.length * 20;
-      const pourcentage = (total / max) * 100;
-
-      // Mention
-      let mention = "";
-      if (pourcentage >= 80) mention = "Grande Distinction";
-      else if (pourcentage >= 70) mention = "Distinction";
-      else if (pourcentage >= 50) mention = "Satisfaction";
-      else mention = "Ajourné";
-
-      // HTML du brevet (format paysage compact)
-      const brevetHtml = `
-<div style="
-  width:96%;
-  margin:2% auto;
-  padding:40px;
-  font-family:Arial, sans-serif;
-  background:#e5e5e5;
-  border:2px solid #999;
-">
-
-  <h2 style="text-align:center;margin:0;">
-    CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
-  </h2>
-  <p style="text-align:center;margin:4px 0;">
-    « LEON ACADEMY »
-  </p>
-
-  <p style="text-align:center;font-weight:bold;">
-    ${codeBrevet}
-  </p>
-
-  <h3 style="
-    text-align:center;
-    background:#d4af37;
-    padding:8px;
-    margin:20px auto;
-    width:fit-content;
-  ">
-    ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
-    D’APTITUDE PROFESSIONNELLE
-  </h3>
-
-  <p>
-    Nous soussignons la Direction du centre de formation Professionnelle
-    et Métiers « Léon Academy », certifions que :
-  </p>
-
-  <p style="text-align:center;font-weight:bold;font-size:18px;">
-    ${etudiant.nom} ${etudiant.postnom} ${formatPrenom(etudiant.prenom)}
-  </p>
-
-  <p>
-    a suivi la formation et a satisfait aux épreuves d’évaluation
-    avec la mention <strong>BIEN</strong>
-    soit <strong>${pourcentage.toFixed(0)} %</strong>.
-  </p>
-
-  <p>
-    En foi de quoi, nous lui délivrons la présente attestation.
-  </p>
-
-  <p style="margin-top:40px;">
-    Fait à Kinshasa le ${new Date().toLocaleDateString()}
-  </p>
-
-  <div style="text-align:right;margin-top:60px;">
-    <strong>Le Directeur</strong>
-    <div style="margin-top:40px;border-top:1px solid #000;width:200px;"></div>
-  </div>
-</div>
-`;
-
-
-      const win = window.open("", "_blank", "width=1200,height=850");
-      if (!win) return toast.error("Impossible d'ouvrir l'aperçu");
-
-      win.document.write(`
-      <html>
-        <head>
-          <title>Brevet de Réussite</title>
-          <style>
-            @page {
-              size: A4 landscape;
-              margin: 0;
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>${brevetHtml}</body>
-      </html>
-    `);
-
-      win.document.close();
-      win.focus();
-      win.print();
-
-    } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de l'impression du brevet");
-    }
-  };
-
-
-
-
-
-
-
-
-  // =======================
-  // Render
-  // =======================
   return (
     <div className="mx-8 mt-8">
       <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
 
-      {/* Filtres et boutons */}
+      {/* TOOLBAR */}
       <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <Select options={etudiantOptions} isClearable placeholder="Filtrer par étudiant" value={filterEtudiant} onChange={setFilterEtudiant} className="w-1/4" />
-        <Select options={anneeOptions} isClearable placeholder="Filtrer par année" value={filterAnnee} onChange={setFilterAnnee} className="w-1/4" />
-        <button className="btn btn-primary" onClick={handleOpenAddPopup}>Ajouter</button>
-        <button className="btn btn-secondary" onClick={exportExcel}>Exporter Excel</button>
+        <div className="flex  items-center justify-between gap-3">
+          
+          {/* SEARCH */}
+       
+            <Select
+              options={etudiantOptions}
+              isClearable
+              placeholder="Étudiant"
+              onChange={(opt) => {
+                setFilterEtudiant(opt);
+                setCurrentPage(1);
+              }}
+              className="w-full"
+            />
+ 
+          <Select
+            options={anneeOptions}
+            isClearable
+            placeholder="Année"
+            onChange={(opt) => {
+              setFilterAnnee(opt);
+              setCurrentPage(1);
+            }}
+             className="w-full"
+          />
 
-        {/* Nouveau bouton Import */}
-        <label className="btn btn-accent cursor-pointer">
-          Importer Excel
-          <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
-        </label>
+          <Select
+            options={sessionOptions}
+            isClearable
+            placeholder="Session"
+            onChange={(opt) => {
+              setFilterSession(opt);
+              setCurrentPage(1);
+            }}
+             className="w-full"
+          />
+
+          <Select
+            options={filiereOptions}
+            isClearable
+            placeholder="Filière"
+            onChange={(opt) => {
+              setFilterFiliere(opt);
+              setCurrentPage(1);
+            }}
+             className="w-full"
+          />
+        </div>
+
+        <button className="btn btn-accent rounded-xl px-6" onClick={() => setPopupOpen(true)}>
+          + Ajouter une note
+        </button>
       </div>
 
-      {/* Table */}
-      {filteredNotes.length === 0 ? (
-        <div className="text-center text-gray-500 py-10">Aucune note trouvée</div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
-          <table ref={tableRef} className="table w-full">
-            <thead className="bg-base-200 text-sm">
-              <tr>
-                <th>Etudiant</th>
-                <th>Matière</th>
-                <th>Note</th>
-                <th>Année</th>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredNotes.map(n => (
+      {/* TABLE */}
+      <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
+        <table ref={tableRef} className="table w-full">
+          <thead className="bg-base-200 text-sm">
+            <tr>
+              <th>Etudiant</th>
+              <th>Matière</th>
+              <th>Note</th>
+              <th>Année</th>
+              <th>Session</th>
+              <th>Filière</th>
+              <th className="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedNotes.length ? (
+              paginatedNotes.map(n => (
                 <tr key={n.id}>
-                  <td>{n.etudiant.nom} {n.etudiant.postnom} {n.etudiant.prenom}</td>
+                  <td>
+                    {n.etudiant
+                      ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}`
+                      : "Étudiant supprimé"}
+                  </td>
                   <td>{n.matiere}</td>
                   <td>{n.note}</td>
-                  <td>{n.anneeAcademique.annee}</td>
-                  <td className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <button className="btn btn-xs btn-warning btn-outline" onClick={() => handleEditNote(n)}><LucideEdit2 size={16} /></button>
-                      <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteNote(n.id)}><LucideTrash2 size={16} /></button>
-                      <button className="btn btn-xs btn-outline btn-info" onClick={() => handlePrintReleve(n.etudiant.id, n.anneeAcademique.id)}><LucidePrinter size={16} /></button>
-                      <button
-                        className="btn btn-xs btn-outline btn-success"
-                        onClick={() => handlePrintBrevet(n.etudiant.id, n.anneeAcademique.id)}
-                      >
-                        🎓
-                      </button>
-                      <button
-                        className="btn btn-xs btn-outline btn-primary"
-                        onClick={() => handleDownloadBrevet(
-                          n.etudiant.id,
-                          n.anneeAcademique.id
-                        )}
-                      >
-                        ⬇️🎓
-                      </button>
-
-                      <button
-                        className="btn btn-xs btn-outline btn-primary"
-                        onClick={() => handleDownloadReleve(
-                          n.etudiant.id,
-                          n.anneeAcademique.id
-                        )}
-                      >
-                        ⬇️ Relevé
-                      </button>
-                    </div>
+                  <td>{n.anneeAcademique?.annee ?? "N/A"}</td>
+                  <td>
+                    {n.session?.dateDebut && n.session?.dateFin
+                      ? `${new Date(n.session.dateDebut).toLocaleDateString()} - ${new Date(n.session.dateFin).toLocaleDateString()}`
+                      : "N/A"}
+                  </td>
+                  <td>{n.filiere?.nom ?? "N/A"}</td>
+                  <td className="flex justify-center gap-2">
+                    <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}>
+                      <LucideTrash2 size={16} />
+                    </button>
+                    <button
+                      className="btn btn-xs btn-success  btn-outline"
+                      onClick={() => handleDownloadBrevet(n)}
+                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
+                    >
+                      🎓
+                    </button>
+                    <button
+                      className="btn btn-xs btn-warning  btn-outline"
+                      onClick={() => openEditPopup(n)}
+                    >
+                      ✏️
+                    </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={7} className="text-center py-6 text-gray-500">
+                  Aucune note trouvée
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <div className="join shadow-sm">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                className={`join-item btn btn-sm ${p === currentPage ? "btn-primary" : ""}`}
+                onClick={() => setCurrentPage(p)}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* POPUP ADD */}
+      {/* POPUP AJOUT */}
       {popupOpen && (
-        <dialog className="modal modal-open">
-          <form className="modal-box" onSubmit={handleAddNote}>
-            <h3 className="font-bold mb-4">Ajouter Note</h3>
-            <input name="matiere" placeholder="Matière" className="input w-full mb-2" required />
-            <input name="note" type="number" placeholder="Note" className="input w-full mb-2" required />
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-[520px] p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Ajouter une note</h2>
 
-            <Select options={etudiantOptions} placeholder="Etudiant" value={selectedEtudiant} onChange={setSelectedEtudiant} className="mb-2" />
-            <Select options={anneeOptions} placeholder="Année" value={selectedAnnee} onChange={setSelectedAnnee} />
+            <form onSubmit={handleAddNote}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Étudiant</label>
+                  <Select
+                    options={etudiantOptions}
+                    value={selectedEtudiant}
+                    onChange={setSelectedEtudiant}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
 
-            <div className="modal-action">
-              <button type="button" className="btn" onClick={() => setPopupOpen(false)}>Annuler</button>
-              <button type="submit" className="btn btn-primary">Enregistrer</button>
-            </div>
-          </form>
-        </dialog>
+                <div>
+                  <label className="text-sm font-medium">Année académique</label>
+                  <Select
+                    options={anneeOptions}
+                    value={selectedAnnee}
+                    onChange={setSelectedAnnee}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Session</label>
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSession}
+                    onChange={setSelectedSession}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Filière</label>
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliere}
+                    onChange={setSelectedFiliere}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Matière</label>
+                  <input name="matiere" className="input input-bordered w-full" required />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Note</label>
+                  <input name="note" type="number" step="0.01" min="0" max="20" className="input input-bordered w-full" required />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" className="btn btn-ghost" onClick={() => setPopupOpen(false)}>
+                  Annuler
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* POPUP EDIT */}
       {editPopupOpen && selectedNote && (
-        <dialog className="modal modal-open">
-          <form className="modal-box" onSubmit={handleUpdateNote}>
-            <h3 className="font-bold mb-4">Modifier Note</h3>
-            <input name="matiere" defaultValue={selectedNote.matiere} className="input w-full mb-2" required />
-            <input name="note" type="number" defaultValue={selectedNote.note} className="input w-full mb-2" required />
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-[520px] p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Modifier la note</h2>
 
-            <Select options={etudiantOptions} placeholder="Etudiant" value={selectedEtudiant} onChange={setSelectedEtudiant} className="mb-2" />
-            <Select options={anneeOptions} placeholder="Année" value={selectedAnnee} onChange={setSelectedAnnee} />
+            <form onSubmit={handleEditNote}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Étudiant</label>
+                  <Select
+                    options={etudiantOptions}
+                    value={selectedEtudiant}
+                    onChange={setSelectedEtudiant}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
 
-            <div className="modal-action">
-              <button type="button" className="btn" onClick={() => setEditPopupOpen(false)}>Annuler</button>
-              <button type="submit" className="btn btn-primary">Enregistrer</button>
-            </div>
-          </form>
-        </dialog>
+                <div>
+                  <label className="text-sm font-medium">Année académique</label>
+                  <Select
+                    options={anneeOptions}
+                    value={selectedAnnee}
+                    onChange={setSelectedAnnee}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Session</label>
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSession}
+                    onChange={setSelectedSession}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Filière</label>
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliere}
+                    onChange={setSelectedFiliere}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Matière</label>
+                  <input
+                    name="matiere"
+                    defaultValue={selectedNote.matiere}
+                    className="input input-bordered w-full"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Note</label>
+                  <input
+                    name="note"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="20"
+                    defaultValue={selectedNote.note}
+                    className="input input-bordered w-full"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditPopupOpen(false)}>
+                  Annuler
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Modifier
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
