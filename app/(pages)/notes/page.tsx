@@ -11,6 +11,7 @@ import html2canvas from "html2canvas-pro";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+
 import {
   addNote,
   updateNote,
@@ -36,6 +37,7 @@ export default function NotesClient() {
   const [annees, setAnnees] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [filieres, setFilieres] = useState<any[]>([]);
+  const [formKey, setFormKey] = useState(0);
 
   const [filterEtudiant, setFilterEtudiant] = useState<SelectOption | null>(null);
   const [filterAnnee, setFilterAnnee] = useState<SelectOption | null>(null);
@@ -135,11 +137,15 @@ export default function NotesClient() {
     ? filteredNotes.reduce((acc, n) => acc + Number(n.note || 0), 0) / filteredNotes.length
     : 0;
 
+  const moyennePourcentage = (moyenneGenerale / 20) * 100;
+
   const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
+
   const paginatedNotes = filteredNotes.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
 
   // =====================
   // EXPORT EXCEL
@@ -724,7 +730,14 @@ export default function NotesClient() {
 
             <button
               className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
-              onClick={() => setPopupOpen(true)}
+              onClick={() => {
+                setPopupOpen(true);
+                setSelectedEtudiant(null);
+                setSelectedAnnee(null);
+                setSelectedSession(null);
+                setSelectedFiliere(null);
+                setFormKey(prev => prev + 1); // <-- reset form
+              }}
             >
               <Plus size={18} />
               Ajouter une note
@@ -839,18 +852,22 @@ export default function NotesClient() {
 
 
       {/* MOYENNE GÉNÉRALE */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="text-lg font-semibold">
-          Moyenne générale :{" "}
-          <span className="text-primary">
-            {moyenneGenerale.toFixed(2)} / 20
-          </span>
-        </div>
-
-        <div className="text-sm text-gray-500">
-          ({filteredNotes.length} note{filteredNotes.length > 1 ? "s" : ""})
-        </div>
+      <div className="text-lg font-semibold w-full flex justify-between mb-2">
+        <div>
+        Moyenne générale :{" "}
+        <span className="text-primary">
+          {moyenneGenerale.toFixed(2)} / 20
+        </span>{" "}
+        <span className="text-base-content/60">
+          ({moyennePourcentage.toFixed(2)}%)
+        </span>
       </div>
+
+        <p className="text-sm">
+        ({filteredNotes.length} notes)
+        </p>
+      </div>
+
 
       {/* TABLE */}
       <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
@@ -913,6 +930,7 @@ export default function NotesClient() {
             )}
           </tbody>
         </table>
+      
       </div>
 
       {/* PAGINATION */}
@@ -932,7 +950,9 @@ export default function NotesClient() {
         </div>
       )}
 
-      {/* POPUP AJOUT */}
+
+
+      {/* ================= POPUP AJOUT ================= */}
       <input
         type="checkbox"
         id="modal-add"
@@ -940,89 +960,153 @@ export default function NotesClient() {
         checked={popupOpen}
         onChange={() => setPopupOpen(!popupOpen)}
       />
-      <div className="modal">
-        <div className="modal-box w-[520px]">
-          <h2 className="text-xl font-bold mb-4">Ajouter une note</h2>
 
-          <form onSubmit={handleAddNote}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Étudiant</span>
-                </label>
-                <Select
-                  options={etudiantOptions}
-                  value={selectedEtudiant}
-                  onChange={setSelectedEtudiant}
-                  placeholder="Sélectionner"
-                  isClearable
-                />
-              </div>
+      <div className="modal modal-middle">
+        <div className="modal-box w-full max-w-2xl p-0 rounded-3xl shadow-2xl overflow-visible">
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Année académique</span>
-                </label>
-                <Select
-                  options={anneeOptions}
-                  value={selectedAnnee}
-                  onChange={setSelectedAnnee}
-                  placeholder="Sélectionner"
-                  isClearable
-                />
-              </div>
+          {/* HEADER */}
+          <div className="relative px-7 py-5 border-b bg-base-200 rounded-t-3xl">
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Session</span>
-                </label>
-                <Select
-                  options={sessionOptions}
-                  value={selectedSession}
-                  onChange={setSelectedSession}
-                  placeholder="Sélectionner"
-                  isClearable
-                />
-              </div>
+            <h2 className="text-lg font-bold">Ajouter une note</h2>
+            <p className="text-xs text-base-content/60 mt-1">
+              Remplissez les informations ci-dessous
+            </p>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Filière</span>
-                </label>
-                <Select
-                  options={filiereOptions}
-                  value={selectedFiliere}
-                  onChange={setSelectedFiliere}
-                  placeholder="Sélectionner"
-                  isClearable
-                />
+            {/* CROIX FERMETURE */}
+            <button
+              type="button"
+              onClick={() => setPopupOpen(false)}
+              className="absolute right-4 top-4 btn btn-sm btn-circle btn-ghost"
+            >
+              ✕
+            </button>
+
+          </div>
+
+          {/* BODY */}
+          <form onSubmit={handleAddNote} className="px-7 py-5 space-y-5 text-sm" key={formKey}>
+
+            {/* Section Informations */}
+            <div>
+              <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
+                Informations
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Étudiant</span>
+                  </label>
+                  <Select
+                    options={etudiantOptions}
+                    value={selectedEtudiant}
+                    onChange={setSelectedEtudiant}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Année</span>
+                  </label>
+                  <Select
+                    options={anneeOptions}
+                    value={selectedAnnee}
+                    onChange={setSelectedAnnee}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Session</span>
+                  </label>
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSession}
+                    onChange={setSelectedSession}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Filière</span>
+                  </label>
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliere}
+                    onChange={setSelectedFiliere}
+                    placeholder="Sélectionner"
+                    isClearable
+                  />
+                </div>
+
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Matière</span>
-                </label>
-                <input name="matiere" className="input input-bordered w-full" required />
-              </div>
+            {/* Section note */}
+            <div>
+              <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
+                Détails de la note
+              </h3>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Note</span>
-                </label>
-                <input name="note" type="number" step="0.01" min="0" max="20" className="input input-bordered w-full" required />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Matière</span>
+                  </label>
+                  <input
+                    name="matiere"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: Mathématiques"
+                    required
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Note /20</span>
+                  </label>
+                  <input
+                    name="note"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="20"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: 15.50"
+                    required
+                    onInput={(e: any) => {
+                      const value = e.target.value;
+                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                      if (!regex.test(value)) {
+                        e.target.value = value.slice(0, -1);
+                      }
+                    }}
+                  />
+                </div>
+
+
               </div>
             </div>
 
-            <div className="modal-action">
-              <button type="button" className="btn btn-ghost" onClick={() => setPopupOpen(false)}>
-                Annuler
-              </button>
-              <button type="submit" className="btn btn-primary">
+            {/* FOOTER */}
+            <div className="flex justify-end pt-6 border-t">
+              <button
+                type="submit"
+                className="btn btn-accent rounded-xl px-7 shadow-md hover:shadow-lg transition flex items-center gap-2"
+              >
+
                 Enregistrer
               </button>
             </div>
+
           </form>
         </div>
       </div>
@@ -1037,108 +1121,157 @@ export default function NotesClient() {
             checked={editPopupOpen}
             onChange={() => setEditPopupOpen(!editPopupOpen)}
           />
-          <div className="modal">
-            <div className="modal-box w-[520px]">
-              <h2 className="text-xl font-bold mb-4">Modifier la note</h2>
 
-              <form onSubmit={handleEditNote}>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Étudiant</span>
-                    </label>
-                    <Select
-                      options={etudiantOptions}
-                      value={selectedEtudiant}
-                      onChange={setSelectedEtudiant}
-                      placeholder="Sélectionner"
-                      isClearable
-                    />
-                  </div>
+          <div className="modal modal-middle">
+            <div className="modal-box w-full max-w-2xl p-0 rounded-3xl shadow-2xl overflow-visible">
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Année académique</span>
-                    </label>
-                    <Select
-                      options={anneeOptions}
-                      value={selectedAnnee}
-                      onChange={setSelectedAnnee}
-                      placeholder="Sélectionner"
-                      isClearable
-                    />
-                  </div>
+              {/* HEADER */}
+              <div className="relative px-7 py-5 border-b bg-base-200 rounded-t-3xl">
+                <h2 className="text-lg font-bold">Modifier la note</h2>
+                <p className="text-xs text-base-content/60 mt-1">
+                  Modifiez les informations ci-dessous
+                </p>
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Session</span>
-                    </label>
-                    <Select
-                      options={sessionOptions}
-                      value={selectedSession}
-                      onChange={setSelectedSession}
-                      placeholder="Sélectionner"
-                      isClearable
-                    />
-                  </div>
+                {/* CROIX FERMETURE */}
+                <button
+                  type="button"
+                  onClick={() => setEditPopupOpen(false)}
+                  className="absolute right-4 top-4 btn btn-sm btn-circle btn-ghost"
+                >
+                  ✕
+                </button>
+              </div>
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Filière</span>
-                    </label>
-                    <Select
-                      options={filiereOptions}
-                      value={selectedFiliere}
-                      onChange={setSelectedFiliere}
-                      placeholder="Sélectionner"
-                      isClearable
-                    />
-                  </div>
-                </div>
+              {/* BODY */}
+              <form onSubmit={handleEditNote} className="px-7 py-5 space-y-5 text-sm">
 
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Matière</span>
-                    </label>
-                    <input
-                      name="matiere"
-                      defaultValue={selectedNote.matiere}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
+                {/* Section Informations */}
+                <div>
+                  <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
+                    Informations
+                  </h3>
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Note</span>
-                    </label>
-                    <input
-                      name="note"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="20"
-                      defaultValue={selectedNote.note}
-                      className="input input-bordered w-full"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Étudiant</span>
+                      </label>
+                      <Select
+                        options={etudiantOptions}
+                        value={selectedEtudiant}
+                        onChange={setSelectedEtudiant}
+                        placeholder="Sélectionner"
+                        isClearable
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Année</span>
+                      </label>
+                      <Select
+                        options={anneeOptions}
+                        value={selectedAnnee}
+                        onChange={setSelectedAnnee}
+                        placeholder="Sélectionner"
+                        isClearable
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Session</span>
+                      </label>
+                      <Select
+                        options={sessionOptions}
+                        value={selectedSession}
+                        onChange={setSelectedSession}
+                        placeholder="Sélectionner"
+                        isClearable
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Filière</span>
+                      </label>
+                      <Select
+                        options={filiereOptions}
+                        value={selectedFiliere}
+                        onChange={setSelectedFiliere}
+                        placeholder="Sélectionner"
+                        isClearable
+                      />
+                    </div>
+
                   </div>
                 </div>
 
-                <div className="modal-action">
-                  <button type="button" className="btn btn-ghost" onClick={() => setEditPopupOpen(false)}>
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn btn-primary">
+                {/* Section note */}
+                <div>
+                  <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
+                    Détails de la note
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Matière</span>
+                      </label>
+                      <input
+                        name="matiere"
+                        defaultValue={selectedNote.matiere}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Note /20</span>
+                      </label>
+                      <input
+                        name="note"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="20"
+                        defaultValue={selectedNote.note}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        placeholder="Ex: 15.50"
+                        required
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                          if (!regex.test(value)) {
+                            e.target.value = value.slice(0, -1);
+                          }
+                        }}
+                      />
+                    </div>
+
+
+                  </div>
+                </div>
+
+                {/* FOOTER */}
+                <div className="flex justify-end pt-6 border-t">
+                  <button
+                    type="submit"
+                    className="btn btn-accent rounded-xl px-7 shadow-md hover:shadow-lg transition"
+                  >
                     Modifier
                   </button>
                 </div>
+
               </form>
             </div>
           </div>
         </>
       ) : null}
+
     </div>
   );
 }
