@@ -2,7 +2,6 @@
 
 import { prisma } from "@/app/lib/prisma";
 import { revalidatePath } from "next/cache";
-import * as XLSX from "xlsx";
 
 // ===============================
 // CALCUL MOYENNE + MENTION
@@ -58,11 +57,25 @@ export async function addNote(formData: FormData) {
     !etudiantId ||
     !anneeAcademiqueId ||
     !sessionId ||
-    !filiereId
+    !filiereId ||
+    !createdById
   )
     throw new Error("Tous les champs sont obligatoires");
 
-  // 🔥 Empêcher doublon
+  const userExists = await prisma.user.findUnique({ where: { id: createdById } });
+  if (!userExists) throw new Error("Utilisateur introuvable (createdById invalide)");
+
+  const [etudiant, annee, session, filiere] = await Promise.all([
+    prisma.etudiant.findUnique({ where: { id: etudiantId } }),
+    prisma.anneeAcademique.findUnique({ where: { id: anneeAcademiqueId } }),
+    prisma.session.findUnique({ where: { id: sessionId } }),
+    prisma.filiere.findUnique({ where: { id: filiereId } }),
+  ]);
+
+  if (!etudiant || !annee || !session || !filiere) {
+    throw new Error("Données invalides : étudiant/année/session/filière introuvable");
+  }
+
   const existing = await prisma.note.findFirst({
     where: {
       matiere,
@@ -74,9 +87,7 @@ export async function addNote(formData: FormData) {
   });
 
   if (existing) {
-    throw new Error(
-      "Une note existe déjà pour cette matière, session et filière."
-    );
+    throw new Error("Une note existe déjà pour cette matière, session et filière (pour cet étudiant).");
   }
 
   const newNote = await prisma.note.create({
@@ -97,9 +108,7 @@ export async function addNote(formData: FormData) {
     },
   });
 
-  // 🔥 Calcul à la volée (sans update en base)
   await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
-
   revalidatePath("/notes");
   return newNote;
 }
@@ -124,11 +133,11 @@ export async function updateNote(formData: FormData) {
     !etudiantId ||
     !anneeAcademiqueId ||
     !sessionId ||
-    !filiereId
+    !filiereId ||
+    !createdById
   )
     throw new Error("Tous les champs sont obligatoires");
 
-  // 🔥 Empêcher doublon (sauf la note actuelle)
   const existing = await prisma.note.findFirst({
     where: {
       id: { not: id },
@@ -142,7 +151,7 @@ export async function updateNote(formData: FormData) {
 
   if (existing) {
     throw new Error(
-      "Une note existe déjà pour cette matière, session et filière."
+      "Une note existe déjà pour cette matière, session et filière (pour cet étudiant)."
     );
   }
 
@@ -165,9 +174,7 @@ export async function updateNote(formData: FormData) {
     },
   });
 
-  // 🔥 Calcul à la volée (sans update en base)
   await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
-
   revalidatePath("/notes");
   return updated;
 }
