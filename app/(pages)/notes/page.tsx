@@ -268,6 +268,188 @@ export default function NotesClient() {
     }
   };
 
+  const handleDownloadReleve = async (note: any) => {
+    const BREVE_CODE_OFFICIEL =
+      "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
+
+    if (
+      !note?.etudiant?.id ||
+      !note?.anneeAcademique?.id ||
+      !note?.session?.id ||
+      !note?.filiere?.id
+    ) {
+      return toast.error("Données manquantes");
+    }
+
+    const { notes: releveNotes, stats } = await getReleve(
+      note.etudiant.id,
+      note.anneeAcademique.id,
+      note.session.id,
+      note.filiere.id
+    );
+
+    if (!releveNotes?.length) {
+      return toast.info("Aucune note trouvée");
+    }
+
+    const first = releveNotes[0];
+
+    if (!first?.etudiant || !first?.session || !first?.filiere) {
+      return toast.error("Données relationnelles manquantes");
+    }
+
+    const etudiant = first.etudiant;
+    const session = first.session;
+    const filiere = first.filiere;
+
+
+    const dateDebut = new Date(session.dateDebut).toLocaleDateString();
+    const dateFin = new Date(session.dateFin).toLocaleDateString();
+
+    const releveHtml = `
+  <div style="
+    width:100%;
+    height:100%;
+    padding:18mm;
+    font-family:'Times New Roman', serif;
+    background:#ffffff;
+    box-sizing:border-box;
+  ">
+
+    <!-- HEADER IDENTIQUE BREVET -->
+    <div style="text-align:center;border-bottom:4px solid #1f5e3b;padding-bottom:12px;">
+      <h2 style="margin:0;font-size:20px;">
+        CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+      </h2>
+      <p style="margin:2px 0;font-weight:bold;font-size:18px;color:#1f5e3b;">
+        « LEON ACADEMY »
+      </p>
+      <img src="/logo-leon.png" style="width:90px;margin:8px auto;" />
+      <p style="font-size:11px;font-weight:bold;margin-top:5px;">
+        ${BREVE_CODE_OFFICIEL}
+      </p>
+    </div>
+
+    <!-- TITRE -->
+    <div style="
+      margin:22px auto;
+      text-align:center;
+      font-weight:bold;
+      font-size:20px;
+      background:#c9a64d;
+      padding:10px 25px;
+      width:fit-content;
+      letter-spacing:1px;
+    ">
+      RELEVÉ DE NOTES
+    </div>
+
+    <!-- INFOS ETUDIANT -->
+    <div style="
+      margin-bottom:25px;
+      font-size:14px;
+      line-height:1.6;
+      padding:15px;
+      background:#f9f9f9;
+      border-left:5px solid #1f5e3b;
+    ">
+      <p><strong>Étudiant :</strong> ${etudiant.nom} ${etudiant.postnom} ${etudiant.prenom}</p>
+      <p><strong>Filière :</strong> ${filiere.nom}</p>
+      <p><strong>Session :</strong> ${dateDebut} - ${dateFin}</p>
+      <p><strong>Année académique :</strong> ${note.anneeAcademique.annee}</p>
+    </div>
+
+    <!-- TABLE NOTES -->
+    <table style="
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    ">
+      <thead>
+        <tr style="background:#1f5e3b;color:white;">
+          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Matière</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:center;">Note /20</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${releveNotes
+        .map(
+          (n: any, index: number) => `
+          <tr style="background:${index % 2 === 0 ? "#ffffff" : "#f4f4f4"};">
+            <td style="padding:10px;border:1px solid #ddd;">
+              ${n.matiere}
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
+              ${n.note}
+            </td>
+          </tr>
+        `
+        )
+        .join("")}
+      </tbody>
+    </table>
+
+    <!-- MOYENNE -->
+    <div style="
+      margin-top:30px;
+      padding:15px;
+      background:#eef3f0;
+      border:2px solid #1f5e3b;
+      font-size:15px;
+    ">
+      <p><strong>Moyenne :</strong> ${stats.moyenne.toFixed(2)} / 20</p>
+      <p><strong>Pourcentage :</strong> ${stats.pourcentage.toFixed(2)} %</p>
+      <p><strong>Mention :</strong> 
+        <span style="color:#1f5e3b;font-weight:bold;font-size:16px;">
+          ${stats.mention}
+        </span>
+      </p>
+    </div>
+
+    <!-- SIGNATURE -->
+    <div style="text-align:right;margin-top:60px;font-size:14px;">
+      Fait à Kinshasa, le ${new Date().toLocaleDateString()}
+      <div style="margin-top:50px;">
+        <div style="border-top:1px solid #000;width:200px;margin-left:auto;"></div>
+        <strong style="display:block;text-align:center;width:200px;margin-left:auto;">
+          Le Directeur
+        </strong>
+      </div>
+    </div>
+
+  </div>
+  `;
+
+    const container = document.createElement("div");
+    container.style.width = "210mm";
+    container.style.height = "297mm";
+    container.innerHTML = releveHtml;
+    document.body.appendChild(container);
+
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    pdf.addImage(
+      imgData,
+      "PNG",
+      0,
+      0,
+      pdf.internal.pageSize.getWidth(),
+      pdf.internal.pageSize.getHeight()
+    );
+
+    pdf.save("releve-notes.pdf");
+
+    document.body.removeChild(container);
+  };
+
+
   // =====================
   // ADD NOTE
   // =====================
@@ -854,17 +1036,17 @@ export default function NotesClient() {
       {/* MOYENNE GÉNÉRALE */}
       <div className="text-lg font-semibold w-full flex justify-between mb-2">
         <div>
-        Moyenne générale :{" "}
-        <span className="text-primary">
-          {moyenneGenerale.toFixed(2)} / 20
-        </span>{" "}
-        <span className="text-base-content/60">
-          ({moyennePourcentage.toFixed(2)}%)
-        </span>
-      </div>
+          Moyenne générale :{" "}
+          <span className="text-primary">
+            {moyenneGenerale.toFixed(2)} / 20
+          </span>{" "}
+          <span className="text-base-content/60">
+            ({moyennePourcentage.toFixed(2)}%)
+          </span>
+        </div>
 
         <p className="text-sm">
-        ({filteredNotes.length} notes)
+          ({filteredNotes.length} notes)
         </p>
       </div>
 
@@ -918,6 +1100,14 @@ export default function NotesClient() {
                     >
                       ✏️
                     </button>
+
+                    <button
+                      className="btn btn-xs btn-primary btn-outline"
+                      onClick={() => handleDownloadReleve(n)}
+                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
+                    >
+                      📄
+                    </button>
                   </td>
                 </tr>
               ))
@@ -930,7 +1120,7 @@ export default function NotesClient() {
             )}
           </tbody>
         </table>
-      
+
       </div>
 
       {/* PAGINATION */}
