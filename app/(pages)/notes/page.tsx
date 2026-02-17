@@ -171,7 +171,7 @@ export default function NotesClient() {
       Filiere: n.filiere?.nom ?? "N/A",
     }));
 
-    const moyenne = filteredNotes.reduce((acc, n) => acc + Number(n.note || 0), 0) / filteredNotes.length;
+    const moyenne = filteredNotes.reduce((acc, n) => acc + Number(n.noteTheorique + n.notePratique + n.noteJyry || 0), 0) / 3;
     const mention = calculateMentionFromAverage(moyenne);
 
     const dataResume = [
@@ -371,25 +371,40 @@ export default function NotesClient() {
     ">
       <thead>
         <tr style="background:#1f5e3b;color:white;">
-          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Ev/Th</th>
-          <th style="padding:10px;border:1px solid #ddd;text-align:center;">Note /20</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Rubriques</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:center;">Côtations</th>
         </tr>
       </thead>
       <tbody>
-        ${releveNotes
-        .map(
-          (n: any, index: number) => `
-          <tr style="background:${index % 2 === 0 ? "#ffffff" : "#f4f4f4"};">
+      
+       
+          <tr style="background:;">
             <td style="padding:10px;border:1px solid #ddd;">
-              ${n.matiere}
+            Evaluation Théorique / 20
             </td>
             <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
-              ${n.note}
+             ${note.noteTheorique}
             </td>
           </tr>
-        `
-        )
-        .join("")}
+
+            <tr style="background:;">
+            <td style="padding:10px;border:1px solid #ddd;">
+            Evaluation Pratique / 50
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
+             ${note.notePratique}
+            </td>
+          </tr>
+
+            <tr style="background:;">
+            <td style="padding:10px;border:1px solid #ddd;">
+            Evaluation Jury / 30
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
+             ${note.noteJyry}
+            </td>
+          </tr>
+        
       </tbody>
     </table>
 
@@ -401,7 +416,7 @@ export default function NotesClient() {
       border:2px solid #1f5e3b;
       font-size:15px;
     ">
-      <p><strong>Moyenne :</strong> ${stats.moyenne.toFixed(2)} / 20</p>
+     
       <p><strong>Pourcentage :</strong> ${stats.pourcentage.toFixed(2)} %</p>
       <p><strong>Mention :</strong> 
         <span style="color:#1f5e3b;font-weight:bold;font-size:16px;">

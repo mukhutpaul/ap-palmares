@@ -42,7 +42,7 @@ async function calculateMoyenne(
   else if (pourcentage >= 50) mention = "Assez bien";
 
   return {
-    moyenne: total / count,
+    moyenne: total / 3,
     pourcentage,
     mention,
   };
