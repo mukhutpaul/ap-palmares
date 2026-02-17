@@ -32,13 +32,14 @@ async function calculateMoyenne(
     if (n.noteJyry != null) { total += n.noteJyry; count++; }
   }
 
-  const max = count * 20;
+  const max = 100;
   const pourcentage = (total / max) * 100;
 
   let mention = "Ajourné";
-  if (pourcentage >= 80) mention = "Grande Distinction";
-  else if (pourcentage >= 70) mention = "Distinction";
-  else if (pourcentage >= 50) mention = "Satisfaction";
+  if (pourcentage >= 80) mention = "Excellent";
+  else if (pourcentage >= 70) mention = "Très bien";
+  else if (pourcentage >= 60) mention = "Bien";
+  else if (pourcentage >= 50) mention = "Assez bien";
 
   return {
     moyenne: total / count,
@@ -227,20 +228,20 @@ export async function getReleve(
 // ===============================
 // GET ETUDIANTS / SESSIONS / FILIERES / ANNEES
 // ===============================
-export async function getEtudiants () {
+export async function getEtudiants() {
   const etudiants = prisma.etudiant.findMany({ orderBy: { nom: "asc" } });
   return etudiants;
 }
-export async function getSessions (){
- const sessions = prisma.session.findMany({ orderBy: { dateDebut: "desc" } });
- return sessions;
-} 
-export async function getFilieres(){
+export async function getSessions() {
+  const sessions = prisma.session.findMany({ orderBy: { dateDebut: "desc" } });
+  return sessions;
+}
+export async function getFilieres() {
   const filieres = prisma.filiere.findMany({ orderBy: { nom: "asc" } });
   return filieres;
 
-} 
-export async function getAnneesAcademiques(){
+}
+export async function getAnneesAcademiques() {
   const annees = prisma.anneeAcademique.findMany({ orderBy: { annee: "desc" } });
   return annees;
 } 
