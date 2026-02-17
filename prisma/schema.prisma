@@ -121,9 +121,10 @@ model Session {
 // -------------------------------
 
 model Note {
-  id      Int    @id @default(autoincrement())
-  matiere String
-  note    Float
+  id     Int    @id @default(autoincrement())
+  noteTheorique Float?  @default(0)
+  notePratique Float?  @default(0)
+  noteJyry Float?  @default(0)
 
   etudiant   Etudiant? @relation(fields: [etudiantId], references: [id])
   etudiantId Int?
@@ -137,7 +138,7 @@ model Note {
   session   Session? @relation(fields: [sessionId], references: [id])
   sessionId Int?
 
-  updatedAt   DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String

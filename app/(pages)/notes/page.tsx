@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toast } from "react-toastify";
-import Swal from "sweetalert2";
-import Select from "react-select";
-import { FileDown, FileUp, LucideTrash2, Plus } from "lucide-react";
-import { useSession } from "next-auth/react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas-pro";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { toast } from "react-toastify"; // notifications
+import Swal from "sweetalert2"; // alertes confirm
+import Select from "react-select"; // dropdowns
+import { FileDown, FileUp, LucideTrash2, Plus } from "lucide-react"; // icônes
+import { useSession } from "next-auth/react"; // session user
+import jsPDF from "jspdf"; // génération PDF
+import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
+import * as XLSX from "xlsx"; // lecture et écriture Excel
+import { saveAs } from "file-saver"; // sauvegarde fichiers
 
-
+// ================= ACTIONS SERVER =================
 import {
   addNote,
   updateNote,
@@ -22,12 +22,14 @@ import {
   getAnneesAcademiques,
   getSessions,
   getFilieres,
-} from "@/app/actions/notesActions";
+} from "@/app/actions/notesActions"; // ton fichier actions.ts
 
-interface SelectOption {
+// ================= TYPES =================
+export interface SelectOption {
   value: number;
   label: string;
 }
+
 
 export default function NotesClient() {
   const { data: authSession } = useSession();
@@ -111,10 +113,11 @@ export default function NotesClient() {
   }));
 
   const calculateMentionFromAverage = (average: number) => {
-    const percentage = (average / 20) * 100;
-    if (percentage >= 80) return "Grande Distinction";
-    if (percentage >= 70) return "Distinction";
-    if (percentage >= 50) return "Satisfaction";
+    const percentage = average;
+    if (percentage >= 80) return "Excellent";
+    if (percentage >= 70) return "Très bien";
+    if (percentage >= 60) return "Bien";
+    if (percentage >= 50) return "Assez Bien";
     return "Ajourné";
   };
 
@@ -134,10 +137,10 @@ export default function NotesClient() {
     );
 
   const moyenneGenerale = filteredNotes.length
-    ? filteredNotes.reduce((acc, n) => acc + Number(n.note || 0), 0) / filteredNotes.length
+    ? filteredNotes.reduce((acc, n) => acc + Number(n.noteTheorique + n.notePratique + n.noteJyry || 0), 0) / filteredNotes.length
     : 0;
 
-  const moyennePourcentage = (moyenneGenerale / 20) * 100;
+  const moyennePourcentage = (moyenneGenerale / 100) * 100;
 
   const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
 
@@ -157,8 +160,9 @@ export default function NotesClient() {
 
     const dataNotes = filteredNotes.map(n => ({
       Etudiant: n.etudiant ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}` : "Étudiant supprimé",
-      Matiere: n.matiere,
-      Note: n.note,
+      Notes_Th: n.noteTheorique,
+      Notes_Pr: n.notePratique,
+      Notes_Jury: n.noteJyry,
       Annee: n.anneeAcademique?.annee ?? "N/A",
       Session:
         n.session?.dateDebut && n.session?.dateFin
@@ -367,7 +371,7 @@ export default function NotesClient() {
     ">
       <thead>
         <tr style="background:#1f5e3b;color:white;">
-          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Matière</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Ev/Th</th>
           <th style="padding:10px;border:1px solid #ddd;text-align:center;">Note /20</th>
         </tr>
       </thead>
@@ -457,10 +461,10 @@ export default function NotesClient() {
     e.preventDefault();
     if (!authSession?.user?.id) return toast.error("Session expirée");
 
-    const matiere = e.currentTarget.matiere.value.trim();
+    //const matiere = e.currentTarget.matiere.value.trim();
 
     const already = notes.find(n =>
-      n.matiere.toLowerCase() === matiere.toLowerCase() &&
+      //n.matiere.toLowerCase() === matiere.toLowerCase() &&
       n.etudiant?.id === selectedEtudiant?.value &&
       n.session?.id === selectedSession?.value &&
       n.filiere?.id === selectedFiliere?.value &&
@@ -490,6 +494,7 @@ export default function NotesClient() {
         setSelectedFiliere(null);
         setSelectedNote(null)
       };
+      resetForm()
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -535,11 +540,9 @@ export default function NotesClient() {
       return toast.error("Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)");
     }
 
-    const matiere = e.currentTarget.matiere.value.trim();
 
     const already = notes.find(n =>
       n.id !== selectedNote.id &&
-      n.matiere.toLowerCase() === matiere.toLowerCase() &&
       n.etudiant?.id === selectedEtudiant?.value &&
       n.session?.id === selectedSession?.value &&
       n.filiere?.id === selectedFiliere?.value &&
@@ -805,126 +808,12 @@ export default function NotesClient() {
     <div className="mx-8 mt-8">
       <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
 
-      {/* TOOLBAR */}
-      {/* <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 w-full">
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Étudiant</span>
-            </label>
-            <Select
-              options={etudiantOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterEtudiant(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Année</span>
-            </label>
-            <Select
-              options={anneeOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterAnnee(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Session</span>
-            </label>
-            <Select
-              options={sessionOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterSession(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Filière</span>
-            </label>
-            <Select
-              options={filiereOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterFiliere(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <button
-            className="btn btn-accent rounded-xl h-12"
-            onClick={() => setPopupOpen(true)}
-          >
-            + Ajouter une note
-          </button>
-
-          <button
-            className="btn btn-outline btn-primary rounded-xl h-12"
-            onClick={handleExportExcel}
-          >
-            Export Excel
-          </button>
-
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            onChange={handleImportExcel}
-            className="hidden"
-            id="importExcel"
-          />
-          <label
-            htmlFor="importExcel"
-            className="btn btn-outline btn-secondary rounded-xl h-12 cursor-pointer"
-          >
-            Import Excel
-          </label>
-        </div>
-      </div> */}
-
       <div className="bg-base-100 p-8 rounded-3xl shadow-lg mb-8 space-y-8">
 
         {/* ================= TOP : ACTION BUTTONS ================= */}
         <div className="flex flex-wrap gap-4 justify-between items-center border-b pb-6">
 
-
-          <div className="flex flex-wrap gap-3">
-
-            <button
-              className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
-              onClick={() => {
-                setPopupOpen(true);
-                setSelectedEtudiant(null);
-                setSelectedAnnee(null);
-                setSelectedSession(null);
-                setSelectedFiliere(null);
-                setFormKey(prev => prev + 1); // <-- reset form
-              }}
-            >
-              <Plus size={18} />
-              Ajouter une note
-            </button>
-
+          <div className="flex gap-3">
             <button
               className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
               onClick={handleExportExcel}
@@ -950,6 +839,24 @@ export default function NotesClient() {
             </label>
 
           </div>
+          <div className="flex flex-wrap gap-3">
+
+            <button
+              className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
+              onClick={() => {
+                setPopupOpen(true);
+                setSelectedEtudiant(null);
+                setSelectedAnnee(null);
+                setSelectedSession(null);
+                setSelectedFiliere(null);
+                setFormKey(prev => prev + 1); // <-- reset form
+              }}
+            >
+              <Plus size={18} />
+              Ajouter une note
+            </button>
+          </div>
+
         </div>
 
         {/* ================= BOTTOM : FILTERS ================= */}
@@ -1038,7 +945,7 @@ export default function NotesClient() {
         <div>
           Moyenne générale :{" "}
           <span className="text-primary">
-            {moyenneGenerale.toFixed(2)} / 20
+            {moyenneGenerale.toFixed(2)} / 100
           </span>{" "}
           <span className="text-base-content/60">
             ({moyennePourcentage.toFixed(2)}%)
@@ -1056,10 +963,13 @@ export default function NotesClient() {
         <table ref={tableRef} className="table w-full">
           <thead className="bg-base-200 text-sm">
             <tr>
+              {/* <th>#</th> */}
               <th>Etudiant</th>
-              <th>Matière</th>
-              <th>Note</th>
-              <th>Année</th>
+              <th>EV/TH</th>
+              <th>EV/PR</th>
+              <th>Jury</th>
+              <th>Total</th>
+              <th>Mention</th>
               <th>Session</th>
               <th>Filière</th>
               <th className="text-center">Actions</th>
@@ -1074,9 +984,11 @@ export default function NotesClient() {
                       ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}`
                       : "Étudiant supprimé"}
                   </td>
-                  <td>{n.matiere}</td>
-                  <td>{n.note}</td>
-                  <td>{n.anneeAcademique?.annee ?? "N/A"}</td>
+                  <td>{n.noteTheorique}</td>
+                  <td>{n.notePratique}</td>
+                  <td>{n.noteJyry}</td>
+                  <td>{n.noteJyry + n.notePratique + n.noteTheorique} %</td>
+                  <td>{calculateMentionFromAverage(n.noteJyry + n.notePratique + n.noteTheorique)}</td>
                   <td>
                     {n.session?.dateDebut && n.session?.dateFin
                       ? `${new Date(n.session.dateDebut).toLocaleDateString()} - ${new Date(n.session.dateFin).toLocaleDateString()}`
@@ -1242,33 +1154,66 @@ export default function NotesClient() {
             {/* Section note */}
             <div>
               <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
-                Détails de la note
+                Détails des notes
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text font-medium">Matière</span>
+                    <span className="label-text font-medium">Ev Théorique /20</span>
                   </label>
                   <input
-                    name="matiere"
-                    className="input input-bordered rounded-xl focus:input-primary text-sm"
-                    placeholder="Ex: Mathématiques"
-                    required
-                  />
-                </div>
-
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Note /20</span>
-                  </label>
-                  <input
-                    name="note"
+                    name="noteTheorique"
                     type="number"
                     step="0.01"
                     min="0"
                     max="20"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: 15.50"
+                    required
+                    onInput={(e: any) => {
+                      const value = e.target.value;
+                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                      if (!regex.test(value)) {
+                        e.target.value = value.slice(0, -1);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Ev Pratique /50</span>
+                  </label>
+                  <input
+                    name="notePratique"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="50"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: 15.50"
+                    required
+                    onInput={(e: any) => {
+                      const value = e.target.value;
+                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                      if (!regex.test(value)) {
+                        e.target.value = value.slice(0, -1);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Jury /30</span>
+                  </label>
+                  <input
+                    name="noteJyry"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="30"
                     className="input input-bordered rounded-xl focus:input-primary text-sm"
                     placeholder="Ex: 15.50"
                     required
@@ -1401,34 +1346,68 @@ export default function NotesClient() {
                 {/* Section note */}
                 <div>
                   <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
-                    Détails de la note
+                    Détails des notes
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-medium">Matière</span>
+                        <span className="label-text font-medium">Ev Théorique /20</span>
                       </label>
                       <input
-                        name="matiere"
-                        defaultValue={selectedNote.matiere}
-                        className="input input-bordered rounded-xl focus:input-primary text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">Note /20</span>
-                      </label>
-                      <input
-                        name="note"
+                        name="noteTheorique"
                         type="number"
                         step="0.01"
                         min="0"
                         max="20"
-                        defaultValue={selectedNote.note}
+                        defaultValue={selectedNote.noteTheorique}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        placeholder="Ex: 15.50"
+                        required
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                          if (!regex.test(value)) {
+                            e.target.value = value.slice(0, -1);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Ev Pratique /50</span>
+                      </label>
+                      <input
+                        name="notePratique"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="50"
+                        defaultValue={selectedNote.notePratique}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        placeholder="Ex: 15.50"
+                        required
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                          if (!regex.test(value)) {
+                            e.target.value = value.slice(0, -1);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Jury /30</span>
+                      </label>
+                      <input
+                        name="noteJyry"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="30"
+                        defaultValue={selectedNote.noteJyry}
                         className="input input-bordered rounded-xl focus:input-primary text-sm"
                         placeholder="Ex: 15.50"
                         required
