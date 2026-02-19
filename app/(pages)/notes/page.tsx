@@ -11,6 +11,7 @@ import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
 import * as XLSX from "xlsx"; // lecture et écriture Excel
 import { saveAs } from "file-saver"; // sauvegarde fichiers
 
+
 // ================= ACTIONS SERVER =================
 import {
   addNote,
@@ -61,6 +62,7 @@ export default function NotesClient() {
 
   const tableRef = useRef<HTMLTableElement>(null);
 
+
   // =====================
   // LOAD DATA
   // =====================
@@ -98,6 +100,104 @@ export default function NotesClient() {
       .toString()
       .padStart(2, "0")}/${date.getFullYear()}`;
   };
+
+  const addHeader = (pdf: jsPDF, pageNumber: number) => {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+
+    // NOM ECOLE (remplace selon ton image)
+    pdf.text("LEON ACADEMY", pageWidth / 2, 10, { align: "center" });
+
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+
+    pdf.text(
+      `Année académique : ${filterAnnee?.label || ""}`,
+      14,
+      20
+    );
+
+    pdf.text(
+      `Session : ${filterSession?.label || ""}`,
+      pageWidth - 60,
+      20
+    );
+
+    pdf.line(10, 30, pageWidth - 10, 30);
+  };
+
+
+  const handleExportDeliberationPDF = async () => {
+    if (!tableRef.current) return;
+
+    const element = tableRef.current;
+
+    // Générer le canvas à partir de l'élément DOM
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4"); // Portrait A4
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth - 20; // 10mm marge de chaque côté
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    let pageCount = 1;
+
+    // ===== Fonction pour ajouter l'en-tête =====
+    const addHeader = (pdfInstance: jsPDF, pageNumber: number) => {
+      pdfInstance.setFontSize(12);
+      pdfInstance.text(
+        "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS – LEON ACADEMY",
+        10,
+        10
+      );
+      pdfInstance.setFontSize(10);
+      pdfInstance.text(`Grille de Délibération`, 10, 16);
+    };
+
+    // ===== PREMIERE PAGE =====
+    addHeader(pdf, pageCount);
+    pdf.addImage(imgData, "PNG", 10, 25, imgWidth, imgHeight); // 10mm marge gauche, 25mm pour header
+    heightLeft -= pageHeight - 25; // retirer espace header
+
+    // ===== AUTRES PAGES =====
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pageCount++;
+
+      addHeader(pdf, pageCount);
+
+      pdf.addImage(imgData, "PNG", 10, 25 + position, imgWidth, imgHeight);
+      heightLeft -= pageHeight - 25;
+    }
+
+    // ===== NUMÉROTATION =====
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(9);
+      pdf.text(
+        `Page ${i} / ${totalPages}`,
+        pageWidth - 25,
+        pageHeight - 10
+      );
+    }
+
+    // ===== ENREGISTRER LE PDF =====
+    pdf.save("Grille_Deliberation.pdf");
+  };
+
 
   const sessionOptions = sessions.map((s) => ({
     value: s.id,
@@ -835,6 +935,15 @@ export default function NotesClient() {
             >
               <FileDown size={18} />
               Export Excel
+            </button>
+
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={handleExportDeliberationPDF}
+            >
+
+              Export PDF
+
             </button>
 
             <input

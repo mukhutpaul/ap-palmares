@@ -244,4 +244,98 @@ export async function getFilieres() {
 export async function getAnneesAcademiques() {
   const annees = prisma.anneeAcademique.findMany({ orderBy: { annee: "desc" } });
   return annees;
-} 
+}
+
+// ===============================
+// GET DELIBERATION LIST (GROUPED)
+// ===============================
+export async function getDeliberationList(
+  anneeAcademiqueId: number,
+  sessionId: number
+) {
+  if (!anneeAcademiqueId || !sessionId) {
+    throw new Error("Année académique et session obligatoires");
+  }
+
+  // Récupérer toutes les notes avec relations
+  const notes = await prisma.note.findMany({
+    where: {
+      anneeAcademiqueId,
+      sessionId,
+    },
+    include: {
+      etudiant: true,
+      filiere: true,
+      anneeAcademique: true,
+      session: true,
+    },
+    orderBy: [
+      { filiere: { nom: "asc" } },
+      { etudiant: { nom: "asc" } },
+    ],
+  });
+
+  // Grouper par filière + étudiant
+  const grouped: any = {};
+
+  for (const note of notes) {
+    if (!note.filiere || !note.etudiant ) continue; // ✅ protection TS
+    const filiereName = note.filiere.nom;
+    const etudiantId = note.etudiant.id;
+
+    if (!grouped[filiereName]) {
+      grouped[filiereName] = {};
+    }
+
+    if (!grouped[filiereName][etudiantId]) {
+      grouped[filiereName][etudiantId] = {
+        etudiant: note.etudiant,
+        notes: [],
+      };
+    }
+
+    grouped[filiereName][etudiantId].notes.push(note);
+  }
+
+  // Transformer en tableau final avec moyenne + mention
+  const result = [];
+
+  for (const filiere in grouped) {
+    const studentsArray = [];
+
+    for (const etuId in grouped[filiere]) {
+      const data = grouped[filiere][etuId];
+
+      let total = 0;
+      for (const n of data.notes) {
+        total +=
+          (n.noteTheorique ?? 0) +
+          (n.notePratique ?? 0) +
+          (n.noteJyry ?? 0);
+      }
+
+      const pourcentage = total;
+      let mention = "Ajourné";
+
+      if (pourcentage >= 80) mention = "Excellent";
+      else if (pourcentage >= 70) mention = "Très bien";
+      else if (pourcentage >= 60) mention = "Bien";
+      else if (pourcentage >= 50) mention = "Assez bien";
+
+      studentsArray.push({
+        etudiant: data.etudiant,
+        total,
+        pourcentage,
+        mention,
+      });
+    }
+
+    result.push({
+      filiere,
+      students: studentsArray,
+    });
+  }
+
+  return result;
+}
+
