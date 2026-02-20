@@ -127,19 +127,15 @@ export default function NotesClient() {
 
     pdf.line(10, 30, pageWidth - 10, 30);
   };
-
   const handleExportDeliberationPDF = async () => {
     if (!filterAnnee || !filterFiliere || !filterSession) {
-      toast.info(
-        "Veuillez sélectionner l'année, la session et la filière avant d'exporter la grille."
-      );
+      toast.info("Veuillez sélectionner l'année, la session et la filière avant d'exporter la grille.");
       return;
     }
 
     if (!tableRef.current) return;
     const table = tableRef.current;
 
-    // Colonnes à masquer
     const columnsToHide = [7, 8, 9];
     const hiddenCells: HTMLElement[] = [];
 
@@ -153,7 +149,6 @@ export default function NotesClient() {
       });
     });
 
-    // Génération du canvas
     const canvas = await html2canvas(table, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL("image/png");
 
@@ -164,16 +159,15 @@ export default function NotesClient() {
     const imgWidth = pageWidth - 20;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Header dimensions
     const blueHeaderHeight = 35;
     const whiteHeaderHeight = 25;
-    const headerRadius = 3;
-    const tableStartY = blueHeaderHeight + whiteHeaderHeight + 5;
+    const logoWidth = 32;
+    const logoHeight = 22;
+    const tableStartY = blueHeaderHeight + whiteHeaderHeight + 8;
 
     let heightLeft = imgHeight;
     let position = 0;
 
-    // Charger logo
     const fetchLogoAsDataURL = async (url: string) => {
       const res = await fetch(url);
       const blob = await res.blob();
@@ -188,59 +182,75 @@ export default function NotesClient() {
     const addHeader = (pdfInstance: jsPDF) => {
       const pageWidth = pdfInstance.internal.pageSize.getWidth();
 
-      // Bande bleu pastel avec coins arrondis
+      // Bande bleue avec coins arrondis
       pdfInstance.setFillColor(72, 118, 255);
-      pdfInstance.roundedRect(10, 5, pageWidth - 20, blueHeaderHeight, headerRadius, headerRadius, "F");
+      pdfInstance.roundedRect(10, 10, pageWidth - 20, blueHeaderHeight, 4, 4, "F");
 
-      // Cercle blanc pour le logo
-      const circleDiameter = 20;
-      const circleX = pageWidth / 2 - circleDiameter / 2;
-      const circleY = 7; // un peu sous le haut de la bande
-      pdfInstance.setFillColor(255, 255, 255);
-      pdfInstance.circle(pageWidth / 2, circleY + circleDiameter / 2, circleDiameter / 2, "F");
+      // Logo centré
+      pdfInstance.addImage(
+        logoBase64,
+        pageWidth / 2 - logoWidth / 2,
+        18, // logo un peu plus bas pour libérer le texte du haut
+        logoWidth,
+        logoHeight
+      );
 
-      // Logo centré dans le cercle
-      pdfInstance.addImage(logoBase64, pageWidth / 2 - 10, circleY + 2, 20, 15);
-
-      // Texte header bleu, ajusté pour libérer espace autour du logo
+      // Texte au-dessus du logo avec margin-top
       pdfInstance.setTextColor(255, 255, 255);
       pdfInstance.setFont("helvetica", "normal");
-      pdfInstance.setFontSize(10);
+      pdfInstance.setFontSize(9);
       pdfInstance.text(
         "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS",
         pageWidth / 2,
-        blueHeaderHeight - 15,
+        12 + 3, // +3 mm pour espacer du bord haut
         { align: "center" }
       );
 
+      // Texte sous le logo
       pdfInstance.setFont("helvetica", "bold");
-      pdfInstance.setFontSize(14);
-      pdfInstance.text("LEON ACADEMY", pageWidth / 2, blueHeaderHeight - 5, { align: "center" });
+      pdfInstance.setFontSize(12);
+      pdfInstance.text(
+        "LEON ACADEMY",
+        pageWidth / 2,
+        18 + logoHeight + 3, // +3 mm marge
+        { align: "center" }
+      );
 
       // Zone blanche sous la bande bleue
       pdfInstance.setFillColor(255, 255, 255);
-      pdfInstance.rect(10, blueHeaderHeight + 5, pageWidth - 20, whiteHeaderHeight, "F");
+      pdfInstance.rect(10, blueHeaderHeight + 10, pageWidth - 20, whiteHeaderHeight, "F");
 
+      // Texte grille et info session/année/filière
       pdfInstance.setTextColor(0, 0, 0);
-      pdfInstance.setFont("helvetica", "normal");
-      pdfInstance.setFontSize(12);
-      pdfInstance.text("Grille de Délibération", pageWidth / 2, blueHeaderHeight + 15, { align: "center" });
-
-      pdfInstance.setFontSize(10);
+      pdfInstance.setFont("helvetica", "bold");
+      pdfInstance.setFontSize(11);
       pdfInstance.text(
-        `Année: ${filterAnnee.label} | Filière: ${filterFiliere.label} | Session: ${filterSession.label}`,
+        "Grille de Délibération",
         pageWidth / 2,
-        blueHeaderHeight + 23,
+        blueHeaderHeight + 18,
         { align: "center" }
       );
 
-      // Ligne séparatrice douce
+      pdfInstance.setFont("helvetica", "normal");
+      pdfInstance.setFontSize(9);
+      pdfInstance.text(
+        `Année: ${filterAnnee.label} | Filière: ${filterFiliere.label} | Session: ${filterSession.label}`,
+        pageWidth / 2,
+        blueHeaderHeight + 26,
+        { align: "center" }
+      );
+
+      // Ligne séparatrice
       pdfInstance.setDrawColor(72, 118, 255);
       pdfInstance.setLineWidth(0.8);
-      pdfInstance.line(12, blueHeaderHeight + whiteHeaderHeight + 5, pageWidth - 12, blueHeaderHeight + whiteHeaderHeight + 5);
+      pdfInstance.line(
+        12,
+        blueHeaderHeight + whiteHeaderHeight + 10,
+        pageWidth - 12,
+        blueHeaderHeight + whiteHeaderHeight + 10
+      );
     };
 
-    // Modifier tableau : entête colorée, texte taille 12, lignes alternées
     const modifyTableForPDF = () => {
       const thead = table.querySelector("thead");
       if (thead) {
@@ -264,7 +274,6 @@ export default function NotesClient() {
     };
     modifyTableForPDF();
 
-    // Générer pages PDF
     const generatePage = () => {
       addHeader(pdf);
       pdf.addImage(imgData, "PNG", 10, tableStartY, imgWidth, imgHeight, undefined, "FAST");
@@ -281,7 +290,6 @@ export default function NotesClient() {
       heightLeft -= pageHeight - tableStartY;
     }
 
-    // Bas de page : barre et signature
     const addFooter = () => {
       pdf.setDrawColor(72, 118, 255);
       pdf.setLineWidth(0.8);
@@ -296,7 +304,6 @@ export default function NotesClient() {
     };
     addFooter();
 
-    // Numérotation
     const totalPages = pdf.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
@@ -481,7 +488,9 @@ export default function NotesClient() {
     }
   };
 
-  const handleDownloadReleve = async (note: any) => {
+  const handleDownloadReleve = async (
+
+    note: any) => {
     const BREVE_CODE_OFFICIEL =
       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
 
