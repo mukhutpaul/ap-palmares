@@ -128,77 +128,186 @@ export default function NotesClient() {
     pdf.line(10, 30, pageWidth - 10, 30);
   };
 
-
   const handleExportDeliberationPDF = async () => {
+    if (!filterAnnee || !filterFiliere || !filterSession) {
+      toast.info(
+        "Veuillez sélectionner l'année, la session et la filière avant d'exporter la grille."
+      );
+      return;
+    }
+
     if (!tableRef.current) return;
+    const table = tableRef.current;
 
-    const element = tableRef.current;
+    // Colonnes à masquer
+    const columnsToHide = [7, 8, 9];
+    const hiddenCells: HTMLElement[] = [];
 
-    // Générer le canvas à partir de l'élément DOM
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
+    table.querySelectorAll("tr").forEach((row) => {
+      columnsToHide.forEach((index) => {
+        const cell = row.children[index] as HTMLElement;
+        if (cell) {
+          hiddenCells.push(cell);
+          cell.style.display = "none";
+        }
+      });
     });
 
+    // Génération du canvas
+    const canvas = await html2canvas(table, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL("image/png");
 
-    const pdf = new jsPDF("p", "mm", "a4"); // Portrait A4
+    const pdf = new jsPDF("p", "mm", "a4");
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    const imgWidth = pageWidth - 20; // 10mm marge de chaque côté
+    const imgWidth = pageWidth - 20;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    // Header dimensions
+    const blueHeaderHeight = 35;
+    const whiteHeaderHeight = 25;
+    const headerRadius = 3;
+    const tableStartY = blueHeaderHeight + whiteHeaderHeight + 5;
 
     let heightLeft = imgHeight;
     let position = 0;
-    let pageCount = 1;
 
-    // ===== Fonction pour ajouter l'en-tête =====
-    const addHeader = (pdfInstance: jsPDF, pageNumber: number) => {
-      pdfInstance.setFontSize(12);
-      pdfInstance.text(
-        "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS – LEON ACADEMY",
-        10,
-        10
-      );
+    // Charger logo
+    const fetchLogoAsDataURL = async (url: string) => {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    };
+    const logoBase64 = await fetchLogoAsDataURL("/logo-leon.png");
+
+    const addHeader = (pdfInstance: jsPDF) => {
+      const pageWidth = pdfInstance.internal.pageSize.getWidth();
+
+      // Bande bleu pastel avec coins arrondis
+      pdfInstance.setFillColor(72, 118, 255);
+      pdfInstance.roundedRect(10, 5, pageWidth - 20, blueHeaderHeight, headerRadius, headerRadius, "F");
+
+      // Cercle blanc pour le logo
+      const circleDiameter = 20;
+      const circleX = pageWidth / 2 - circleDiameter / 2;
+      const circleY = 7; // un peu sous le haut de la bande
+      pdfInstance.setFillColor(255, 255, 255);
+      pdfInstance.circle(pageWidth / 2, circleY + circleDiameter / 2, circleDiameter / 2, "F");
+
+      // Logo centré dans le cercle
+      pdfInstance.addImage(logoBase64, pageWidth / 2 - 10, circleY + 2, 20, 15);
+
+      // Texte header bleu, ajusté pour libérer espace autour du logo
+      pdfInstance.setTextColor(255, 255, 255);
+      pdfInstance.setFont("helvetica", "normal");
       pdfInstance.setFontSize(10);
-      pdfInstance.text(`Grille de Délibération`, 10, 16);
+      pdfInstance.text(
+        "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS",
+        pageWidth / 2,
+        blueHeaderHeight - 15,
+        { align: "center" }
+      );
+
+      pdfInstance.setFont("helvetica", "bold");
+      pdfInstance.setFontSize(14);
+      pdfInstance.text("LEON ACADEMY", pageWidth / 2, blueHeaderHeight - 5, { align: "center" });
+
+      // Zone blanche sous la bande bleue
+      pdfInstance.setFillColor(255, 255, 255);
+      pdfInstance.rect(10, blueHeaderHeight + 5, pageWidth - 20, whiteHeaderHeight, "F");
+
+      pdfInstance.setTextColor(0, 0, 0);
+      pdfInstance.setFont("helvetica", "normal");
+      pdfInstance.setFontSize(12);
+      pdfInstance.text("Grille de Délibération", pageWidth / 2, blueHeaderHeight + 15, { align: "center" });
+
+      pdfInstance.setFontSize(10);
+      pdfInstance.text(
+        `Année: ${filterAnnee.label} | Filière: ${filterFiliere.label} | Session: ${filterSession.label}`,
+        pageWidth / 2,
+        blueHeaderHeight + 23,
+        { align: "center" }
+      );
+
+      // Ligne séparatrice douce
+      pdfInstance.setDrawColor(72, 118, 255);
+      pdfInstance.setLineWidth(0.8);
+      pdfInstance.line(12, blueHeaderHeight + whiteHeaderHeight + 5, pageWidth - 12, blueHeaderHeight + whiteHeaderHeight + 5);
     };
 
-    // ===== PREMIERE PAGE =====
-    addHeader(pdf, pageCount);
-    pdf.addImage(imgData, "PNG", 10, 25, imgWidth, imgHeight); // 10mm marge gauche, 25mm pour header
-    heightLeft -= pageHeight - 25; // retirer espace header
+    // Modifier tableau : entête colorée, texte taille 12, lignes alternées
+    const modifyTableForPDF = () => {
+      const thead = table.querySelector("thead");
+      if (thead) {
+        Array.from(thead.querySelectorAll("th")).forEach((th) => {
+          (th as HTMLElement).style.backgroundColor = "#B0E0E6";
+          (th as HTMLElement).style.fontSize = "12px";
+          (th as HTMLElement).style.padding = "2px";
+        });
+      }
+      const tbody = table.querySelector("tbody");
+      if (tbody) {
+        Array.from(tbody.querySelectorAll("tr")).forEach((tr, index) => {
+          Array.from(tr.querySelectorAll("td")).forEach((td) => {
+            (td as HTMLElement).style.fontSize = "12px";
+            (td as HTMLElement).style.padding = "2px";
+            (td as HTMLElement).style.backgroundColor =
+              index % 2 === 0 ? "#E6F2FA" : "#ffffff";
+          });
+        });
+      }
+    };
+    modifyTableForPDF();
 
-    // ===== AUTRES PAGES =====
+    // Générer pages PDF
+    const generatePage = () => {
+      addHeader(pdf);
+      pdf.addImage(imgData, "PNG", 10, tableStartY, imgWidth, imgHeight, undefined, "FAST");
+    };
+
+    generatePage();
+    heightLeft -= pageHeight - tableStartY;
+
     while (heightLeft > 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
-      pageCount++;
-
-      addHeader(pdf, pageCount);
-
-      pdf.addImage(imgData, "PNG", 10, 25 + position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 25;
+      addHeader(pdf);
+      pdf.addImage(imgData, "PNG", 10, tableStartY + position, imgWidth, imgHeight, undefined, "FAST");
+      heightLeft -= pageHeight - tableStartY;
     }
 
-    // ===== NUMÉROTATION =====
+    // Bas de page : barre et signature
+    const addFooter = () => {
+      pdf.setDrawColor(72, 118, 255);
+      pdf.setLineWidth(0.8);
+      pdf.line(10, pageHeight - 25, pageWidth - 10, pageHeight - 25);
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Fait à Kinshasa, le ${new Date().toLocaleDateString()}`, 15, pageHeight - 18);
+
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Directeur", pageWidth - 40, pageHeight - 18);
+    };
+    addFooter();
+
+    // Numérotation
     const totalPages = pdf.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
-      pdf.setFontSize(9);
-      pdf.text(
-        `Page ${i} / ${totalPages}`,
-        pageWidth - 25,
-        pageHeight - 10
-      );
+      pdf.setFontSize(8);
+      pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 25, pageHeight - 10);
     }
 
-    // ===== ENREGISTRER LE PDF =====
     pdf.save("Grille_Deliberation.pdf");
+
+    hiddenCells.forEach((cell) => (cell.style.display = ""));
   };
-
-
   const sessionOptions = sessions.map((s) => ({
     value: s.id,
     label:
@@ -1082,16 +1191,17 @@ export default function NotesClient() {
       </div>
 
 
+
       {/* TABLE */}
       <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
         <table ref={tableRef} className="table w-full">
           <thead className="bg-base-200 text-sm">
             <tr>
-              {/* <th>#</th> */}
+              <th>N°</th> {/* ✅ Nouvelle colonne */}
               <th>Etudiant</th>
-              <th>EV/TH</th>
-              <th>EV/PR</th>
-              <th>Jury</th>
+              <th>Théorie/20</th>
+              <th>Pratique/50</th>
+              <th>Jury/30</th>
               <th>Total</th>
               <th>Mention</th>
               <th>Session</th>
@@ -1099,10 +1209,16 @@ export default function NotesClient() {
               <th className="text-center">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {paginatedNotes.length ? (
-              paginatedNotes.map(n => (
+              paginatedNotes.map((n, index) => (
                 <tr key={n.id}>
+                  {/* ✅ Index avec pagination */}
+                  <td>
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
+
                   <td>
                     {n.etudiant
                       ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}`
@@ -1111,52 +1227,40 @@ export default function NotesClient() {
                   <td>{n.noteTheorique}</td>
                   <td>{n.notePratique}</td>
                   <td>{n.noteJyry}</td>
-                  <td>{n.noteJyry + n.notePratique + n.noteTheorique} %</td>
-                  <td>{calculateMentionFromAverage(n.noteJyry + n.notePratique + n.noteTheorique)}</td>
+                  <td>
+                    {n.noteJyry + n.notePratique + n.noteTheorique} %
+                  </td>
+                  <td>
+                    {calculateMentionFromAverage(
+                      n.noteJyry + n.notePratique + n.noteTheorique
+                    )}
+                  </td>
                   <td>
                     {n.session?.dateDebut && n.session?.dateFin
-                      ? `${new Date(n.session.dateDebut).toLocaleDateString()} - ${new Date(n.session.dateFin).toLocaleDateString()}`
+                      ? `${new Date(n.session.dateDebut).toLocaleDateString()} - 
+                   ${new Date(n.session.dateFin).toLocaleDateString()}`
                       : "N/A"}
                   </td>
                   <td>{n.filiere?.nom ?? "N/A"}</td>
-                  <td className="flex justify-center gap-2">
-                    <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}>
-                      <LucideTrash2 size={16} />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-success btn-outline"
-                      onClick={() => handleDownloadBrevet(n)}
-                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
-                    >
-                      🎓
-                    </button>
-                    <button
-                      className="btn btn-xs btn-warning btn-outline"
-                      onClick={() => openEditPopup(n)}
-                    >
-                      ✏️
-                    </button>
 
-                    <button
-                      className="btn btn-xs btn-primary btn-outline"
-                      onClick={() => handleDownloadReleve(n)}
-                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
-                    >
-                      📄
-                    </button>
+                  <td className="flex justify-center gap-2">
+                    <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}> <LucideTrash2 size={16} /> </button>
+                    <button className="btn btn-xs btn-success btn-outline" onClick={() => handleDownloadBrevet(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 🎓 </button>
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} > ✏️ </button>
+                    <button className="btn btn-xs btn-primary btn-outline" onClick={() => handleDownloadReleve(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 📄 </button>
                   </td>
+
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-6 text-gray-500">
+                <td colSpan={10} className="text-center py-6 text-gray-500">
                   Aucune note trouvée
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
       </div>
 
       {/* PAGINATION */}
