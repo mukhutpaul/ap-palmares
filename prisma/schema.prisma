@@ -31,6 +31,7 @@ model User {
   classes   Classe[]
   filieres  Filiere[]
   notes     Note[]
+  evaluations Evaluation[]
 }
 
 // -------------------------------
@@ -44,6 +45,7 @@ model Etudiant {
   sexe    String
 
   classes Classe[]
+  evaluations Evaluation[]
   notes   Note[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -85,6 +87,8 @@ model Filiere {
 
   classes Classe[]
   notes   Note[]
+  evaluations Evaluation[]
+  competences Competence[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -100,6 +104,7 @@ model AnneeAcademique {
   active Boolean @default(false)
 
   notes Note[]
+  evaluations Evaluation[]
 
   createdAt DateTime @default(now())
 }
@@ -114,6 +119,7 @@ model Session {
 
   notes   Note[]
   classes Classe[]
+  evaluations Evaluation[]
 
   createdAt DateTime @default(now())
 }
@@ -144,4 +150,60 @@ model Note {
   createdById String
 
   createdAt DateTime @default(now())
+}
+
+model Evaluation {
+  id     Int @id @default(autoincrement())
+
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId Int
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+
+  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+  anneeAcademiqueId Int
+
+  competences EvaluationCompetence[]
+
+  moyenne Float?
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId])
+}
+
+model Competence {
+  id          Int    @id @default(autoincrement())
+  nom         String
+  maxScore    Float
+  coefficient Float  @default(1)
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  evaluations EvaluationCompetence[]
+
+  createdAt DateTime @default(now())
+}
+
+model EvaluationCompetence {
+  id Int @id @default(autoincrement())
+
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id])
+  evaluationId Int
+
+  competence   Competence @relation(fields: [competenceId], references: [id])
+  competenceId Int
+
+  score Float
+
+  @@unique([evaluationId, competenceId])
 }
