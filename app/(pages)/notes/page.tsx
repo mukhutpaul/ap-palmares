@@ -692,42 +692,65 @@ export default function NotesClient() {
   // =====================
   const handleAddNote = async (e: any) => {
     e.preventDefault();
-    if (!authSession?.user?.id) return toast.error("Session expirée");
 
-    //const matiere = e.currentTarget.matiere.value.trim();
+    if (!authSession?.user?.id)
+      return toast.error("Session expirée");
 
-    const already = notes.find(n =>
-      //n.matiere.toLowerCase() === matiere.toLowerCase() &&
-      n.etudiant?.id === selectedEtudiant?.value &&
-      n.session?.id === selectedSession?.value &&
-      n.filiere?.id === selectedFiliere?.value &&
-      n.anneeAcademique?.id === selectedAnnee?.value
+    if (
+      !selectedEtudiant ||
+      !selectedSession ||
+      !selectedFiliere ||
+      !selectedAnnee
+    ) {
+      return toast.error("Veuillez remplir tous les champs");
+    }
+
+    // ✅ Vérification doublon
+    const already = notes.find(
+      (n) =>
+        n.etudiant?.id === selectedEtudiant.value &&
+        n.session?.id === selectedSession.value &&
+        n.filiere?.id === selectedFiliere.value &&
+        n.anneeAcademique?.id === selectedAnnee.value
     );
 
     if (already) {
-      return toast.error("Doublon détecté : cet étudiant a déjà une note pour cette matière, session et filière.");
+      return toast.error(
+        "Doublon détecté : cet étudiant a déjà une note pour cette session et filière."
+      );
     }
 
+    // ✅ On récupère uniquement les champs nécessaires
     const formData = new FormData(e.currentTarget);
-    formData.append("etudiantId", String(selectedEtudiant?.value));
-    formData.append("anneeAcademiqueId", String(selectedAnnee?.value));
-    formData.append("sessionId", String(selectedSession?.value));
-    formData.append("filiereId", String(selectedFiliere?.value));
-    formData.append("createdById", authSession.user.id);
+
+    // ⚠️ IMPORTANT :
+    // Si tu as un input name="notePratique" dans ton form,
+    // on le supprime pour éviter d'envoyer une mauvaise valeur
+    formData.delete("notePratique");
+
+    // ✅ On injecte les relations
+    formData.set("etudiantId", String(selectedEtudiant.value));
+    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+    formData.set("sessionId", String(selectedSession.value));
+    formData.set("filiereId", String(selectedFiliere.value));
+    formData.set("createdById", authSession.user.id);
 
     try {
       const created = await addNote(formData);
-      setNotes(prev => [created, ...prev]);
-      toast.success("Note ajoutée");
+
+      setNotes((prev) => [created, ...prev]);
+
+      toast.success("Note ajoutée avec calcul automatique du pratique");
+
       setPopupOpen(false);
-      const resetForm = () => {
-        setSelectedEtudiant(null);
-        setSelectedAnnee(null);
-        setSelectedSession(null);
-        setSelectedFiliere(null);
-        setSelectedNote(null)
-      };
-      resetForm()
+
+      // ✅ Reset propre
+      setSelectedEtudiant(null);
+      setSelectedAnnee(null);
+      setSelectedSession(null);
+      setSelectedFiliere(null);
+      setSelectedNote(null);
+
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -1199,8 +1222,6 @@ export default function NotesClient() {
         </p>
       </div>
 
-
-
       {/* TABLE */}
       <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
         <table ref={tableRef} className="table w-full">
@@ -1394,7 +1415,7 @@ export default function NotesClient() {
                 Détails des notes
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
 
                 <div className="form-control">
@@ -1419,7 +1440,7 @@ export default function NotesClient() {
                     }}
                   />
                 </div>
-                <div className="form-control">
+                {/* <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Ev Pratique /50</span>
                   </label>
@@ -1440,7 +1461,7 @@ export default function NotesClient() {
                       }
                     }}
                   />
-                </div>
+                </div> */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Jury /30</span>
@@ -1586,7 +1607,7 @@ export default function NotesClient() {
                     Détails des notes
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     <div className="form-control">
                       <label className="label">
@@ -1611,7 +1632,7 @@ export default function NotesClient() {
                         }}
                       />
                     </div>
-                    <div className="form-control">
+                    {/* <div className="form-control">
                       <label className="label">
                         <span className="label-text font-medium">Ev Pratique /50</span>
                       </label>
@@ -1633,7 +1654,7 @@ export default function NotesClient() {
                           }
                         }}
                       />
-                    </div>
+                    </div> */}
                     <div className="form-control">
                       <label className="label">
                         <span className="label-text font-medium">Jury /30</span>

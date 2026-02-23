@@ -19,7 +19,7 @@ import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 interface Filiere { id: number; nom: string }
-interface Etudiant { id: number; prenom: string; nom: string }
+interface Etudiant { id: number; prenom: string; nom: string; postnom: string }
 interface CompetenceScore { competenceId: number; competenceNom: string; coefficient: number; score: number }
 interface Evaluation {
     id: number;
@@ -113,7 +113,7 @@ export default function EvaluationsClient() {
 
     // ---------------- SELECT OPTIONS ----------------
     const filiereOptions = filieres.map(f => ({ value: f.id, label: f.nom }));
-    const etudiantOptions = etudiants.map(e => ({ value: e.id, label: `${e.prenom} ${e.nom}` }));
+    const etudiantOptions = etudiants.map(e => ({ value: e.id, label: `${e.nom} ${e.postnom} ${e.prenom} ${e.nom}` }));
     const sessionsOptions = sessions.map(s => ({
         value: s.id,
         label: `${new Date(s.dateDebut).toLocaleDateString()} - ${new Date(s.dateFin).toLocaleDateString()}`,
@@ -193,7 +193,7 @@ export default function EvaluationsClient() {
         const query = search.trim().toLowerCase();
         if (!query) return true;
 
-        const studentName = e.etudiant ? `${e.etudiant.prenom} ${e.etudiant.nom}`.toLowerCase() : "";
+        const studentName = e.etudiant ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom} ${e.etudiant.nom}`.toLowerCase() : "";
         const filiereName = e.filiere?.nom?.toLowerCase() || "";
 
         return studentName.includes(query) || filiereName.includes(query);
@@ -228,6 +228,8 @@ export default function EvaluationsClient() {
                             <th>ID</th>
                             <th>Étudiant</th>
                             <th>Filière</th>
+                            <th>Session</th>
+                            <th>Année</th>
                             <th>Moyenne</th>
                             <th>Date</th>
                             <th className="text-center">Actions</th>
@@ -237,8 +239,16 @@ export default function EvaluationsClient() {
                         {filteredEvaluations.length ? filteredEvaluations.map(e => (
                             <tr key={e.id}>
                                 <td>{e.id}</td>
-                                <td>{e.etudiant ? `${e.etudiant.prenom} ${e.etudiant.nom}` : "—"}</td>
+                                <td>{e.etudiant ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom} ` : "—"}</td>
                                 <td>{e.filiere?.nom || "—"}</td>
+                                <td>
+                                    {e.session?.dateDebut && e.session?.dateFin
+                                        ? `${new Date(e.session.dateDebut).toLocaleDateString("fr-FR")} - ${new Date(
+                                            e.session.dateFin
+                                        ).toLocaleDateString("fr-FR")}`
+                                        : "—"}
+                                </td>
+                                <td>{e.anneeAcademique?.annee}</td>
                                 <td>{e.moyenne?.toFixed(2)}</td>
                                 <td>{e.createdAt.toLocaleDateString()}</td>
                                 <td className="text-center">
@@ -322,7 +332,7 @@ export default function EvaluationsClient() {
                         <button type="button" className="btn btn-ghost btn-sm absolute right-4 top-4" onClick={() => setEditEvaluation(null)}>✕</button>
                         <h3 className="text-2xl font-bold text-center">Modifier l'évaluation</h3>
 
-                        <p className="text-sm text-gray-500">Étudiant: {editEvaluation.etudiant?.prenom} {editEvaluation.etudiant?.nom}</p>
+                        <p className="text-sm text-gray-500">Étudiant: {editEvaluation.etudiant?.nom} {editEvaluation.etudiant?.postnom} {editEvaluation.etudiant?.prenom}</p>
                         <p className="text-sm text-gray-500">Filière: {editEvaluation.filiere?.nom}</p>
 
                         {editEvaluation.competences.map((c, idx) => (

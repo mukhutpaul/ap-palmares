@@ -51,10 +51,72 @@ async function calculateMoyenne(
 // ===============================
 // ADD NOTE
 // ===============================
+// export async function addNote(formData: FormData) {
+//   const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
+//   const notePratique = Number(formData.get("notePratique") ?? 0);
+//   const noteJyry = Number(formData.get("noteJyry") ?? 0);
+//   const etudiantId = Number(formData.get("etudiantId"));
+//   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
+//   const sessionId = Number(formData.get("sessionId"));
+//   const filiereId = Number(formData.get("filiereId"));
+//   const createdById = String(formData.get("createdById"));
+
+//   if (
+//     isNaN(noteTheorique) ||
+//     isNaN(notePratique) ||
+//     isNaN(noteJyry) ||
+//     !etudiantId ||
+//     !anneeAcademiqueId ||
+//     !sessionId ||
+//     !filiereId ||
+//     !createdById
+//   )
+//     throw new Error("Tous les champs sont obligatoires");
+
+//   const userExists = await prisma.user.findUnique({ where: { id: createdById } });
+//   if (!userExists) throw new Error("Utilisateur introuvable (createdById invalide)");
+
+//   const [etudiant, annee, session, filiere] = await Promise.all([
+//     prisma.etudiant.findUnique({ where: { id: etudiantId } }),
+//     prisma.anneeAcademique.findUnique({ where: { id: anneeAcademiqueId } }),
+//     prisma.session.findUnique({ where: { id: sessionId } }),
+//     prisma.filiere.findUnique({ where: { id: filiereId } }),
+//   ]);
+
+//   if (!etudiant || !annee || !session || !filiere) {
+//     throw new Error("Données invalides : étudiant/année/session/filière introuvable");
+//   }
+
+//   const newNote = await prisma.note.create({
+//     data: {
+//       noteTheorique,
+//       notePratique,
+//       noteJyry,
+//       etudiantId,
+//       anneeAcademiqueId,
+//       sessionId,
+//       filiereId,
+//       createdById,
+//     },
+//     include: {
+//       etudiant: true,
+//       anneeAcademique: true,
+//       session: true,
+//       filiere: true,
+//     },
+//   });
+
+//   await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+//   revalidatePath("/notes");
+//   return newNote;
+// }
+
 export async function addNote(formData: FormData) {
   const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
-  const notePratique = Number(formData.get("notePratique") ?? 0);
   const noteJyry = Number(formData.get("noteJyry") ?? 0);
+
+  let notePratique = 0;
+
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
   const sessionId = Number(formData.get("sessionId"));
@@ -63,7 +125,6 @@ export async function addNote(formData: FormData) {
 
   if (
     isNaN(noteTheorique) ||
-    isNaN(notePratique) ||
     isNaN(noteJyry) ||
     !etudiantId ||
     !anneeAcademiqueId ||
@@ -73,8 +134,11 @@ export async function addNote(formData: FormData) {
   )
     throw new Error("Tous les champs sont obligatoires");
 
-  const userExists = await prisma.user.findUnique({ where: { id: createdById } });
-  if (!userExists) throw new Error("Utilisateur introuvable (createdById invalide)");
+  const userExists = await prisma.user.findUnique({
+    where: { id: createdById },
+  });
+  if (!userExists)
+    throw new Error("Utilisateur introuvable (createdById invalide)");
 
   const [etudiant, annee, session, filiere] = await Promise.all([
     prisma.etudiant.findUnique({ where: { id: etudiantId } }),
@@ -84,7 +148,42 @@ export async function addNote(formData: FormData) {
   ]);
 
   if (!etudiant || !annee || !session || !filiere) {
-    throw new Error("Données invalides : étudiant/année/session/filière introuvable");
+    throw new Error(
+      "Données invalides : étudiant/année/session/filière introuvable"
+    );
+  }
+
+  // 🔥 Récupérer l'évaluation
+  const evaluation = await prisma.evaluation.findUnique({
+    where: {
+      etudiantId_filiereId_sessionId_anneeAcademiqueId: {
+        etudiantId,
+        filiereId,
+        sessionId,
+        anneeAcademiqueId,
+      },
+    },
+    include: {
+      competences: true,
+    },
+  });
+
+  if (evaluation && evaluation.competences.length > 0) {
+    const totalScore = evaluation.competences.reduce(
+      (acc, comp) => acc + comp.score,
+      0
+    );
+
+    // ✅ chaque compétence max = 5
+    const maxPossible = evaluation.competences.length * 5;
+
+    // ✅ ramener sur 50
+    notePratique = (totalScore / maxPossible) * 50;
+
+    // ✅ arrondir à 2 décimales
+    notePratique = Number(notePratique.toFixed(2));
+  } else {
+    notePratique = 0;
   }
 
   const newNote = await prisma.note.create({
@@ -106,11 +205,17 @@ export async function addNote(formData: FormData) {
     },
   });
 
-  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+  await calculateMoyenne(
+    etudiantId,
+    anneeAcademiqueId,
+    sessionId,
+    filiereId
+  );
+
   revalidatePath("/notes");
+
   return newNote;
 }
-
 // ===============================
 // UPDATE NOTE
 // ===============================
@@ -279,7 +384,7 @@ export async function getDeliberationList(
   const grouped: any = {};
 
   for (const note of notes) {
-    if (!note.filiere || !note.etudiant ) continue; // ✅ protection TS
+    if (!note.filiere || !note.etudiant) continue; // ✅ protection TS
     const filiereName = note.filiere.nom;
     const etudiantId = note.etudiant.id;
 
