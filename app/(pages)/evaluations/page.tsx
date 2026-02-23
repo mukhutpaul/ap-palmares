@@ -8,6 +8,7 @@ import {
     createEvaluation,
     getEvaluationsByFiliere,
     deleteEvaluation,
+    updateEvaluation,
 } from "@/app/actions/evaluation.actions";
 import { getFilieres } from "@/app/actions/filieresActions";
 import { getEtudiants } from "@/app/actions/etudiantsActions";
@@ -44,6 +45,7 @@ export default function EvaluationsClient() {
     const [selectedSession, setSelectedSession] = useState<{ value: number; label: string } | null>(null);
     const [selectedAnnee, setSelectedAnnee] = useState<{ value: number; label: string } | null>(null);
     const [formScores, setFormScores] = useState<CompetenceScore[]>([]);
+    const [editEvaluation, setEditEvaluation] = useState<Evaluation | null>(null);
     const [search, setSearch] = useState("");
 
     // ---------------- FETCH INITIAL DATA ----------------
@@ -165,6 +167,30 @@ export default function EvaluationsClient() {
         }
     };
 
+    const openEditPopup = async (evaluation: Evaluation) => {
+        if (!evaluation.filiere) return;
+
+        try {
+            // Récupérer toutes les compétences de la filière
+            const competences = await getCompetencesByFiliere(evaluation.filiere.id);
+
+            // Fusionner avec les scores existants de l'évaluation
+            const competencesWithScores: CompetenceScore[] = competences.map(c => {
+                const existingScore = evaluation.competences.find(ec => ec.competenceId === c.id);
+                return {
+                    competenceId: c.id,
+                    competenceNom: c.nom,
+                    coefficient: c.coefficient,
+                    score: existingScore ? existingScore.score : 0,
+                };
+            });
+
+            setEditEvaluation({ ...evaluation, competences: competencesWithScores });
+        } catch {
+            toast.error("Impossible de charger les compétences pour l'édition");
+        }
+    };
+
     // ---------------- UI ----------------
     return (
         <div className="relative max-w-7xl mx-auto px-6 py-8">
@@ -209,7 +235,7 @@ export default function EvaluationsClient() {
                                 <td>{e.createdAt.toLocaleDateString()}</td>
                                 <td className="text-center">
                                     <div className="flex justify-center gap-2">
-                                        <button className="btn btn-xs btn-outline btn-warning">
+                                        <button className="btn btn-xs btn-outline btn-warning" onClick={() => openEditPopup(e)}>
                                             <LucideEdit2 size={14} />
                                         </button>
                                         <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteEvaluation(e.id)}>
@@ -244,22 +270,76 @@ export default function EvaluationsClient() {
                         {formScores.length === 0 ? (
                             <p className="text-gray-500 text-sm">Sélectionner une filière pour voir les compétences</p>
                         ) : formScores.map((c, idx) => (
-                            <input
-                                key={c.competenceId}
-                                type="number"
-                                className="input input-bordered w-full"
-                                value={isNaN(c.score) ? 0 : c.score}
-                                onChange={e => {
-                                    const newScores = [...formScores];
-                                    newScores[idx].score = parseFloat(e.target.value) || 0;
-                                    setFormScores(newScores);
-                                }}
-                                placeholder={`${c.competenceNom} (Coefficient: ${c.coefficient})`}
-                            />
+                            <div key={c.competenceId} className="flex flex-col mb-2">
+                                <label className="text-sm font-medium mb-1">
+                                    {c.competenceNom} (Coefficient: {c.coefficient})
+                                </label>
+                                <input
+                                    type="number"
+                                    className="input input-bordered w-full"
+                                    value={isNaN(c.score) ? 0 : c.score}
+                                    onChange={e => {
+                                        const newScores = [...formScores];
+                                        newScores[idx].score = parseFloat(e.target.value) || 0;
+                                        setFormScores(newScores);
+                                    }}
+                                />
+                            </div>
                         ))}
 
                         <div className="modal-action justify-center mt-6">
                             <button type="submit" className="btn btn-accent w-full">Ajouter</button>
+                        </div>
+                    </form>
+                </dialog>
+            )}
+
+            {/* Edit Evaluation Modal */}
+            {editEvaluation && (
+                <dialog className="modal modal-open">
+                    <form
+                        className="modal-box max-w-lg w-full p-8 flex flex-col gap-4"
+                        onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!editEvaluation) return;
+
+                            try {
+                                await updateEvaluation(editEvaluation.id, editEvaluation.competences.map(s => ({ competenceId: s.competenceId, score: s.score })));
+                                toast.success("Évaluation mise à jour !");
+                                setEditEvaluation(null);
+                                // Rafraîchir le tableau
+                                if (selectedFiliere) fetchEvaluations(selectedFiliere.value);
+                            } catch (err: any) {
+                                toast.error(err.message || "Erreur lors de la modification");
+                            }
+                        }}
+                    >
+                        <button type="button" className="btn btn-ghost btn-sm absolute right-4 top-4" onClick={() => setEditEvaluation(null)}>✕</button>
+                        <h3 className="text-2xl font-bold text-center">Modifier l'évaluation</h3>
+
+                        <p className="text-sm text-gray-500">Étudiant: {editEvaluation.etudiant?.prenom} {editEvaluation.etudiant?.nom}</p>
+                        <p className="text-sm text-gray-500">Filière: {editEvaluation.filiere?.nom}</p>
+
+                        {editEvaluation.competences.map((c, idx) => (
+                            <div key={c.competenceId} className="flex flex-col mb-2">
+                                <label className="text-sm font-medium mb-1">
+                                    {c.competenceNom} (Coefficient: {c.coefficient})
+                                </label>
+                                <input
+                                    type="number"
+                                    className="input input-bordered w-full"
+                                    value={c.score}
+                                    onChange={e => {
+                                        const newScores = [...editEvaluation.competences];
+                                        newScores[idx].score = parseFloat(e.target.value) || 0;
+                                        setEditEvaluation({ ...editEvaluation, competences: newScores });
+                                    }}
+                                />
+                            </div>
+                        ))}
+
+                        <div className="modal-action justify-center mt-6">
+                            <button type="submit" className="btn btn-accent w-full">Modifier</button>
                         </div>
                     </form>
                 </dialog>
