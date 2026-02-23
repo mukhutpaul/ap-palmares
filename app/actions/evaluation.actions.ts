@@ -1,9 +1,7 @@
-"use server"
+"use server";
 
-
-import { revalidatePath } from "next/cache"
-import { z } from "zod"
 import { prisma } from "@/app/lib/prisma";
+import { z } from "zod";
 import { Prisma } from "@prisma/client";
 
 // ================================
@@ -29,52 +27,42 @@ const evaluationSchema = z.object({
 // ================================
 
 export async function createEvaluation(data: unknown) {
-  const parsed = evaluationSchema.parse(data)
-
-  const {
-    etudiantId,
-    filiereId,
-    sessionId,
-    anneeAcademiqueId,
-    scores,
-    userId
-  } = parsed
+  const parsed = evaluationSchema.parse(data);
+  const { etudiantId, filiereId, sessionId, anneeAcademiqueId, scores, userId } = parsed;
 
   return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const etudiant = await tx.etudiant.findUnique({ where: { id: etudiantId } });
+    if (!etudiant) throw new Error("Étudiant inexistant");
+
+    const filiere = await tx.filiere.findUnique({ where: { id: filiereId } });
+    if (!filiere) throw new Error("Filière inexistante");
+
+    const session = await tx.session.findUnique({ where: { id: sessionId } });
+    if (!session) throw new Error("Session inexistante");
+
+    const annee = await tx.anneeAcademique.findUnique({ where: { id: anneeAcademiqueId } });
+    if (!annee) throw new Error("Année académique inexistante");
+
+    const user = await tx.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("Utilisateur inexistant");
 
     const existing = await tx.evaluation.findUnique({
-      where: {
-        etudiantId_filiereId_sessionId_anneeAcademiqueId: {
-          etudiantId,
-          filiereId,
-          sessionId,
-          anneeAcademiqueId
-        }
-      }
-    })
+      where: { etudiantId_filiereId_sessionId_anneeAcademiqueId: { etudiantId, filiereId, sessionId, anneeAcademiqueId } }
+    });
+    if (existing) throw new Error("Cette évaluation existe déjà");
 
-    if (existing) {
-      throw new Error("Cette évaluation existe déjà.")
-    }
-
-    const competences = await tx.competence.findMany({
-      where: { filiereId }
-    })
-
-    let total = 0
-    let totalCoef = 0
-
+    const competences = await tx.competence.findMany({ where: { filiereId } });
+    let total = 0;
+    let totalCoef = 0;
     for (const item of scores) {
-      const comp = competences.find(c => c.id === item.competenceId)
-      if (!comp) continue
-
-      total += item.score * comp.coefficient
-      totalCoef += comp.coefficient
+      const comp = competences.find(c => c.id === item.competenceId);
+      if (!comp) continue;
+      total += item.score * comp.coefficient;
+      totalCoef += comp.coefficient;
     }
+    const moyenne = totalCoef > 0 ? total / totalCoef : 0;
 
-    const moyenne = totalCoef > 0 ? total / totalCoef : 0
-
-    const evaluation = await tx.evaluation.create({
+    return await tx.evaluation.create({
       data: {
         etudiantId,
         filiereId,
@@ -82,17 +70,10 @@ export async function createEvaluation(data: unknown) {
         anneeAcademiqueId,
         moyenne,
         createdById: userId,
-        competences: {
-          create: scores.map(s => ({
-            competenceId: s.competenceId,
-            score: s.score
-          }))
-        }
+        competences: { create: scores.map(s => ({ competenceId: s.competenceId, score: s.score })) }
       }
-    })
-
-    return evaluation
-  })
+    });
+  });
 }
 
 // ================================
@@ -100,22 +81,17 @@ export async function createEvaluation(data: unknown) {
 // ================================
 
 export async function getEvaluationsByFiliere(filiereId: number) {
-  return await prisma.evaluation.findMany({
+  return prisma.evaluation.findMany({
     where: { filiereId },
     include: {
       etudiant: true,
+      filiere: true,      // ← ajouté
       session: true,
       anneeAcademique: true,
-      competences: {
-        include: {
-          competence: true
-        }
-      }
+      competences: { include: { competence: true } }
     },
-    orderBy: {
-      createdAt: "desc"
-    }
-  })
+    orderBy: { createdAt: "desc" }
+  });
 }
 
 // ================================
@@ -123,17 +99,14 @@ export async function getEvaluationsByFiliere(filiereId: number) {
 // ================================
 
 export async function getEvaluationById(id: number) {
-  return await prisma.evaluation.findUnique({
+  return prisma.evaluation.findUnique({
     where: { id },
     include: {
       etudiant: true,
-      competences: {
-        include: {
-          competence: true
-        }
-      }
+      filiere: true,       // ← ajouté
+      competences: { include: { competence: true } }
     }
-  })
+  });
 }
 
 // ================================
@@ -144,50 +117,29 @@ export async function updateEvaluation(
   evaluationId: number,
   scores: { competenceId: number; score: number }[]
 ) {
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const item of scores) {
       await tx.evaluationCompetence.update({
-        where: {
-          evaluationId_competenceId: {
-            evaluationId,
-            competenceId: item.competenceId
-          }
-        },
-        data: {
-          score: item.score
-        }
-      })
+        where: { evaluationId_competenceId: { evaluationId, competenceId: item.competenceId } },
+        data: { score: item.score }
+      });
     }
 
     const evaluation = await tx.evaluation.findUnique({
       where: { id: evaluationId },
-      include: {
-        competences: {
-          include: { competence: true }
-        }
-      }
-    })
+      include: { competences: { include: { competence: true } } }
+    });
+    if (!evaluation) throw new Error("Evaluation introuvable");
 
-    if (!evaluation) {
-      throw new Error("Evaluation introuvable")
-    }
-
-    let total = 0
-    let totalCoef = 0
-
+    let total = 0;
+    let totalCoef = 0;
     for (const item of evaluation.competences) {
-      total += item.score * item.competence.coefficient
-      totalCoef += item.competence.coefficient
+      total += item.score * item.competence.coefficient;
+      totalCoef += item.competence.coefficient;
     }
 
-    const moyenne = totalCoef > 0 ? total / totalCoef : 0
-
-    return await tx.evaluation.update({
-      where: { id: evaluationId },
-      data: { moyenne }
-    })
-  })
+    return tx.evaluation.update({ where: { id: evaluationId }, data: { moyenne: totalCoef > 0 ? total / totalCoef : 0 } });
+  });
 }
 
 // ================================
@@ -195,16 +147,10 @@ export async function updateEvaluation(
 // ================================
 
 export async function deleteEvaluation(id: number) {
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-
-    await tx.evaluationCompetence.deleteMany({
-      where: { evaluationId: id }
-    })
-
-    return await tx.evaluation.delete({
-      where: { id }
-    })
-  })
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.evaluationCompetence.deleteMany({ where: { evaluationId: id } });
+    return tx.evaluation.delete({ where: { id } });
+  });
 }
 
 // ================================
@@ -212,16 +158,15 @@ export async function deleteEvaluation(id: number) {
 // ================================
 
 export async function getEvaluationsByStudent(etudiantId: number) {
-  return await prisma.evaluation.findMany({
+  return prisma.evaluation.findMany({
     where: { etudiantId },
     include: {
-      filiere: true,
+      etudiant: true,       // ← ajouté
+      filiere: true,        // ← ajouté
       session: true,
       anneeAcademique: true,
-      competences: {
-        include: { competence: true }
-      }
+      competences: { include: { competence: true } }
     },
     orderBy: { createdAt: "desc" }
-  })
+  });
 }

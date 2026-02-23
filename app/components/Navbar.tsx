@@ -65,6 +65,7 @@ const NavBar = () => {
     { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/competences", label: "Compétences", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/evaluations", label: "Evaluations", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
 
 

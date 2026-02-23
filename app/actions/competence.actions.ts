@@ -55,6 +55,8 @@ export async function updateCompetence(
   }
 }
 
+
+
 /* =========================
    DELETE
 ========================= */
@@ -83,4 +85,19 @@ export async function getCompetences() {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function getCompetencesByFiliere(filiereId: number) {
+    // Récupère toutes les compétences d'une filière
+    return await prisma.competence.findMany({
+        where: { filiereId },
+        select: {
+            id: true,
+            nom: true,
+            coefficient: true,
+        },
+        orderBy: {
+            nom: "asc",
+        },
+    });
 }
