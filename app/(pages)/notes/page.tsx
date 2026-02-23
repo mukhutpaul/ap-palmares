@@ -790,44 +790,69 @@ export default function NotesClient() {
 
   const handleEditNote = async (e: any) => {
     e.preventDefault();
+
     if (!selectedNote) return;
-    if (!authSession?.user?.id) return toast.error("Session expirée");
-    if (!selectedEtudiant || !selectedAnnee || !selectedSession || !selectedFiliere) {
-      return toast.error("Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)");
+    if (!authSession?.user?.id)
+      return toast.error("Session expirée");
+
+    if (
+      !selectedEtudiant ||
+      !selectedAnnee ||
+      !selectedSession ||
+      !selectedFiliere
+    ) {
+      return toast.error(
+        "Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)"
+      );
     }
 
-
-    const already = notes.find(n =>
-      n.id !== selectedNote.id &&
-      n.etudiant?.id === selectedEtudiant?.value &&
-      n.session?.id === selectedSession?.value &&
-      n.filiere?.id === selectedFiliere?.value &&
-      n.anneeAcademique?.id === selectedAnnee?.value
+    // ✅ Vérification doublon
+    const already = notes.find(
+      (n) =>
+        n.id !== selectedNote.id &&
+        n.etudiant?.id === selectedEtudiant.value &&
+        n.session?.id === selectedSession.value &&
+        n.filiere?.id === selectedFiliere.value &&
+        n.anneeAcademique?.id === selectedAnnee.value
     );
 
     if (already) {
-      return toast.error("Doublon détecté : cet étudiant a déjà une note pour cette matière, session et filière.");
+      return toast.error(
+        "Doublon détecté : cet étudiant a déjà une note pour cette session et filière."
+      );
     }
 
     const formData = new FormData(e.currentTarget);
-    formData.append("id", String(selectedNote.id));
-    formData.append("etudiantId", String(selectedEtudiant.value));
-    formData.append("anneeAcademiqueId", String(selectedAnnee.value));
-    formData.append("sessionId", String(selectedSession.value));
-    formData.append("filiereId", String(selectedFiliere.value));
-    formData.append("createdById", authSession.user.id);
+
+    // ⚠️ IMPORTANT : on supprime notePratique si elle existe
+    formData.delete("notePratique");
+
+    // ✅ Injecter les valeurs correctes
+    formData.set("id", String(selectedNote.id));
+    formData.set("etudiantId", String(selectedEtudiant.value));
+    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+    formData.set("sessionId", String(selectedSession.value));
+    formData.set("filiereId", String(selectedFiliere.value));
+    formData.set("createdById", authSession.user.id);
 
     try {
       const updated = await updateNote(formData);
-      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
-      toast.success("Note modifiée");
+
+      setNotes((prev) =>
+        prev.map((n) => (n.id === updated.id ? updated : n))
+      );
+
+      toast.success("Note modifiée (pratique recalculé automatiquement)");
+
       setEditPopupOpen(false);
+
+      // ✅ Reset propre
       setSelectedNote(null);
       setSelectedEtudiant(null);
       setSelectedAnnee(null);
       setSelectedSession(null);
       setSelectedFiliere(null);
-      setSelectedNote(null)
+
     } catch (err: any) {
       toast.error(err.message);
     }

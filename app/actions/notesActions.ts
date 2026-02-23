@@ -222,8 +222,11 @@ export async function addNote(formData: FormData) {
 export async function updateNote(formData: FormData) {
   const id = Number(formData.get("id"));
   const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
-  const notePratique = Number(formData.get("notePratique") ?? 0);
   const noteJyry = Number(formData.get("noteJyry") ?? 0);
+
+  // ⚠️ recalcul automatique
+  let notePratique = 0;
+
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
   const sessionId = Number(formData.get("sessionId"));
@@ -233,7 +236,6 @@ export async function updateNote(formData: FormData) {
   if (
     !id ||
     isNaN(noteTheorique) ||
-    isNaN(notePratique) ||
     isNaN(noteJyry) ||
     !etudiantId ||
     !anneeAcademiqueId ||
@@ -243,11 +245,44 @@ export async function updateNote(formData: FormData) {
   )
     throw new Error("Tous les champs sont obligatoires");
 
+  // 🔥 Récupérer l’évaluation liée
+  const evaluation = await prisma.evaluation.findUnique({
+    where: {
+      etudiantId_filiereId_sessionId_anneeAcademiqueId: {
+        etudiantId,
+        filiereId,
+        sessionId,
+        anneeAcademiqueId,
+      },
+    },
+    include: {
+      competences: true,
+    },
+  });
+
+  if (evaluation && evaluation.competences.length > 0) {
+    const totalScore = evaluation.competences.reduce(
+      (acc, comp) => acc + comp.score,
+      0
+    );
+
+    const maxPossible = evaluation.competences.length * 5;
+
+    if (maxPossible > 0) {
+      notePratique = (totalScore / maxPossible) * 50;
+      notePratique = Number(notePratique.toFixed(2));
+    } else {
+      notePratique = 0;
+    }
+  } else {
+    notePratique = 0;
+  }
+
   const updated = await prisma.note.update({
     where: { id },
     data: {
       noteTheorique,
-      notePratique,
+      notePratique, // ✅ recalculé automatiquement
       noteJyry,
       etudiantId,
       anneeAcademiqueId,
@@ -263,8 +298,15 @@ export async function updateNote(formData: FormData) {
     },
   });
 
-  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+  await calculateMoyenne(
+    etudiantId,
+    anneeAcademiqueId,
+    sessionId,
+    filiereId
+  );
+
   revalidatePath("/notes");
+
   return updated;
 }
 
