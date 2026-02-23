@@ -63,7 +63,6 @@ export default function EvaluationsClient() {
                 setSessions(sessionsData);
                 setAnnees(anneesData);
 
-                // Sélection par défaut de la première filière et fetch des évaluations
                 if (filieresData.length > 0) {
                     const defaultFiliere = { value: filieresData[0].id, label: filieresData[0].nom };
                     setSelectedFiliere(defaultFiliere);
@@ -142,7 +141,7 @@ export default function EvaluationsClient() {
             toast.success("Évaluation ajoutée !");
             setPopupOpen(false);
             setFormScores([]);
-            fetchEvaluations(selectedFiliere.value); // 🔥 rafraîchit le tableau
+            fetchEvaluations(selectedFiliere.value);
         } catch (err: any) {
             toast.error(err.message || "Erreur lors de la création");
         }
@@ -171,10 +170,8 @@ export default function EvaluationsClient() {
         if (!evaluation.filiere) return;
 
         try {
-            // Récupérer toutes les compétences de la filière
             const competences = await getCompetencesByFiliere(evaluation.filiere.id);
 
-            // Fusionner avec les scores existants de l'évaluation
             const competencesWithScores: CompetenceScore[] = competences.map(c => {
                 const existingScore = evaluation.competences.find(ec => ec.competenceId === c.id);
                 return {
@@ -191,6 +188,17 @@ export default function EvaluationsClient() {
         }
     };
 
+    // ---------------- FILTERED EVALUATIONS ----------------
+    const filteredEvaluations = evaluations.filter(e => {
+        const query = search.trim().toLowerCase();
+        if (!query) return true;
+
+        const studentName = e.etudiant ? `${e.etudiant.prenom} ${e.etudiant.nom}`.toLowerCase() : "";
+        const filiereName = e.filiere?.nom?.toLowerCase() || "";
+
+        return studentName.includes(query) || filiereName.includes(query);
+    });
+
     // ---------------- UI ----------------
     return (
         <div className="relative max-w-7xl mx-auto px-6 py-8">
@@ -201,7 +209,7 @@ export default function EvaluationsClient() {
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl border shadow w-72">
                     <LucideSearch size={18} className="text-gray-400" />
                     <input
-                        placeholder="Rechercher..."
+                        placeholder="Rechercher par étudiant ou filière..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         className="w-full bg-transparent outline-none"
@@ -226,7 +234,7 @@ export default function EvaluationsClient() {
                         </tr>
                     </thead>
                     <tbody>
-                        {evaluations.length ? evaluations.map(e => (
+                        {filteredEvaluations.length ? filteredEvaluations.map(e => (
                             <tr key={e.id}>
                                 <td>{e.id}</td>
                                 <td>{e.etudiant ? `${e.etudiant.prenom} ${e.etudiant.nom}` : "—"}</td>
@@ -271,9 +279,7 @@ export default function EvaluationsClient() {
                             <p className="text-gray-500 text-sm">Sélectionner une filière pour voir les compétences</p>
                         ) : formScores.map((c, idx) => (
                             <div key={c.competenceId} className="flex flex-col mb-2">
-                                <label className="text-sm font-medium mb-1">
-                                    {c.competenceNom} (Coefficient: {c.coefficient})
-                                </label>
+                                <label className="text-sm font-medium mb-1">{c.competenceNom} (Coefficient: {c.coefficient})</label>
                                 <input
                                     type="number"
                                     className="input input-bordered w-full"
@@ -307,7 +313,6 @@ export default function EvaluationsClient() {
                                 await updateEvaluation(editEvaluation.id, editEvaluation.competences.map(s => ({ competenceId: s.competenceId, score: s.score })));
                                 toast.success("Évaluation mise à jour !");
                                 setEditEvaluation(null);
-                                // Rafraîchir le tableau
                                 if (selectedFiliere) fetchEvaluations(selectedFiliere.value);
                             } catch (err: any) {
                                 toast.error(err.message || "Erreur lors de la modification");
@@ -322,9 +327,7 @@ export default function EvaluationsClient() {
 
                         {editEvaluation.competences.map((c, idx) => (
                             <div key={c.competenceId} className="flex flex-col mb-2">
-                                <label className="text-sm font-medium mb-1">
-                                    {c.competenceNom} (Coefficient: {c.coefficient})
-                                </label>
+                                <label className="text-sm font-medium mb-1">{c.competenceNom} (Coefficient: {c.coefficient})</label>
                                 <input
                                     type="number"
                                     className="input input-bordered w-full"
