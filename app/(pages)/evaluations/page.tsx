@@ -17,6 +17,7 @@ import { getAnneesAcademiques } from "@/app/actions/notesActions";
 import { getCompetencesByFiliere } from "@/app/actions/competence.actions";
 import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
 import { useSession } from "next-auth/react";
+import EmptyStates from "@/app/components/EmptyStates";
 
 interface Filiere { id: number; nom: string }
 interface Etudiant { id: number; prenom: string; nom: string; postnom: string }
@@ -346,7 +347,7 @@ export default function EvaluationsClient() {
                     </div>
                 )) : (
                     <div className="col-span-full text-center py-10 text-gray-500">
-                        Aucune évaluation trouvée
+                        <EmptyStates IconComponent={"Inbox"} message="Aucune évaluation trouvée" sm={true}/>
                     </div>
                 )}
             </div>

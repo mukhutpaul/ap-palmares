@@ -18,6 +18,7 @@ import {
     LucideChevronDown,
 } from "lucide-react";
 import { getFilieres } from "@/app/actions/filieresActions";
+import EmptyStates from "@/app/components/EmptyStates";
 
 interface Filiere {
     id: number;
@@ -315,7 +316,7 @@ export default function CompetencesClient() {
                         ) : (
                             <tr>
                                 <td colSpan={6} className="text-center py-6 text-gray-500">
-                                    Aucune compétence trouvée
+                                    <EmptyStates IconComponent={"Inbox"} message="Aucune compétence trouvée" sm={true}/>
                                 </td>
                             </tr>
                         )}

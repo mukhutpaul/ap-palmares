@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
 import Swal from "sweetalert2";
+import EmptyStates from "@/app/components/EmptyStates";
 
 type Session = {
     id: number;
@@ -193,7 +194,7 @@ export default function SessionsClient() {
                         ) : (
                             <tr>
                                 <td colSpan={5} className="text-center py-6 text-gray-500">
-                                    Aucune session trouvée
+                                    <EmptyStates IconComponent={"Inbox"} message="Aucune session trouvée" sm={true}/>
                                 </td>
                             </tr>
                         )}

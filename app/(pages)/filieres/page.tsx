@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import ReactConfetti from "react-confetti";
 import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
 import Swal from "sweetalert2";
+import EmptyStates from "@/app/components/EmptyStates";
 
 
 interface Filiere {
@@ -172,7 +173,7 @@ export default function FilieresClient() {
             </tr>
           </thead>
           <tbody>
-            {paginatedFilieres.map((f) => (
+            {paginatedFilieres.length ? (paginatedFilieres.map((f) => (
               <tr key={f.id}>
                 <td>{f.id}</td>
                 <td>{f.nom}</td>
@@ -191,7 +192,16 @@ export default function FilieresClient() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ))) : (
+              <tr>
+                <td colSpan={10} className="text-center py-6 text-gray-500">
+                  <EmptyStates IconComponent={"Inbox"} message="Aucune filière trouvée" sm={true} />
+
+                </td>
+              </tr>
+            )}
+
+
           </tbody>
         </table>
       </div>

@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify"; // notifications
 import Swal from "sweetalert2"; // alertes confirm
 import Select from "react-select"; // dropdowns
-import { FileDown, FileUp, LucideTrash2, Plus } from "lucide-react"; // icônes
+import { FileDown, FileUp, LucideTrash2, Plus, Trash } from "lucide-react"; // icônes
 import { useSession } from "next-auth/react"; // session user
 import jsPDF from "jspdf"; // génération PDF
 import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
 import * as XLSX from "xlsx"; // lecture et écriture Excel
 import { saveAs } from "file-saver"; // sauvegarde fichiers
+import { Inbox } from "lucide-react";
 
 
 // ================= ACTIONS SERVER =================
@@ -24,6 +25,7 @@ import {
   getSessions,
   getFilieres,
 } from "@/app/actions/notesActions"; // ton fichier actions.ts
+import EmptyStates from "@/app/components/EmptyStates";
 
 // ================= TYPES =================
 // export interface SelectOption {
@@ -1316,7 +1318,7 @@ export default function NotesClient() {
                   <td className="flex justify-center gap-2">
                     <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}> <LucideTrash2 size={16} /> </button>
                     <button className="btn btn-xs btn-success btn-outline" onClick={() => handleDownloadBrevet(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 🎓 </button>
-                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} > ✏️ </button>
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} > c </button>
                     <button className="btn btn-xs btn-primary btn-outline" onClick={() => handleDownloadReleve(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 📄 </button>
                   </td>
 
@@ -1325,7 +1327,8 @@ export default function NotesClient() {
             ) : (
               <tr>
                 <td colSpan={10} className="text-center py-6 text-gray-500">
-                  Aucune note trouvée
+                   <EmptyStates IconComponent={"Inbox"} message="Aucune note trouvée" sm={true}/>
+                 
                 </td>
               </tr>
             )}

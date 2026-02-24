@@ -13,6 +13,7 @@ import {
   deleteEtudiant,
   getEtudiants,
 } from "@/app/actions/etudiantsActions";
+import EmptyStates from "@/app/components/EmptyStates";
 
 /* =======================
    Types
@@ -190,7 +191,7 @@ export default function EtudiantsClient() {
       {/* TABLEAU */}
       {filteredEtudiants.length === 0 ? (
         <div className="text-center text-gray-500 py-10">
-          Aucun étudiant trouvé
+          <EmptyStates IconComponent={"User"} message="Aucune étudiant trouvé" sm={true}/>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
