@@ -14,11 +14,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "App Palmares",
-  description: "Generated MKG",
+  description: "MKG",
+  icons: {
+    icon: "/logo-leon.png?v=2",
+  },
 };
 
 // Layout enfant adapté : pas de <html> ni <body>
-export default function ChildLayout({
+export function ChildLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
