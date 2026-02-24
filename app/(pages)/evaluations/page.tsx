@@ -34,135 +34,69 @@ interface Evaluation {
 
 export default function EvaluationsClient() {
     const { data: session } = useSession();
+
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [filieres, setFilieres] = useState<Filiere[]>([]);
     const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
     const [sessions, setSessions] = useState<any[]>([]);
     const [annees, setAnnees] = useState<any[]>([]);
     const [popupOpen, setPopupOpen] = useState(false);
-    const [selectedFiliere, setSelectedFiliere] = useState<{ value: number; label: string } | null>(null);
-    const [selectedEtudiant, setSelectedEtudiant] = useState<{ value: number; label: string } | null>(null);
-    const [selectedSession, setSelectedSession] = useState<{ value: number; label: string } | null>(null);
-    const [selectedAnnee, setSelectedAnnee] = useState<{ value: number; label: string } | null>(null);
+    const [selectedFiliere, setSelectedFiliere] = useState<any>(null);
+    const [selectedEtudiant, setSelectedEtudiant] = useState<any>(null);
+    const [selectedSession, setSelectedSession] = useState<any>(null);
+    const [selectedAnnee, setSelectedAnnee] = useState<any>(null);
     const [formScores, setFormScores] = useState<CompetenceScore[]>([]);
     const [editEvaluation, setEditEvaluation] = useState<Evaluation | null>(null);
+    const [detailEvaluation, setDetailEvaluation] = useState<Evaluation | null>(null);
     const [search, setSearch] = useState("");
 
-    // ---------------- FETCH INITIAL DATA ----------------
+    // ---------------- INIT ----------------
     useEffect(() => {
         async function init() {
             try {
-                const [filieresData, etudiantsData, sessionsData, anneesData] = await Promise.all([
-                    getFilieres(),
-                    getEtudiants(),
-                    getSessions(),
-                    getAnneesAcademiques(),
-                ]);
+                const [filieresData, etudiantsData, sessionsData, anneesData] =
+                    await Promise.all([
+                        getFilieres(),
+                        getEtudiants(),
+                        getSessions(),
+                        getAnneesAcademiques(),
+                    ]);
+
                 setFilieres(filieresData);
                 setEtudiants(etudiantsData);
                 setSessions(sessionsData);
                 setAnnees(anneesData);
 
                 if (filieresData.length > 0) {
-                    const defaultFiliere = { value: filieresData[0].id, label: filieresData[0].nom };
+                    const defaultFiliere = {
+                        value: filieresData[0].id,
+                        label: filieresData[0].nom,
+                    };
                     setSelectedFiliere(defaultFiliere);
                     fetchEvaluations(defaultFiliere.value);
                 }
             } catch {
-                toast.error("Impossible de charger les données initiales");
+                toast.error("Impossible de charger les données");
             }
         }
         init();
     }, []);
 
-    // ---------------- FETCH EVALUATIONS QUAND FILIERE CHANGE ----------------
     useEffect(() => {
-        if (selectedFiliere) {
-            fetchEvaluations(selectedFiliere.value);
-        }
+        if (selectedFiliere) fetchEvaluations(selectedFiliere.value);
     }, [selectedFiliere]);
 
     const fetchEvaluations = async (filiereId: number) => {
         try {
             const data = await getEvaluationsByFiliere(filiereId);
-            setEvaluations(data.map((e: any) => ({ ...e, createdAt: new Date(e.createdAt) })));
+            setEvaluations(
+                data.map((e: any) => ({
+                    ...e,
+                    createdAt: new Date(e.createdAt),
+                }))
+            );
         } catch {
             toast.error("Impossible de charger les évaluations");
-        }
-    };
-
-    // ---------------- FETCH COMPETENCES ----------------
-    useEffect(() => {
-        async function fetchCompetences() {
-            if (!selectedFiliere) return;
-            try {
-                const data = await getCompetencesByFiliere(selectedFiliere.value);
-                const initialScores: CompetenceScore[] = data.map(c => ({
-                    competenceId: c.id,
-                    competenceNom: c.nom,
-                    coefficient: c.coefficient,
-                    score: 0,
-                }));
-                setFormScores(initialScores);
-            } catch {
-                toast.error("Impossible de charger les compétences");
-            }
-        }
-        fetchCompetences();
-    }, [selectedFiliere]);
-
-    // ---------------- SELECT OPTIONS ----------------
-    const filiereOptions = filieres.map(f => ({ value: f.id, label: f.nom }));
-    const etudiantOptions = etudiants.map(e => ({ value: e.id, label: `${e.nom} ${e.postnom} ${e.prenom} ${e.nom}` }));
-    const sessionsOptions = sessions.map(s => ({
-        value: s.id,
-        label: `${new Date(s.dateDebut).toLocaleDateString()} - ${new Date(s.dateFin).toLocaleDateString()}`,
-    }));
-    const anneeOptions = annees.map(a => ({ value: a.id, label: a.annee }));
-
-    // ---------------- ACTIONS ----------------
-    const handleAddEvaluation = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!selectedFiliere || !selectedEtudiant || !selectedSession || !selectedAnnee || formScores.length === 0) {
-            toast.error("Remplir tous les champs !");
-            return;
-        }
-
-        try {
-            await createEvaluation({
-                etudiantId: selectedEtudiant.value,
-                filiereId: selectedFiliere.value,
-                sessionId: selectedSession.value,
-                anneeAcademiqueId: selectedAnnee.value,
-                scores: formScores.map(s => ({ competenceId: s.competenceId, score: s.score })),
-                userId: session?.user?.id || "unknown",
-            });
-
-            toast.success("Évaluation ajoutée !");
-            setPopupOpen(false);
-            setFormScores([]);
-            fetchEvaluations(selectedFiliere.value);
-        } catch (err: any) {
-            toast.error(err.message || "Erreur lors de la création");
-        }
-    };
-
-    const handleDeleteEvaluation = async (id: number) => {
-        const result = await Swal.fire({
-            title: "Supprimer cette évaluation ?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Supprimer",
-            cancelButtonText: "Annuler",
-        });
-        if (!result.isConfirmed) return;
-
-        try {
-            await deleteEvaluation(id);
-            setEvaluations(prev => prev.filter(e => e.id !== id));
-            toast.success("Évaluation supprimée !");
-        } catch {
-            toast.error("Impossible de supprimer l'évaluation");
         }
     };
 
@@ -188,90 +122,235 @@ export default function EvaluationsClient() {
         }
     };
 
-    // ---------------- FILTERED EVALUATIONS ----------------
-    const filteredEvaluations = evaluations.filter(e => {
-        const query = search.trim().toLowerCase();
+    const handleOpenDetail = async (evaluation: Evaluation) => {
+        if (!evaluation.filiere) return;
+
+        try {
+            // Récupérer toutes les compétences de la filière
+            const competences = await getCompetencesByFiliere(evaluation.filiere.id);
+
+            // Créer la liste complète avec score et coefficient
+            const competencesWithScores: CompetenceScore[] = competences.map(c => {
+                const existing = evaluation.competences.find(ec => ec.competenceId === c.id);
+                return {
+                    competenceId: c.id,
+                    competenceNom: c.nom || "Compétence inconnue",
+                    coefficient: c.coefficient,  // ⚠️ ajoute le coefficient ici
+                    score: existing ? existing.score : 0
+                };
+            });
+
+            setDetailEvaluation({ ...evaluation, competences: competencesWithScores });
+        } catch {
+            toast.error("Impossible de charger les détails des compétences");
+        }
+    };
+    // ---------------- COMPETENCES ----------------
+    useEffect(() => {
+        async function fetchCompetences() {
+            if (!selectedFiliere) return;
+            try {
+                const data = await getCompetencesByFiliere(
+                    selectedFiliere.value
+                );
+                setFormScores(
+                    data.map((c) => ({
+                        competenceId: c.id,
+                        competenceNom: c.nom,
+                        coefficient: c.coefficient,
+                        score: 0,
+                    }))
+                );
+            } catch {
+                toast.error("Impossible de charger les compétences");
+            }
+        }
+        fetchCompetences();
+    }, [selectedFiliere]);
+
+    // ---------------- OPTIONS ----------------
+    const filiereOptions = filieres.map((f) => ({
+        value: f.id,
+        label: f.nom,
+    }));
+
+    const etudiantOptions = etudiants.map((e) => ({
+        value: e.id,
+        label: `${e.nom} ${e.postnom} ${e.prenom}`,
+    }));
+
+    const sessionsOptions = sessions.map((s) => ({
+        value: s.id,
+        label: `${new Date(s.dateDebut).toLocaleDateString("fr-FR")} - ${new Date(
+            s.dateFin
+        ).toLocaleDateString("fr-FR")}`,
+    }));
+
+    const anneeOptions = annees.map((a) => ({
+        value: a.id,
+        label: a.annee,
+    }));
+
+    // ---------------- ADD ----------------
+    const handleAddEvaluation = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedFiliere || !selectedEtudiant || !selectedSession || !selectedAnnee)
+            return toast.error("Remplir tous les champs");
+
+        try {
+            await createEvaluation({
+                etudiantId: selectedEtudiant.value,
+                filiereId: selectedFiliere.value,
+                sessionId: selectedSession.value,
+                anneeAcademiqueId: selectedAnnee.value,
+                scores: formScores.map((s) => ({
+                    competenceId: s.competenceId,
+                    score: s.score,
+                })),
+                userId: session?.user?.id || "unknown",
+            });
+
+            toast.success("Évaluation ajoutée");
+            setPopupOpen(false);
+            fetchEvaluations(selectedFiliere.value);
+        } catch (err: any) {
+            toast.error(err.message);
+        }
+    };
+
+    // ---------------- DELETE ----------------
+    const handleDeleteEvaluation = async (id: number) => {
+        const result = await Swal.fire({
+            title: "Supprimer cette évaluation ?",
+            icon: "warning",
+            showCancelButton: true,
+        });
+        if (!result.isConfirmed) return;
+
+        await deleteEvaluation(id);
+        setEvaluations((prev) => prev.filter((e) => e.id !== id));
+        toast.success("Évaluation supprimée");
+    };
+
+    // ---------------- FILTER ----------------
+    const filteredEvaluations = evaluations.filter((e) => {
+        const query = search.toLowerCase();
         if (!query) return true;
 
-        const studentName = e.etudiant ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom} ${e.etudiant.nom}`.toLowerCase() : "";
-        const filiereName = e.filiere?.nom?.toLowerCase() || "";
+        const student =
+            e.etudiant &&
+            `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom}`.toLowerCase();
 
-        return studentName.includes(query) || filiereName.includes(query);
+        return student?.includes(query) || e.filiere?.nom.toLowerCase().includes(query);
     });
 
     // ---------------- UI ----------------
     return (
-        <div className="relative max-w-7xl mx-auto px-6 py-8">
-            <h1 className="text-3xl font-semibold mb-4">Gestion des évaluations</h1>
+        <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold mb-6">
+                Gestion des évaluations
+            </h1>
 
             {/* Toolbar */}
-            <div className="flex justify-between items-center mb-6 gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl border shadow w-72">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl border shadow w-full lg:w-80">
                     <LucideSearch size={18} className="text-gray-400" />
                     <input
-                        placeholder="Rechercher par étudiant ou filière..."
+                        placeholder="Rechercher..."
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="w-full bg-transparent outline-none"
                     />
                 </div>
-                <button className="btn btn-accent rounded-xl px-6" onClick={() => setPopupOpen(true)}>
+
+                <button
+                    className="btn btn-accent rounded-xl w-full lg:w-auto"
+                    onClick={() => setPopupOpen(true)}
+                >
                     + Ajouter évaluation
                 </button>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto rounded-xl border shadow bg-base-100">
-                <table className="table w-full">
-                    <thead className="bg-base-200">
-                        <tr>
-                            <th>ID</th>
-                            <th>Étudiant</th>
-                            <th>Filière</th>
-                            <th>Session</th>
-                            <th>Année</th>
-                            <th>Moyenne</th>
-                            <th>Date</th>
-                            <th className="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredEvaluations.length ? filteredEvaluations.map(e => (
-                            <tr key={e.id}>
-                                <td>{e.id}</td>
-                                <td>{e.etudiant ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom} ` : "—"}</td>
-                                <td>{e.filiere?.nom || "—"}</td>
-                                <td>
+            {/* TABLE */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredEvaluations.length ? filteredEvaluations.map(e => (
+                    <div
+                        key={e.id}
+                        className="bg-base-100 border rounded-xl shadow hover:shadow-lg transition-shadow duration-300 p-5 flex flex-col justify-between"
+                    >
+                        {/* HEADER */}
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="font-bold text-gray-700">ID #{e.id}</span>
+                            <span className={`px-2 py-1 rounded-full text-white text-xs font-semibold
+                    ${e.moyenne >= 14 ? 'bg-green-500' : e.moyenne >= 10 ? 'bg-yellow-500' : 'bg-red-500'}`}>
+                                {e.moyenne?.toFixed(2)}
+                            </span>
+                        </div>
+
+                        {/* CONTENT */}
+                        <div className="space-y-2 text-sm sm:text-base">
+                            <div>
+                                <span className="font-semibold text-gray-600">Étudiant:</span>
+                                <p className="text-gray-800">{e.etudiant ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom}` : "—"}</p>
+                            </div>
+
+                            <div>
+                                <span className="font-semibold text-gray-600">Filière:</span>
+                                <p className="text-gray-800">{e.filiere?.nom || "—"}</p>
+                            </div>
+
+                            <div>
+                                <span className="font-semibold text-gray-600">Session:</span>
+                                <p className="text-gray-800">
                                     {e.session?.dateDebut && e.session?.dateFin
                                         ? `${new Date(e.session.dateDebut).toLocaleDateString("fr-FR")} - ${new Date(
                                             e.session.dateFin
                                         ).toLocaleDateString("fr-FR")}`
                                         : "—"}
-                                </td>
-                                <td>{e.anneeAcademique?.annee}</td>
-                                <td>{e.moyenne?.toFixed(2)}</td>
-                                <td>{e.createdAt.toLocaleDateString()}</td>
-                                <td className="text-center">
-                                    <div className="flex justify-center gap-2">
-                                        <button className="btn btn-xs btn-outline btn-warning" onClick={() => openEditPopup(e)}>
-                                            <LucideEdit2 size={14} />
-                                        </button>
-                                        <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteEvaluation(e.id)}>
-                                            <LucideTrash2 size={14} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        )) : (
-                            <tr>
-                                <td colSpan={6} className="text-center py-6 text-gray-500">
-                                    Aucune évaluation trouvée
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                                </p>
+                            </div>
+
+                            <div>
+                                <span className="font-semibold text-gray-600">Année:</span>
+                                <p className="text-gray-800">{e.anneeAcademique?.annee || "—"}</p>
+                            </div>
+
+                            <div>
+                                <span className="font-semibold text-gray-600">Date:</span>
+                                <p className="text-gray-800">{e.createdAt.toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
+                        {/* ACTIONS */}
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button
+                                className="btn btn-xs btn-outline btn-info hover:bg-blue-500 hover:text-white transition-colors"
+                                 onClick={() => handleOpenDetail(e)}
+                            >
+                                Détails
+                            </button>
+                            <button
+                                className="btn btn-xs btn-outline btn-warning hover:bg-yellow-500 hover:text-white transition-colors"
+                                onClick={() => openEditPopup(e)}
+                            >
+                                <LucideEdit2 size={14} />
+                            </button>
+
+                            <button
+                                className="btn btn-xs btn-outline btn-error hover:bg-red-500 hover:text-white transition-colors"
+                                onClick={() => handleDeleteEvaluation(e.id)}
+                            >
+                                <LucideTrash2 size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )) : (
+                    <div className="col-span-full text-center py-10 text-gray-500">
+                        Aucune évaluation trouvée
+                    </div>
+                )}
             </div>
+
 
             {/* Add Evaluation Modal */}
             {popupOpen && (
@@ -310,7 +389,63 @@ export default function EvaluationsClient() {
                 </dialog>
             )}
 
+            {/* Détail Evaluation Modal */}
+            {/* Détail Evaluation Modal */}
+            {detailEvaluation && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box max-w-lg w-full p-6 flex flex-col gap-4">
+                        <button
+                            type="button"
+                            className="btn btn-ghost btn-sm absolute right-4 top-4"
+                            onClick={() => setDetailEvaluation(null)}
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-xl font-bold text-center">Détails des notes</h3>
+
+                        <p className="text-sm text-gray-500">
+                            Étudiant: {detailEvaluation.etudiant?.nom} {detailEvaluation.etudiant?.postnom} {detailEvaluation.etudiant?.prenom}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                            Filière: {detailEvaluation.filiere?.nom}
+                        </p>
+
+                        <div className="mt-4 space-y-2">
+                            {detailEvaluation.competences.map((c) => (
+                                <div key={c.competenceId} className="flex justify-between text-sm">
+                                    <span>{c.competenceNom || "Compétence inconnue"}</span>
+                                    <span>{c.score?.toFixed(2) || 0} / 5</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Somme et moyenne */}
+                        <div className="mt-4 border-t pt-2 text-sm font-medium flex justify-between">
+                            <span>Somme:</span>
+                            <span>
+                                {detailEvaluation.competences.reduce((sum, c) => sum + (c.score || 0), 0).toFixed(2)} / {detailEvaluation.competences.length * 5}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-sm font-medium">
+                            <span>Moyenne:</span>
+                            <span>
+                                {(
+                                    detailEvaluation.competences.reduce((sum, c) => sum + (c.score || 0), 0) /
+                                    detailEvaluation.competences.length
+                                ).toFixed(2)} / 5
+                            </span>
+                        </div>
+                    </div>
+                </dialog>
+            )}
+
+
+
+
             {/* Edit Evaluation Modal */}
+
+
+
             {editEvaluation && (
                 <dialog className="modal modal-open">
                     <form
