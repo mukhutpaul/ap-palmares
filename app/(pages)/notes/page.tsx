@@ -26,10 +26,18 @@ import {
 } from "@/app/actions/notesActions"; // ton fichier actions.ts
 
 // ================= TYPES =================
-export interface SelectOption {
-  value: number;
-  label: string;
+// export interface SelectOption {
+//   value: number;
+//   label: string;
+// }
+
+type SelectOption = { value: number; label: string };
+
+interface FiltreFiliereProps {
+  filieres: { id: number; nom: string }[];
 }
+
+
 
 
 export default function NotesClient() {
@@ -46,6 +54,7 @@ export default function NotesClient() {
   const [filterAnnee, setFilterAnnee] = useState<SelectOption | null>(null);
   const [filterSession, setFilterSession] = useState<SelectOption | null>(null);
   const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
+    const [isClient, setIsClient] = useState(false);
 
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -61,6 +70,13 @@ export default function NotesClient() {
   const itemsPerPage = 10;
 
   const tableRef = useRef<HTMLTableElement>(null);
+
+   useEffect(() => {
+    setIsClient(true); // On ne rend Select qu'après le montage client
+  }, []);
+
+
+  
 
 
   // =====================
@@ -1252,7 +1268,7 @@ export default function NotesClient() {
         <table ref={tableRef} className="table w-full">
           <thead className="bg-base-200 text-sm">
             <tr>
-              <th>N°</th> {/* ✅ Nouvelle colonne */}
+              <th>N°</th> 
               <th>Etudiant</th>
               <th>Théorie/20</th>
               <th>Pratique/50</th>
@@ -1269,7 +1285,6 @@ export default function NotesClient() {
             {paginatedNotes.length ? (
               paginatedNotes.map((n, index) => (
                 <tr key={n.id}>
-                  {/* ✅ Index avec pagination */}
                   <td>
                     {(currentPage - 1) * itemsPerPage + index + 1}
                   </td>

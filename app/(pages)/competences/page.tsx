@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Select from "react-select";
+import Select, { SingleValue } from "react-select";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import {
@@ -25,10 +25,10 @@ interface Filiere {
 }
 
 interface CompetencePayload {
-  nom: string;
-  maxScore: number;
-  coefficient: number;
-  filiereId: number;
+    nom: string;
+    maxScore: number;
+    coefficient: number;
+    filiereId: number;
 }
 
 interface Competence {
@@ -36,27 +36,28 @@ interface Competence {
     nom: string;
     maxScore: number;
     coefficient: number;
-    filiereId?: number;
-    filiere: Filiere | null;
+    filiereId: number;
+    filiere?: Filiere | null;
     createdAt: Date;
 }
 
+interface FormState {
+    nom: string;
+    maxScore: number;
+    coefficient?: number; // optionnel pour permettre champ vide temporaire
+}
+
 export default function CompetencesClient() {
-    /* ---------------- STATE ---------------- */
     const [competences, setCompetences] = useState<Competence[]>([]);
     const [filieres, setFilieres] = useState<Filiere[]>([]);
     const [search, setSearch] = useState("");
     const [popupOpen, setPopupOpen] = useState(false);
     const [editPopupOpen, setEditPopupOpen] = useState(false);
-    const [selectedCompetence, setSelectedCompetence] =
-        useState<Competence | null>(null);
-    const [selectedFiliere, setSelectedFiliere] = useState<{
-        value: number;
-        label: string;
-    } | null>(null);
+    const [selectedCompetence, setSelectedCompetence] = useState<Competence | null>(null);
+    const [selectedFiliere, setSelectedFiliere] = useState<SingleValue<{ value: number; label: string }>>(null);
     const [filiereSortAsc, setFiliereSortAsc] = useState<boolean | null>(null);
 
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<FormState>({
         nom: "",
         maxScore: 0,
         coefficient: 1,
@@ -82,7 +83,14 @@ export default function CompetencesClient() {
         }
     };
 
-
+    const fetchFilieres = async () => {
+        try {
+            const data = await getFilieres();
+            setFilieres(data);
+        } catch {
+            toast.error("Impossible de charger les filières");
+        }
+    };
 
     const filiereOptions = filieres.map((f) => ({
         value: f.id,
@@ -109,21 +117,21 @@ export default function CompetencesClient() {
     };
 
     /* ---------------- ACTIONS ---------------- */
-
-    const handleAddCompetence = async (
-        e: React.FormEvent<HTMLFormElement>
-    ) => {
+    const handleAddCompetence = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
         if (!selectedFiliere || !form.nom || !form.maxScore) {
             toast.error("Remplir tous les champs !");
             return;
         }
 
-        const res = await createCompetence({
-            ...form,
+        const payload: CompetencePayload = {
+            nom: form.nom,
+            maxScore: form.maxScore,
+            coefficient: form.coefficient ?? 1,
             filiereId: selectedFiliere.value,
-        });
+        };
+
+        const res = await createCompetence(payload);
 
         if (!res.success) {
             toast.error(res.error);
@@ -132,23 +140,21 @@ export default function CompetencesClient() {
 
         toast.success("Compétence ajoutée !");
 
+        if (!res?.data) return;
+
         setCompetences((prev) => [
             {
                 ...res.data,
+                filiere: { id: selectedFiliere.value, nom: selectedFiliere.label },
                 createdAt: new Date(res.data.createdAt),
-            },
+            } as Competence,
             ...prev,
         ]);
 
         setPopupOpen(false);
         setForm({ nom: "", maxScore: 0, coefficient: 1 });
         setSelectedFiliere(null);
-        getFilieres()
     };
-
-    useEffect(() => {
-        fetchFilieres();
-    }, []);
 
     const openEditPopup = (c: Competence) => {
         setSelectedCompetence(c);
@@ -157,24 +163,22 @@ export default function CompetencesClient() {
             maxScore: c.maxScore,
             coefficient: c.coefficient,
         });
-        setSelectedFiliere(
-            c.filiere ? { value: c.filiere.id, label: c.filiere.nom } : null
-        );
+        setSelectedFiliere(c.filiere ? { value: c.filiere.id, label: c.filiere.nom } : null);
         setEditPopupOpen(true);
     };
 
-    const handleUpdateCompetence = async (
-        e: React.FormEvent<HTMLFormElement>
-    ) => {
+    const handleUpdateCompetence = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedCompetence || !selectedFiliere) return;
 
-        const res = await updateCompetence(selectedCompetence.id, {
+        const payload: CompetencePayload = {
             nom: form.nom,
             maxScore: form.maxScore,
-            coefficient: form.coefficient,
-            filiereId: selectedFiliere.value, // ✅ important
-        });
+            coefficient: form.coefficient ?? 1,
+            filiereId: selectedFiliere.value,
+        };
+
+        const res = await updateCompetence(selectedCompetence.id, payload);
 
         if (!res.success) {
             toast.error(res.error);
@@ -183,13 +187,21 @@ export default function CompetencesClient() {
 
         toast.success("Compétence modifiée !");
 
+        if (!res?.data) return;
+
+        // ⚡ Met à jour la compétence avec la filière sélectionnée
         setCompetences((prev) =>
             prev.map((c) =>
                 c.id === selectedCompetence.id
                     ? {
-                        ...res.data,
-                        createdAt: new Date(res.data.createdAt),
-                    }
+                          id: res.data.id,
+                          nom: res.data.nom,
+                          maxScore: res.data.maxScore,
+                          coefficient: res.data.coefficient,
+                          filiereId: res.data.filiereId,
+                          filiere: { id: selectedFiliere.value, nom: selectedFiliere.label },
+                          createdAt: new Date(res.data.createdAt),
+                      }
                     : c
             )
         );
@@ -199,14 +211,6 @@ export default function CompetencesClient() {
         setSelectedFiliere(null);
     };
 
-    const fetchFilieres = async () => {
-        try {
-            const data = await getFilieres();
-            setFilieres(data);
-        } catch {
-            toast.error("Impossible de charger les filières");
-        }
-    };
     const handleDeleteCompetence = async (id: number) => {
         const result = await Swal.fire({
             title: "Supprimer cette compétence ?",
@@ -236,9 +240,7 @@ export default function CompetencesClient() {
                 <h1 className="text-3xl font-semibold tracking-tight">
                     Gestion des compétences
                 </h1>
-                <p className="text-gray-500 mt-1">
-                    Administration des compétences par filière
-                </p>
+                <p className="text-gray-500 mt-1">Administration des compétences par filière</p>
             </div>
 
             {/* Toolbar */}
@@ -274,12 +276,8 @@ export default function CompetencesClient() {
                                     onClick={toggleFiliereSort}
                                 >
                                     Filière
-                                    {filiereSortAsc === true && (
-                                        <LucideChevronUp size={14} />
-                                    )}
-                                    {filiereSortAsc === false && (
-                                        <LucideChevronDown size={14} />
-                                    )}
+                                    {filiereSortAsc === true && <LucideChevronUp size={14} />}
+                                    {filiereSortAsc === false && <LucideChevronDown size={14} />}
                                 </div>
                             </th>
                             <th>Score max</th>
@@ -316,10 +314,7 @@ export default function CompetencesClient() {
                             ))
                         ) : (
                             <tr>
-                                <td
-                                    colSpan={6}
-                                    className="text-center py-6 text-gray-500"
-                                >
+                                <td colSpan={6} className="text-center py-6 text-gray-500">
                                     Aucune compétence trouvée
                                 </td>
                             </tr>
@@ -328,6 +323,7 @@ export default function CompetencesClient() {
                 </table>
             </div>
 
+            {/* Add Modal */}
             {popupOpen && (
                 <dialog className="modal modal-open">
                     <form
@@ -342,9 +338,7 @@ export default function CompetencesClient() {
                             ✕
                         </button>
 
-                        <h3 className="text-2xl font-bold text-center mb-4">
-                            Nouvelle compétence
-                        </h3>
+                        <h3 className="text-2xl font-bold text-center mb-4">Nouvelle compétence</h3>
 
                         <input
                             name="nom"
@@ -352,9 +346,7 @@ export default function CompetencesClient() {
                             className="input input-bordered w-full"
                             required
                             value={form.nom}
-                            onChange={(e) =>
-                                setForm({ ...form, nom: e.target.value })
-                            }
+                            onChange={(e) => setForm({ ...form, nom: e.target.value })}
                         />
 
                         <input
@@ -363,9 +355,9 @@ export default function CompetencesClient() {
                             placeholder="Score max"
                             className="input input-bordered w-full"
                             required
-                            value={form.maxScore}
+                            value={form.maxScore ?? ""}
                             onChange={(e) =>
-                                setForm({ ...form, maxScore: parseFloat(e.target.value) })
+                                setForm({ ...form, maxScore: parseFloat(e.target.value) || 0 })
                             }
                         />
 
@@ -374,9 +366,13 @@ export default function CompetencesClient() {
                             name="coefficient"
                             placeholder="Coefficient"
                             className="input input-bordered w-full"
-                            value={form.coefficient}
+                            value={form.coefficient ?? ""}
                             onChange={(e) =>
-                                setForm({ ...form, coefficient: parseFloat(e.target.value) })
+                                setForm({
+                                    ...form,
+                                    coefficient:
+                                        e.target.value === "" ? undefined : parseFloat(e.target.value),
+                                })
                             }
                         />
 
@@ -396,74 +392,7 @@ export default function CompetencesClient() {
                 </dialog>
             )}
 
-            {popupOpen && (
-                <dialog className="modal modal-open">
-                    <form
-                        className="modal-box rounded-3xl max-w-lg w-full p-8 flex flex-col gap-5 relative"
-                        onSubmit={handleAddCompetence}
-                    >
-                        <button
-                            type="button"
-                            className="btn btn-ghost btn-sm absolute right-4 top-4"
-                            onClick={() => setPopupOpen(false)}
-                        >
-                            ✕
-                        </button>
-
-                        <h3 className="text-2xl font-bold text-center mb-4">
-                            Nouvelle compétence
-                        </h3>
-
-                        <input
-                            name="nom"
-                            placeholder="Nom"
-                            className="input input-bordered w-full"
-                            required
-                            value={form.nom}
-                            onChange={(e) =>
-                                setForm({ ...form, nom: e.target.value })
-                            }
-                        />
-
-                        <input
-                            type="number"
-                            name="maxScore"
-                            placeholder="Score max"
-                            className="input input-bordered w-full"
-                            required
-                            value={form.maxScore}
-                            onChange={(e) =>
-                                setForm({ ...form, maxScore: parseFloat(e.target.value) })
-                            }
-                        />
-
-                        <input
-                            type="number"
-                            name="coefficient"
-                            placeholder="Coefficient"
-                            className="input input-bordered w-full"
-                            value={form.coefficient}
-                            onChange={(e) =>
-                                setForm({ ...form, coefficient: parseFloat(e.target.value) })
-                            }
-                        />
-
-                        <Select
-                            options={filiereOptions}
-                            value={selectedFiliere}
-                            onChange={setSelectedFiliere}
-                            placeholder="Sélectionner une filière"
-                        />
-
-                        <div className="modal-action justify-center mt-6">
-                            <button type="submit" className="btn btn-accent w-full text-lg">
-                                Ajouter
-                            </button>
-                        </div>
-                    </form>
-                </dialog>
-            )}
-
+            {/* Edit Modal */}
             {editPopupOpen && selectedCompetence && (
                 <dialog className="modal modal-open">
                     <form
@@ -478,9 +407,7 @@ export default function CompetencesClient() {
                             ✕
                         </button>
 
-                        <h3 className="text-2xl font-bold text-center mb-4">
-                            Modifier compétence
-                        </h3>
+                        <h3 className="text-2xl font-bold text-center mb-4">Modifier compétence</h3>
 
                         <input
                             type="text"
@@ -489,9 +416,7 @@ export default function CompetencesClient() {
                             className="input input-bordered w-full"
                             required
                             value={form.nom}
-                            onChange={(e) =>
-                                setForm({ ...form, nom: e.target.value })
-                            }
+                            onChange={(e) => setForm({ ...form, nom: e.target.value })}
                         />
 
                         <input
@@ -500,9 +425,9 @@ export default function CompetencesClient() {
                             placeholder="Score max"
                             className="input input-bordered w-full"
                             required
-                            value={form.maxScore}
+                            value={form.maxScore ?? ""}
                             onChange={(e) =>
-                                setForm({ ...form, maxScore: parseFloat(e.target.value) })
+                                setForm({ ...form, maxScore: parseFloat(e.target.value) || 0 })
                             }
                         />
 
@@ -511,9 +436,13 @@ export default function CompetencesClient() {
                             name="coefficient"
                             placeholder="Coefficient"
                             className="input input-bordered w-full"
-                            value={form.coefficient}
+                            value={form.coefficient ?? ""}
                             onChange={(e) =>
-                                setForm({ ...form, coefficient: parseFloat(e.target.value) })
+                                setForm({
+                                    ...form,
+                                    coefficient:
+                                        e.target.value === "" ? undefined : parseFloat(e.target.value),
+                                })
                             }
                         />
 
