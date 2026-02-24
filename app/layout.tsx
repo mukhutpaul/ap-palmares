@@ -16,14 +16,12 @@ const geistMono = Geist_Mono({
   fallback: ["ui-monospace", "SFMono-Regular", "monospace"],
 });
 
+
+
 export const metadata: Metadata = {
   title: "App Palmares",
   description: "MKG",
-  icons: {
-    icon: "/logo-leon.png?v=2",
-  },
 };
-
 
 export default function RootLayout({
   children,
