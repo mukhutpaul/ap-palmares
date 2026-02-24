@@ -432,7 +432,7 @@ export default function NotesClient() {
         return toast.error("Fichier vide");
       }
 
-      const requiredCols = ["Etudiant", "Matiere", "Note", "Annee", "Session", "Filiere"];
+      const requiredCols = ["Etudiant", "Notes_Th", "Notes_Pr", "Notes_Jury", "Annee", "Session", "Filiere"];
       const missingCols = requiredCols.filter(col => !Object.keys(json[0]).includes(col));
 
       if (missingCols.length) {
@@ -441,13 +441,14 @@ export default function NotesClient() {
 
       const promises = json.map(async (row: any, index: number) => {
         const etudiantNom = row.Etudiant?.toString().trim();
-        const matiere = row.Matiere?.toString().trim();
-        const note = Number(row.Note);
+        const Notes_Th = Number(row.Notes_Th);
+        const Notes_Pr = Number(row.Notes_Pr);
+        const Notes_Jury = Number(row.Notes_Jury);
         const anneeNom = row.Annee?.toString().trim();
         const sessionLabel = row.Session?.toString().trim();
         const filiereNom = row.Filiere?.toString().trim();
 
-        if (!etudiantNom || !matiere || isNaN(note) || !anneeNom || !sessionLabel || !filiereNom) {
+        if (!etudiantNom || isNaN(Notes_Th) || isNaN(Notes_Pr) || isNaN(Notes_Jury) || !anneeNom || !sessionLabel || !filiereNom) {
           throw new Error(`Ligne ${index + 2} : données invalides`);
         }
 
@@ -467,8 +468,9 @@ export default function NotesClient() {
         }
 
         const formData = new FormData();
-        formData.append("matiere", matiere);
-        formData.append("note", String(note));
+        formData.append("noteTheorique", String(Notes_Th));
+        formData.append("notePratique", String(Notes_Pr));
+        formData.append("noteJyry", String(Notes_Jury));
         formData.append("etudiantId", String(etudiant.id));
         formData.append("anneeAcademiqueId", String(annee.id));
         formData.append("sessionId", String(session.id));
@@ -1104,12 +1106,10 @@ export default function NotesClient() {
             </button>
 
             <button
-              className="btn btn-sm btn-primary"
+              className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
               onClick={handleExportDeliberationPDF}
             >
-
-              Export PDF
-
+              Grille
             </button>
 
             <input
