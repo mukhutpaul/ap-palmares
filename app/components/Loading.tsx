@@ -1,5 +1,6 @@
 
 "use client"
+
 import { CircularProgress } from 'react-loader-spinner'
 
 export default function Chargement() {
