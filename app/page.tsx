@@ -37,10 +37,6 @@ export default function Home() {
                   Se connecter
                 </Link>
               )}
-              <Link href={"/sign-up"}
-                className="btn btn-sm md:btn-md ml-2 btn-accent">
-                S'inscrire
-              </Link>
             </div>
 
           </div>
