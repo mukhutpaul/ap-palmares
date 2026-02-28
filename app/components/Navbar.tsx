@@ -64,6 +64,8 @@ const NavBar = () => {
     { href: "/sessions", label: "Sessions", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/competences", label: "Compétences", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/evaluations", label: "Evaluations", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
 
 
@@ -131,7 +133,7 @@ const NavBar = () => {
           {renderLinks("btn rounded-xl")}
 
           {/* Sonnette notifications */}
-          <div className="relative">
+          {/* <div className="relative">
             <button
               className="btn btn-sm btn-warning btn-circle relative"
               onClick={handleClickNotifications}
@@ -146,7 +148,7 @@ const NavBar = () => {
                 </span>
               )}
             </button>
-          </div>
+          </div> */}
 
           {/* Dropdown utilisateur */}
           <div className="dropdown dropdown-start">
@@ -155,7 +157,7 @@ const NavBar = () => {
                 <User className='w-4 h-4' />
               </button>
             )}
-            <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+            <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm -left-40">
               <li><span><User className='w-4 h-4' /> {session?.user?.email}</span></li>
               <li><span><Settings className='w-4 h-4' /> Paramettre</span></li>
               <li>
@@ -181,22 +183,23 @@ const NavBar = () => {
               <button className="btn btn-sm btn-accent btn-circle">
                 <Settings className='w-4 h-4' />
               </button>
-              <button className="btn btn-sm btn-accent btn-circle">
-                <User className='w-4 h-4' />
-              </button>
-              <div className="relative">
-                <button
-                  className="btn btn-sm btn-warning btn-circle relative"
-                  onClick={handleClickNotifications}
-                  title="Notifications"
-                >
-                  {notifications > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {notifications}
-                    </span>
-                  )}
-                </button>
+              <div className="dropdown dropdown-start">
+                {session && (
+                  <button tabIndex={0} className="btn btn-sm btn-accent btn-circle">
+                    <User className='w-4 h-4' />
+                  </button>
+                )}
+                <ul tabIndex={-1} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm -left-40">
+                  <li><span><User className='w-4 h-4' /> {session?.user?.email}</span></li>
+                  <li><span><Settings className='w-4 h-4' /> Paramettre</span></li>
+                  <li>
+                    <button onClick={() => signOut({ callbackUrl: "/login" })} className="text-red-600">
+                      <LogOut className='w-4 h-4' /> Se déconnecter
+                    </button>
+                  </li>
+                </ul>
               </div>
+
             </div>
           )}
         </div>

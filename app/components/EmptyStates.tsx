@@ -6,7 +6,7 @@ interface EmptyStateProps {
     message : string
     sm?: boolean
 }
-const EmptyState: FC<EmptyStateProps>= ({IconComponent,message,sm}) => {
+const EmptyStates: FC<EmptyStateProps>= ({IconComponent,message,sm}) => {
     const SelectedIcon = icons[IconComponent]
   return (
     <div className={`${sm ? 'my-4':'my-40'} w-full h-full flex justify-center items-center flex-col `}>
@@ -22,4 +22,4 @@ const EmptyState: FC<EmptyStateProps>= ({IconComponent,message,sm}) => {
   )
 }
 
-export default EmptyState
+export default EmptyStates

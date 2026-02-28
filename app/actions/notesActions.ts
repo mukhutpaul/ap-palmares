@@ -23,17 +23,26 @@ async function calculateMoyenne(
 
   if (!notes.length) return { moyenne: 0, pourcentage: 0, mention: "Ajourné" };
 
-  const total = notes.reduce((sum, n) => sum + n.note, 0);
-  const max = notes.length * 20;
+  // Somme de toutes les notes (en ignorant null)
+  let total = 0;
+  let count = 0;
+  for (const n of notes) {
+    if (n.noteTheorique != null) { total += n.noteTheorique; count++; }
+    if (n.notePratique != null) { total += n.notePratique; count++; }
+    if (n.noteJyry != null) { total += n.noteJyry; count++; }
+  }
+
+  const max = 100;
   const pourcentage = (total / max) * 100;
 
   let mention = "Ajourné";
-  if (pourcentage >= 80) mention = "Grande Distinction";
-  else if (pourcentage >= 70) mention = "Distinction";
-  else if (pourcentage >= 50) mention = "Satisfaction";
+  if (pourcentage >= 80) mention = "Excellent";
+  else if (pourcentage >= 70) mention = "Très bien";
+  else if (pourcentage >= 60) mention = "Bien";
+  else if (pourcentage >= 50) mention = "Assez bien";
 
   return {
-    moyenne: total / notes.length,
+    moyenne: total / 3,
     pourcentage,
     mention,
   };
@@ -42,9 +51,72 @@ async function calculateMoyenne(
 // ===============================
 // ADD NOTE
 // ===============================
+// export async function addNote(formData: FormData) {
+//   const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
+//   const notePratique = Number(formData.get("notePratique") ?? 0);
+//   const noteJyry = Number(formData.get("noteJyry") ?? 0);
+//   const etudiantId = Number(formData.get("etudiantId"));
+//   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
+//   const sessionId = Number(formData.get("sessionId"));
+//   const filiereId = Number(formData.get("filiereId"));
+//   const createdById = String(formData.get("createdById"));
+
+//   if (
+//     isNaN(noteTheorique) ||
+//     isNaN(notePratique) ||
+//     isNaN(noteJyry) ||
+//     !etudiantId ||
+//     !anneeAcademiqueId ||
+//     !sessionId ||
+//     !filiereId ||
+//     !createdById
+//   )
+//     throw new Error("Tous les champs sont obligatoires");
+
+//   const userExists = await prisma.user.findUnique({ where: { id: createdById } });
+//   if (!userExists) throw new Error("Utilisateur introuvable (createdById invalide)");
+
+//   const [etudiant, annee, session, filiere] = await Promise.all([
+//     prisma.etudiant.findUnique({ where: { id: etudiantId } }),
+//     prisma.anneeAcademique.findUnique({ where: { id: anneeAcademiqueId } }),
+//     prisma.session.findUnique({ where: { id: sessionId } }),
+//     prisma.filiere.findUnique({ where: { id: filiereId } }),
+//   ]);
+
+//   if (!etudiant || !annee || !session || !filiere) {
+//     throw new Error("Données invalides : étudiant/année/session/filière introuvable");
+//   }
+
+//   const newNote = await prisma.note.create({
+//     data: {
+//       noteTheorique,
+//       notePratique,
+//       noteJyry,
+//       etudiantId,
+//       anneeAcademiqueId,
+//       sessionId,
+//       filiereId,
+//       createdById,
+//     },
+//     include: {
+//       etudiant: true,
+//       anneeAcademique: true,
+//       session: true,
+//       filiere: true,
+//     },
+//   });
+
+//   await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+//   revalidatePath("/notes");
+//   return newNote;
+// }
+
 export async function addNote(formData: FormData) {
-  const matiere = formData.get("matiere")?.toString();
-  const note = Number(formData.get("note"));
+  const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
+  const noteJyry = Number(formData.get("noteJyry") ?? 0);
+
+  let notePratique = 0;
+
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
   const sessionId = Number(formData.get("sessionId"));
@@ -52,8 +124,8 @@ export async function addNote(formData: FormData) {
   const createdById = String(formData.get("createdById"));
 
   if (
-    !matiere ||
-    isNaN(note) ||
+    isNaN(noteTheorique) ||
+    isNaN(noteJyry) ||
     !etudiantId ||
     !anneeAcademiqueId ||
     !sessionId ||
@@ -62,8 +134,11 @@ export async function addNote(formData: FormData) {
   )
     throw new Error("Tous les champs sont obligatoires");
 
-  const userExists = await prisma.user.findUnique({ where: { id: createdById } });
-  if (!userExists) throw new Error("Utilisateur introuvable (createdById invalide)");
+  const userExists = await prisma.user.findUnique({
+    where: { id: createdById },
+  });
+  if (!userExists)
+    throw new Error("Utilisateur introuvable (createdById invalide)");
 
   const [etudiant, annee, session, filiere] = await Promise.all([
     prisma.etudiant.findUnique({ where: { id: etudiantId } }),
@@ -73,27 +148,49 @@ export async function addNote(formData: FormData) {
   ]);
 
   if (!etudiant || !annee || !session || !filiere) {
-    throw new Error("Données invalides : étudiant/année/session/filière introuvable");
+    throw new Error(
+      "Données invalides : étudiant/année/session/filière introuvable"
+    );
   }
 
-  const existing = await prisma.note.findFirst({
+  // 🔥 Récupérer l'évaluation
+  const evaluation = await prisma.evaluation.findUnique({
     where: {
-      matiere,
-      etudiantId,
-      anneeAcademiqueId,
-      sessionId,
-      filiereId,
+      etudiantId_filiereId_sessionId_anneeAcademiqueId: {
+        etudiantId,
+        filiereId,
+        sessionId,
+        anneeAcademiqueId,
+      },
+    },
+    include: {
+      competences: true,
     },
   });
 
-  if (existing) {
-    throw new Error("Une note existe déjà pour cette matière, session et filière (pour cet étudiant).");
+  if (evaluation && evaluation.competences.length > 0) {
+    const totalScore = evaluation.competences.reduce(
+      (acc, comp) => acc + comp.score,
+      0
+    );
+
+    // ✅ chaque compétence max = 5
+    const maxPossible = evaluation.competences.length * 5;
+
+    // ✅ ramener sur 50
+    notePratique = (totalScore / maxPossible) * 50;
+
+    // ✅ arrondir à 2 décimales
+    notePratique = Number(notePratique.toFixed(2));
+  } else {
+    notePratique = 0;
   }
 
   const newNote = await prisma.note.create({
     data: {
-      matiere,
-      note,
+      noteTheorique,
+      notePratique,
+      noteJyry,
       etudiantId,
       anneeAcademiqueId,
       sessionId,
@@ -108,18 +205,28 @@ export async function addNote(formData: FormData) {
     },
   });
 
-  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+  await calculateMoyenne(
+    etudiantId,
+    anneeAcademiqueId,
+    sessionId,
+    filiereId
+  );
+
   revalidatePath("/notes");
+
   return newNote;
 }
-
 // ===============================
 // UPDATE NOTE
 // ===============================
 export async function updateNote(formData: FormData) {
   const id = Number(formData.get("id"));
-  const matiere = formData.get("matiere")?.toString();
-  const note = Number(formData.get("note"));
+  const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
+  const noteJyry = Number(formData.get("noteJyry") ?? 0);
+
+  // ⚠️ recalcul automatique
+  let notePratique = 0;
+
   const etudiantId = Number(formData.get("etudiantId"));
   const anneeAcademiqueId = Number(formData.get("anneeAcademiqueId"));
   const sessionId = Number(formData.get("sessionId"));
@@ -128,8 +235,8 @@ export async function updateNote(formData: FormData) {
 
   if (
     !id ||
-    !matiere ||
-    isNaN(note) ||
+    isNaN(noteTheorique) ||
+    isNaN(noteJyry) ||
     !etudiantId ||
     !anneeAcademiqueId ||
     !sessionId ||
@@ -138,28 +245,45 @@ export async function updateNote(formData: FormData) {
   )
     throw new Error("Tous les champs sont obligatoires");
 
-  const existing = await prisma.note.findFirst({
+  // 🔥 Récupérer l’évaluation liée
+  const evaluation = await prisma.evaluation.findUnique({
     where: {
-      id: { not: id },
-      matiere,
-      etudiantId,
-      anneeAcademiqueId,
-      sessionId,
-      filiereId,
+      etudiantId_filiereId_sessionId_anneeAcademiqueId: {
+        etudiantId,
+        filiereId,
+        sessionId,
+        anneeAcademiqueId,
+      },
+    },
+    include: {
+      competences: true,
     },
   });
 
-  if (existing) {
-    throw new Error(
-      "Une note existe déjà pour cette matière, session et filière (pour cet étudiant)."
+  if (evaluation && evaluation.competences.length > 0) {
+    const totalScore = evaluation.competences.reduce(
+      (acc, comp) => acc + comp.score,
+      0
     );
+
+    const maxPossible = evaluation.competences.length * 5;
+
+    if (maxPossible > 0) {
+      notePratique = (totalScore / maxPossible) * 50;
+      notePratique = Number(notePratique.toFixed(2));
+    } else {
+      notePratique = 0;
+    }
+  } else {
+    notePratique = 0;
   }
 
   const updated = await prisma.note.update({
     where: { id },
     data: {
-      matiere,
-      note,
+      noteTheorique,
+      notePratique, // ✅ recalculé automatiquement
+      noteJyry,
       etudiantId,
       anneeAcademiqueId,
       sessionId,
@@ -174,13 +298,20 @@ export async function updateNote(formData: FormData) {
     },
   });
 
-  await calculateMoyenne(etudiantId, anneeAcademiqueId, sessionId, filiereId);
+  await calculateMoyenne(
+    etudiantId,
+    anneeAcademiqueId,
+    sessionId,
+    filiereId
+  );
+
   revalidatePath("/notes");
+
   return updated;
 }
 
 // ===============================
-// DELETE
+// DELETE NOTE
 // ===============================
 export async function deleteNote(id: number) {
   await prisma.note.delete({ where: { id } });
@@ -225,7 +356,7 @@ export async function getReleve(
       session: true,
       filiere: true,
     },
-    orderBy: { matiere: "asc" },
+    orderBy: { id: "asc" },
   });
 
   const stats = await calculateMoyenne(
@@ -242,37 +373,116 @@ export async function getReleve(
 }
 
 // ===============================
-// GET ETUDIANTS
+// GET ETUDIANTS / SESSIONS / FILIERES / ANNEES
 // ===============================
 export async function getEtudiants() {
-  return prisma.etudiant.findMany({
-    orderBy: { nom: "asc" },
-  });
+  const etudiants = prisma.etudiant.findMany({ orderBy: { nom: "asc" } });
+  return etudiants;
 }
-
-// ===============================
-// GET SESSIONS
-// ===============================
 export async function getSessions() {
-  return prisma.session.findMany({
-    orderBy: { dateDebut: "desc" },
-  });
+  const sessions = prisma.session.findMany({ orderBy: { dateDebut: "desc" } });
+  return sessions;
 }
-
-// ===============================
-// GET FILIERES
-// ===============================
 export async function getFilieres() {
-  return prisma.filiere.findMany({
-    orderBy: { nom: "asc" },
-  });
+  const filieres = prisma.filiere.findMany({ orderBy: { nom: "asc" } });
+  return filieres;
+
+}
+export async function getAnneesAcademiques() {
+  const annees = prisma.anneeAcademique.findMany({ orderBy: { annee: "desc" } });
+  return annees;
 }
 
 // ===============================
-// GET ANNEES ACADEMIQUES
+// GET DELIBERATION LIST (GROUPED)
 // ===============================
-export async function getAnneesAcademiques() {
-  return prisma.anneeAcademique.findMany({
-    orderBy: { annee: "desc" },
+export async function getDeliberationList(
+  anneeAcademiqueId: number,
+  sessionId: number
+) {
+  if (!anneeAcademiqueId || !sessionId) {
+    throw new Error("Année académique et session obligatoires");
+  }
+
+  // Récupérer toutes les notes avec relations
+  const notes = await prisma.note.findMany({
+    where: {
+      anneeAcademiqueId,
+      sessionId,
+    },
+    include: {
+      etudiant: true,
+      filiere: true,
+      anneeAcademique: true,
+      session: true,
+    },
+    orderBy: [
+      { filiere: { nom: "asc" } },
+      { etudiant: { nom: "asc" } },
+    ],
   });
+
+  // Grouper par filière + étudiant
+  const grouped: any = {};
+
+  for (const note of notes) {
+    if (!note.filiere || !note.etudiant) continue; // ✅ protection TS
+    const filiereName = note.filiere.nom;
+    const etudiantId = note.etudiant.id;
+
+    if (!grouped[filiereName]) {
+      grouped[filiereName] = {};
+    }
+
+    if (!grouped[filiereName][etudiantId]) {
+      grouped[filiereName][etudiantId] = {
+        etudiant: note.etudiant,
+        notes: [],
+      };
+    }
+
+    grouped[filiereName][etudiantId].notes.push(note);
+  }
+
+  // Transformer en tableau final avec moyenne + mention
+  const result = [];
+
+  for (const filiere in grouped) {
+    const studentsArray = [];
+
+    for (const etuId in grouped[filiere]) {
+      const data = grouped[filiere][etuId];
+
+      let total = 0;
+      for (const n of data.notes) {
+        total +=
+          (n.noteTheorique ?? 0) +
+          (n.notePratique ?? 0) +
+          (n.noteJyry ?? 0);
+      }
+
+      const pourcentage = total;
+      let mention = "Ajourné";
+
+      if (pourcentage >= 80) mention = "Excellent";
+      else if (pourcentage >= 70) mention = "Très bien";
+      else if (pourcentage >= 60) mention = "Bien";
+      else if (pourcentage >= 50) mention = "Assez bien";
+
+      studentsArray.push({
+        etudiant: data.etudiant,
+        total,
+        pourcentage,
+        mention,
+      });
+    }
+
+    result.push({
+      filiere,
+      students: studentsArray,
+    });
+  }
+
+  return result;
 }
+

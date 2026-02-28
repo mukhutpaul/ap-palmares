@@ -23,6 +23,7 @@ import {
 import Swal from "sweetalert2";
 import { Etudiant, Filiere, Session } from "@prisma/client";
 import Select from 'react-select';
+import EmptyStates from "@/app/components/EmptyStates";
 
 
 type Classe = {
@@ -481,7 +482,7 @@ export default function ClassesClient(
             ) : (
               <tr>
                 <td colSpan={6} className="text-center py-6 text-gray-500">
-                  Aucune classe trouvée
+                  <EmptyStates IconComponent={"Inbox"} message="Aucune classe trouvée" sm={true}/>
                 </td>
               </tr>
             )}

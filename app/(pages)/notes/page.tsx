@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toast } from "react-toastify";
-import Swal from "sweetalert2";
-import Select from "react-select";
-import { FileDown, FileUp, LucideTrash2, Plus } from "lucide-react";
-import { useSession } from "next-auth/react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas-pro";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { toast } from "react-toastify"; // notifications
+import Swal from "sweetalert2"; // alertes confirm
+import Select from "react-select"; // dropdowns
+import { FileDown, FileUp, LucideTrash2, Plus, Trash } from "lucide-react"; // icônes
+import { useSession } from "next-auth/react"; // session user
+import jsPDF from "jspdf"; // génération PDF
+import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
+import * as XLSX from "xlsx"; // lecture et écriture Excel
+import { saveAs } from "file-saver"; // sauvegarde fichiers
+import { Inbox } from "lucide-react";
 
 
+
+// ================= ACTIONS SERVER =================
 import {
   addNote,
   updateNote,
@@ -22,12 +25,23 @@ import {
   getAnneesAcademiques,
   getSessions,
   getFilieres,
-} from "@/app/actions/notesActions";
+} from "@/app/actions/notesActions"; // ton fichier actions.ts
+import EmptyStates from "@/app/components/EmptyStates";
 
-interface SelectOption {
-  value: number;
-  label: string;
+// ================= TYPES =================
+// export interface SelectOption {
+//   value: number;
+//   label: string;
+// }
+
+type SelectOption = { value: number; label: string };
+
+interface FiltreFiliereProps {
+  filieres: { id: number; nom: string }[];
 }
+
+
+
 
 export default function NotesClient() {
   const { data: authSession } = useSession();
@@ -43,6 +57,7 @@ export default function NotesClient() {
   const [filterAnnee, setFilterAnnee] = useState<SelectOption | null>(null);
   const [filterSession, setFilterSession] = useState<SelectOption | null>(null);
   const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
+    const [isClient, setIsClient] = useState(false);
 
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -58,6 +73,14 @@ export default function NotesClient() {
   const itemsPerPage = 10;
 
   const tableRef = useRef<HTMLTableElement>(null);
+
+   useEffect(() => {
+    setIsClient(true); // On ne rend Select qu'après le montage client
+  }, []);
+
+
+  
+
 
   // =====================
   // LOAD DATA
@@ -97,6 +120,220 @@ export default function NotesClient() {
       .padStart(2, "0")}/${date.getFullYear()}`;
   };
 
+  const addHeader = (pdf: jsPDF, pageNumber: number) => {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+
+    // NOM ECOLE (remplace selon ton image)
+    pdf.text("LEON ACADEMY", pageWidth / 2, 10, { align: "center" });
+
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+
+    pdf.text(
+      `Année académique : ${filterAnnee?.label || ""}`,
+      14,
+      20
+    );
+
+    pdf.text(
+      `Session : ${filterSession?.label || ""}`,
+      pageWidth - 60,
+      20
+    );
+
+    pdf.line(10, 30, pageWidth - 10, 30);
+  };
+  const handleExportDeliberationPDF = async () => {
+    if (!filterAnnee || !filterFiliere || !filterSession) {
+      toast.info("Veuillez sélectionner l'année, la session et la filière avant d'exporter la grille.");
+      return;
+    }
+
+    if (!tableRef.current) return;
+    const table = tableRef.current;
+
+    const columnsToHide = [7, 8, 9];
+    const hiddenCells: HTMLElement[] = [];
+
+    table.querySelectorAll("tr").forEach((row) => {
+      columnsToHide.forEach((index) => {
+        const cell = row.children[index] as HTMLElement;
+        if (cell) {
+          hiddenCells.push(cell);
+          cell.style.display = "none";
+        }
+      });
+    });
+
+    const canvas = await html2canvas(table, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth - 20;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    const blueHeaderHeight = 35;
+    const whiteHeaderHeight = 25;
+    const logoWidth = 32;
+    const logoHeight = 22;
+    const tableStartY = blueHeaderHeight + whiteHeaderHeight + 8;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    const fetchLogoAsDataURL = async (url: string) => {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    };
+    const logoBase64 = await fetchLogoAsDataURL("/logo-leon.png");
+
+    const addHeader = (pdfInstance: jsPDF) => {
+      const pageWidth = pdfInstance.internal.pageSize.getWidth();
+
+      // Bande bleue avec coins arrondis
+      pdfInstance.setFillColor(72, 118, 255);
+      pdfInstance.roundedRect(10, 10, pageWidth - 20, blueHeaderHeight, 4, 4, "F");
+
+      // Logo centré
+      pdfInstance.addImage(
+        logoBase64,
+        pageWidth / 2 - logoWidth / 2,
+        18, // logo un peu plus bas pour libérer le texte du haut
+        logoWidth,
+        logoHeight
+      );
+
+      // Texte au-dessus du logo avec margin-top
+      pdfInstance.setTextColor(255, 255, 255);
+      pdfInstance.setFont("helvetica", "normal");
+      pdfInstance.setFontSize(9);
+      pdfInstance.text(
+        "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS",
+        pageWidth / 2,
+        12 + 3, // +3 mm pour espacer du bord haut
+        { align: "center" }
+      );
+
+      // Texte sous le logo
+      pdfInstance.setFont("helvetica", "bold");
+      pdfInstance.setFontSize(12);
+      pdfInstance.text(
+        "LEON ACADEMY",
+        pageWidth / 2,
+        18 + logoHeight + 3, // +3 mm marge
+        { align: "center" }
+      );
+
+      // Zone blanche sous la bande bleue
+      pdfInstance.setFillColor(255, 255, 255);
+      pdfInstance.rect(10, blueHeaderHeight + 10, pageWidth - 20, whiteHeaderHeight, "F");
+
+      // Texte grille et info session/année/filière
+      pdfInstance.setTextColor(0, 0, 0);
+      pdfInstance.setFont("helvetica", "bold");
+      pdfInstance.setFontSize(11);
+      pdfInstance.text(
+        "Grille de Délibération",
+        pageWidth / 2,
+        blueHeaderHeight + 18,
+        { align: "center" }
+      );
+
+      pdfInstance.setFont("helvetica", "normal");
+      pdfInstance.setFontSize(9);
+      pdfInstance.text(
+        `Année: ${filterAnnee.label} | Filière: ${filterFiliere.label} | Session: ${filterSession.label}`,
+        pageWidth / 2,
+        blueHeaderHeight + 26,
+        { align: "center" }
+      );
+
+      // Ligne séparatrice
+      pdfInstance.setDrawColor(72, 118, 255);
+      pdfInstance.setLineWidth(0.8);
+      pdfInstance.line(
+        12,
+        blueHeaderHeight + whiteHeaderHeight + 10,
+        pageWidth - 12,
+        blueHeaderHeight + whiteHeaderHeight + 10
+      );
+    };
+
+    const modifyTableForPDF = () => {
+      const thead = table.querySelector("thead");
+      if (thead) {
+        Array.from(thead.querySelectorAll("th")).forEach((th) => {
+          (th as HTMLElement).style.backgroundColor = "#B0E0E6";
+          (th as HTMLElement).style.fontSize = "12px";
+          (th as HTMLElement).style.padding = "2px";
+        });
+      }
+      const tbody = table.querySelector("tbody");
+      if (tbody) {
+        Array.from(tbody.querySelectorAll("tr")).forEach((tr, index) => {
+          Array.from(tr.querySelectorAll("td")).forEach((td) => {
+            (td as HTMLElement).style.fontSize = "12px";
+            (td as HTMLElement).style.padding = "2px";
+            (td as HTMLElement).style.backgroundColor =
+              index % 2 === 0 ? "#E6F2FA" : "#ffffff";
+          });
+        });
+      }
+    };
+    modifyTableForPDF();
+
+    const generatePage = () => {
+      addHeader(pdf);
+      pdf.addImage(imgData, "PNG", 10, tableStartY, imgWidth, imgHeight, undefined, "FAST");
+    };
+
+    generatePage();
+    heightLeft -= pageHeight - tableStartY;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      addHeader(pdf);
+      pdf.addImage(imgData, "PNG", 10, tableStartY + position, imgWidth, imgHeight, undefined, "FAST");
+      heightLeft -= pageHeight - tableStartY;
+    }
+
+    const addFooter = () => {
+      pdf.setDrawColor(72, 118, 255);
+      pdf.setLineWidth(0.8);
+      pdf.line(10, pageHeight - 25, pageWidth - 10, pageHeight - 25);
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Fait à Kinshasa, le ${new Date().toLocaleDateString()}`, 15, pageHeight - 18);
+
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Directeur", pageWidth - 40, pageHeight - 18);
+    };
+    addFooter();
+
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 25, pageHeight - 10);
+    }
+
+    pdf.save("Grille_Deliberation.pdf");
+
+    hiddenCells.forEach((cell) => (cell.style.display = ""));
+  };
   const sessionOptions = sessions.map((s) => ({
     value: s.id,
     label:
@@ -111,10 +348,11 @@ export default function NotesClient() {
   }));
 
   const calculateMentionFromAverage = (average: number) => {
-    const percentage = (average / 20) * 100;
-    if (percentage >= 80) return "Grande Distinction";
-    if (percentage >= 70) return "Distinction";
-    if (percentage >= 50) return "Satisfaction";
+    const percentage = average;
+    if (percentage >= 80) return "Excellent";
+    if (percentage >= 70) return "Très bien";
+    if (percentage >= 60) return "Bien";
+    if (percentage >= 50) return "Assez Bien";
     return "Ajourné";
   };
 
@@ -134,10 +372,10 @@ export default function NotesClient() {
     );
 
   const moyenneGenerale = filteredNotes.length
-    ? filteredNotes.reduce((acc, n) => acc + Number(n.note || 0), 0) / filteredNotes.length
+    ? filteredNotes.reduce((acc, n) => acc + Number(n.noteTheorique + n.notePratique + n.noteJyry || 0), 0) / filteredNotes.length
     : 0;
 
-  const moyennePourcentage = (moyenneGenerale / 20) * 100;
+  const moyennePourcentage = (moyenneGenerale / 100) * 100;
 
   const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
 
@@ -157,8 +395,9 @@ export default function NotesClient() {
 
     const dataNotes = filteredNotes.map(n => ({
       Etudiant: n.etudiant ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}` : "Étudiant supprimé",
-      Matiere: n.matiere,
-      Note: n.note,
+      Notes_Th: n.noteTheorique,
+      Notes_Pr: n.notePratique,
+      Notes_Jury: n.noteJyry,
       Annee: n.anneeAcademique?.annee ?? "N/A",
       Session:
         n.session?.dateDebut && n.session?.dateFin
@@ -167,7 +406,7 @@ export default function NotesClient() {
       Filiere: n.filiere?.nom ?? "N/A",
     }));
 
-    const moyenne = filteredNotes.reduce((acc, n) => acc + Number(n.note || 0), 0) / filteredNotes.length;
+    const moyenne = filteredNotes.reduce((acc, n) => acc + Number(n.noteTheorique + n.notePratique + n.noteJyry || 0), 0) / 3;
     const mention = calculateMentionFromAverage(moyenne);
 
     const dataResume = [
@@ -212,7 +451,7 @@ export default function NotesClient() {
         return toast.error("Fichier vide");
       }
 
-      const requiredCols = ["Etudiant", "Matiere", "Note", "Annee", "Session", "Filiere"];
+      const requiredCols = ["Etudiant", "Notes_Th", "Notes_Pr", "Notes_Jury", "Annee", "Session", "Filiere"];
       const missingCols = requiredCols.filter(col => !Object.keys(json[0]).includes(col));
 
       if (missingCols.length) {
@@ -221,13 +460,14 @@ export default function NotesClient() {
 
       const promises = json.map(async (row: any, index: number) => {
         const etudiantNom = row.Etudiant?.toString().trim();
-        const matiere = row.Matiere?.toString().trim();
-        const note = Number(row.Note);
+        const Notes_Th = Number(row.Notes_Th);
+        const Notes_Pr = Number(row.Notes_Pr);
+        const Notes_Jury = Number(row.Notes_Jury);
         const anneeNom = row.Annee?.toString().trim();
         const sessionLabel = row.Session?.toString().trim();
         const filiereNom = row.Filiere?.toString().trim();
 
-        if (!etudiantNom || !matiere || isNaN(note) || !anneeNom || !sessionLabel || !filiereNom) {
+        if (!etudiantNom || isNaN(Notes_Th) || isNaN(Notes_Pr) || isNaN(Notes_Jury) || !anneeNom || !sessionLabel || !filiereNom) {
           throw new Error(`Ligne ${index + 2} : données invalides`);
         }
 
@@ -247,8 +487,9 @@ export default function NotesClient() {
         }
 
         const formData = new FormData();
-        formData.append("matiere", matiere);
-        formData.append("note", String(note));
+        formData.append("noteTheorique", String(Notes_Th));
+        formData.append("notePratique", String(Notes_Pr));
+        formData.append("noteJyry", String(Notes_Jury));
         formData.append("etudiantId", String(etudiant.id));
         formData.append("anneeAcademiqueId", String(annee.id));
         formData.append("sessionId", String(session.id));
@@ -268,7 +509,9 @@ export default function NotesClient() {
     }
   };
 
-  const handleDownloadReleve = async (note: any) => {
+  const handleDownloadReleve = async (
+
+    note: any) => {
     const BREVE_CODE_OFFICIEL =
       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
 
@@ -367,25 +610,40 @@ export default function NotesClient() {
     ">
       <thead>
         <tr style="background:#1f5e3b;color:white;">
-          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Matière</th>
-          <th style="padding:10px;border:1px solid #ddd;text-align:center;">Note /20</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:left;">Rubriques</th>
+          <th style="padding:10px;border:1px solid #ddd;text-align:center;">Côtations</th>
         </tr>
       </thead>
       <tbody>
-        ${releveNotes
-        .map(
-          (n: any, index: number) => `
-          <tr style="background:${index % 2 === 0 ? "#ffffff" : "#f4f4f4"};">
+      
+       
+          <tr style="background:;">
             <td style="padding:10px;border:1px solid #ddd;">
-              ${n.matiere}
+            Evaluation Théorique / 20
             </td>
             <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
-              ${n.note}
+             ${note.noteTheorique}
             </td>
           </tr>
-        `
-        )
-        .join("")}
+
+            <tr style="background:;">
+            <td style="padding:10px;border:1px solid #ddd;">
+            Evaluation Pratique / 50
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
+             ${note.notePratique}
+            </td>
+          </tr>
+
+            <tr style="background:;">
+            <td style="padding:10px;border:1px solid #ddd;">
+            Evaluation Jury / 30
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;text-align:center;font-weight:bold;">
+             ${note.noteJyry}
+            </td>
+          </tr>
+        
       </tbody>
     </table>
 
@@ -397,7 +655,7 @@ export default function NotesClient() {
       border:2px solid #1f5e3b;
       font-size:15px;
     ">
-      <p><strong>Moyenne :</strong> ${stats.moyenne.toFixed(2)} / 20</p>
+     
       <p><strong>Pourcentage :</strong> ${stats.pourcentage.toFixed(2)} %</p>
       <p><strong>Mention :</strong> 
         <span style="color:#1f5e3b;font-weight:bold;font-size:16px;">
@@ -455,41 +713,65 @@ export default function NotesClient() {
   // =====================
   const handleAddNote = async (e: any) => {
     e.preventDefault();
-    if (!authSession?.user?.id) return toast.error("Session expirée");
 
-    const matiere = e.currentTarget.matiere.value.trim();
+    if (!authSession?.user?.id)
+      return toast.error("Session expirée");
 
-    const already = notes.find(n =>
-      n.matiere.toLowerCase() === matiere.toLowerCase() &&
-      n.etudiant?.id === selectedEtudiant?.value &&
-      n.session?.id === selectedSession?.value &&
-      n.filiere?.id === selectedFiliere?.value &&
-      n.anneeAcademique?.id === selectedAnnee?.value
+    if (
+      !selectedEtudiant ||
+      !selectedSession ||
+      !selectedFiliere ||
+      !selectedAnnee
+    ) {
+      return toast.error("Veuillez remplir tous les champs");
+    }
+
+    // ✅ Vérification doublon
+    const already = notes.find(
+      (n) =>
+        n.etudiant?.id === selectedEtudiant.value &&
+        n.session?.id === selectedSession.value &&
+        n.filiere?.id === selectedFiliere.value &&
+        n.anneeAcademique?.id === selectedAnnee.value
     );
 
     if (already) {
-      return toast.error("Doublon détecté : cet étudiant a déjà une note pour cette matière, session et filière.");
+      return toast.error(
+        "Doublon détecté : cet étudiant a déjà une note pour cette session et filière."
+      );
     }
 
+    // ✅ On récupère uniquement les champs nécessaires
     const formData = new FormData(e.currentTarget);
-    formData.append("etudiantId", String(selectedEtudiant?.value));
-    formData.append("anneeAcademiqueId", String(selectedAnnee?.value));
-    formData.append("sessionId", String(selectedSession?.value));
-    formData.append("filiereId", String(selectedFiliere?.value));
-    formData.append("createdById", authSession.user.id);
+
+    // ⚠️ IMPORTANT :
+    // Si tu as un input name="notePratique" dans ton form,
+    // on le supprime pour éviter d'envoyer une mauvaise valeur
+    formData.delete("notePratique");
+
+    // ✅ On injecte les relations
+    formData.set("etudiantId", String(selectedEtudiant.value));
+    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+    formData.set("sessionId", String(selectedSession.value));
+    formData.set("filiereId", String(selectedFiliere.value));
+    formData.set("createdById", authSession.user.id);
 
     try {
       const created = await addNote(formData);
-      setNotes(prev => [created, ...prev]);
-      toast.success("Note ajoutée");
+
+      setNotes((prev) => [created, ...prev]);
+
+      toast.success("Note ajoutée avec calcul automatique du pratique");
+
       setPopupOpen(false);
-      const resetForm = () => {
-        setSelectedEtudiant(null);
-        setSelectedAnnee(null);
-        setSelectedSession(null);
-        setSelectedFiliere(null);
-        setSelectedNote(null)
-      };
+
+      // ✅ Reset propre
+      setSelectedEtudiant(null);
+      setSelectedAnnee(null);
+      setSelectedSession(null);
+      setSelectedFiliere(null);
+      setSelectedNote(null);
+
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -529,46 +811,69 @@ export default function NotesClient() {
 
   const handleEditNote = async (e: any) => {
     e.preventDefault();
+
     if (!selectedNote) return;
-    if (!authSession?.user?.id) return toast.error("Session expirée");
-    if (!selectedEtudiant || !selectedAnnee || !selectedSession || !selectedFiliere) {
-      return toast.error("Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)");
+    if (!authSession?.user?.id)
+      return toast.error("Session expirée");
+
+    if (
+      !selectedEtudiant ||
+      !selectedAnnee ||
+      !selectedSession ||
+      !selectedFiliere
+    ) {
+      return toast.error(
+        "Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)"
+      );
     }
 
-    const matiere = e.currentTarget.matiere.value.trim();
-
-    const already = notes.find(n =>
-      n.id !== selectedNote.id &&
-      n.matiere.toLowerCase() === matiere.toLowerCase() &&
-      n.etudiant?.id === selectedEtudiant?.value &&
-      n.session?.id === selectedSession?.value &&
-      n.filiere?.id === selectedFiliere?.value &&
-      n.anneeAcademique?.id === selectedAnnee?.value
+    // ✅ Vérification doublon
+    const already = notes.find(
+      (n) =>
+        n.id !== selectedNote.id &&
+        n.etudiant?.id === selectedEtudiant.value &&
+        n.session?.id === selectedSession.value &&
+        n.filiere?.id === selectedFiliere.value &&
+        n.anneeAcademique?.id === selectedAnnee.value
     );
 
     if (already) {
-      return toast.error("Doublon détecté : cet étudiant a déjà une note pour cette matière, session et filière.");
+      return toast.error(
+        "Doublon détecté : cet étudiant a déjà une note pour cette session et filière."
+      );
     }
 
     const formData = new FormData(e.currentTarget);
-    formData.append("id", String(selectedNote.id));
-    formData.append("etudiantId", String(selectedEtudiant.value));
-    formData.append("anneeAcademiqueId", String(selectedAnnee.value));
-    formData.append("sessionId", String(selectedSession.value));
-    formData.append("filiereId", String(selectedFiliere.value));
-    formData.append("createdById", authSession.user.id);
+
+    // ⚠️ IMPORTANT : on supprime notePratique si elle existe
+    formData.delete("notePratique");
+
+    // ✅ Injecter les valeurs correctes
+    formData.set("id", String(selectedNote.id));
+    formData.set("etudiantId", String(selectedEtudiant.value));
+    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+    formData.set("sessionId", String(selectedSession.value));
+    formData.set("filiereId", String(selectedFiliere.value));
+    formData.set("createdById", authSession.user.id);
 
     try {
       const updated = await updateNote(formData);
-      setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
-      toast.success("Note modifiée");
+
+      setNotes((prev) =>
+        prev.map((n) => (n.id === updated.id ? updated : n))
+      );
+
+      toast.success("Note modifiée (pratique recalculé automatiquement)");
+
       setEditPopupOpen(false);
+
+      // ✅ Reset propre
       setSelectedNote(null);
       setSelectedEtudiant(null);
       setSelectedAnnee(null);
       setSelectedSession(null);
       setSelectedFiliere(null);
-      setSelectedNote(null)
+
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -805,132 +1110,25 @@ export default function NotesClient() {
     <div className="mx-8 mt-8">
       <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
 
-      {/* TOOLBAR */}
-      {/* <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 w-full">
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Étudiant</span>
-            </label>
-            <Select
-              options={etudiantOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterEtudiant(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Année</span>
-            </label>
-            <Select
-              options={anneeOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterAnnee(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Session</span>
-            </label>
-            <Select
-              options={sessionOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterSession(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Filière</span>
-            </label>
-            <Select
-              options={filiereOptions}
-              isClearable
-              placeholder="Sélectionner"
-              onChange={(opt) => {
-                setFilterFiliere(opt);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-            />
-          </div>
-
-          <button
-            className="btn btn-accent rounded-xl h-12"
-            onClick={() => setPopupOpen(true)}
-          >
-            + Ajouter une note
-          </button>
-
-          <button
-            className="btn btn-outline btn-primary rounded-xl h-12"
-            onClick={handleExportExcel}
-          >
-            Export Excel
-          </button>
-
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            onChange={handleImportExcel}
-            className="hidden"
-            id="importExcel"
-          />
-          <label
-            htmlFor="importExcel"
-            className="btn btn-outline btn-secondary rounded-xl h-12 cursor-pointer"
-          >
-            Import Excel
-          </label>
-        </div>
-      </div> */}
-
       <div className="bg-base-100 p-8 rounded-3xl shadow-lg mb-8 space-y-8">
 
         {/* ================= TOP : ACTION BUTTONS ================= */}
         <div className="flex flex-wrap gap-4 justify-between items-center border-b pb-6">
 
-
-          <div className="flex flex-wrap gap-3">
-
-            <button
-              className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
-              onClick={() => {
-                setPopupOpen(true);
-                setSelectedEtudiant(null);
-                setSelectedAnnee(null);
-                setSelectedSession(null);
-                setSelectedFiliere(null);
-                setFormKey(prev => prev + 1); // <-- reset form
-              }}
-            >
-              <Plus size={18} />
-              Ajouter une note
-            </button>
-
+          <div className="flex gap-3">
             <button
               className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
               onClick={handleExportExcel}
             >
               <FileDown size={18} />
               Export Excel
+            </button>
+
+            <button
+              className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
+              onClick={handleExportDeliberationPDF}
+            >
+              Grille
             </button>
 
             <input
@@ -950,6 +1148,24 @@ export default function NotesClient() {
             </label>
 
           </div>
+          <div className="flex flex-wrap gap-3">
+
+            <button
+              className="btn btn-accent rounded-2xl flex items-center gap-2 px-6 shadow-md hover:shadow-lg transition"
+              onClick={() => {
+                setPopupOpen(true);
+                setSelectedEtudiant(null);
+                setSelectedAnnee(null);
+                setSelectedSession(null);
+                setSelectedFiliere(null);
+                setFormKey(prev => prev + 1); // <-- reset form
+              }}
+            >
+              <Plus size={18} />
+              Ajouter une note
+            </button>
+          </div>
+
         </div>
 
         {/* ================= BOTTOM : FILTERS ================= */}
@@ -1038,7 +1254,7 @@ export default function NotesClient() {
         <div>
           Moyenne générale :{" "}
           <span className="text-primary">
-            {moyenneGenerale.toFixed(2)} / 20
+            {moyenneGenerale.toFixed(2)} / 100
           </span>{" "}
           <span className="text-base-content/60">
             ({moyennePourcentage.toFixed(2)}%)
@@ -1050,77 +1266,75 @@ export default function NotesClient() {
         </p>
       </div>
 
-
       {/* TABLE */}
       <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
         <table ref={tableRef} className="table w-full">
           <thead className="bg-base-200 text-sm">
             <tr>
+              <th>N°</th> 
               <th>Etudiant</th>
-              <th>Matière</th>
-              <th>Note</th>
-              <th>Année</th>
+              <th>Théorie/20</th>
+              <th>Pratique/50</th>
+              <th>Jury/30</th>
+              <th>Total</th>
+              <th>Mention</th>
               <th>Session</th>
               <th>Filière</th>
               <th className="text-center">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {paginatedNotes.length ? (
-              paginatedNotes.map(n => (
+              paginatedNotes.map((n, index) => (
                 <tr key={n.id}>
+                  <td>
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
+
                   <td>
                     {n.etudiant
                       ? `${n.etudiant.nom} ${n.etudiant.postnom} ${n.etudiant.prenom}`
                       : "Étudiant supprimé"}
                   </td>
-                  <td>{n.matiere}</td>
-                  <td>{n.note}</td>
-                  <td>{n.anneeAcademique?.annee ?? "N/A"}</td>
+                  <td>{n.noteTheorique}</td>
+                  <td>{n.notePratique}</td>
+                  <td>{n.noteJyry}</td>
+                  <td>
+                    {n.noteJyry + n.notePratique + n.noteTheorique} %
+                  </td>
+                  <td>
+                    {calculateMentionFromAverage(
+                      n.noteJyry + n.notePratique + n.noteTheorique
+                    )}
+                  </td>
                   <td>
                     {n.session?.dateDebut && n.session?.dateFin
-                      ? `${new Date(n.session.dateDebut).toLocaleDateString()} - ${new Date(n.session.dateFin).toLocaleDateString()}`
+                      ? `${new Date(n.session.dateDebut).toLocaleDateString()} - 
+                   ${new Date(n.session.dateFin).toLocaleDateString()}`
                       : "N/A"}
                   </td>
                   <td>{n.filiere?.nom ?? "N/A"}</td>
-                  <td className="flex justify-center gap-2">
-                    <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}>
-                      <LucideTrash2 size={16} />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-success btn-outline"
-                      onClick={() => handleDownloadBrevet(n)}
-                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
-                    >
-                      🎓
-                    </button>
-                    <button
-                      className="btn btn-xs btn-warning btn-outline"
-                      onClick={() => openEditPopup(n)}
-                    >
-                      ✏️
-                    </button>
 
-                    <button
-                      className="btn btn-xs btn-primary btn-outline"
-                      onClick={() => handleDownloadReleve(n)}
-                      disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant}
-                    >
-                      📄
-                    </button>
+                  <td className="flex justify-center gap-2">
+                    <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}> <LucideTrash2 size={16} /> </button>
+                    <button className="btn btn-xs btn-success btn-outline" onClick={() => handleDownloadBrevet(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 🎓 </button>
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} > c </button>
+                    <button className="btn btn-xs btn-primary btn-outline" onClick={() => handleDownloadReleve(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 📄 </button>
                   </td>
+
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-6 text-gray-500">
-                  Aucune note trouvée
+                <td colSpan={10} className="text-center py-6 text-gray-500">
+                   <EmptyStates IconComponent={"Inbox"} message="Aucune note trouvée" sm={true}/>
+                 
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
       </div>
 
       {/* PAGINATION */}
@@ -1242,33 +1456,66 @@ export default function NotesClient() {
             {/* Section note */}
             <div>
               <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
-                Détails de la note
+                Détails des notes
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Matière</span>
-                  </label>
-                  <input
-                    name="matiere"
-                    className="input input-bordered rounded-xl focus:input-primary text-sm"
-                    placeholder="Ex: Mathématiques"
-                    required
-                  />
-                </div>
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text font-medium">Note /20</span>
+                    <span className="label-text font-medium">Ev Théorique /20</span>
                   </label>
                   <input
-                    name="note"
+                    name="noteTheorique"
                     type="number"
                     step="0.01"
                     min="0"
                     max="20"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: 15.50"
+                    required
+                    onInput={(e: any) => {
+                      const value = e.target.value;
+                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                      if (!regex.test(value)) {
+                        e.target.value = value.slice(0, -1);
+                      }
+                    }}
+                  />
+                </div>
+                {/* <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Ev Pratique /50</span>
+                  </label>
+                  <input
+                    name="notePratique"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="50"
+                    className="input input-bordered rounded-xl focus:input-primary text-sm"
+                    placeholder="Ex: 15.50"
+                    required
+                    onInput={(e: any) => {
+                      const value = e.target.value;
+                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                      if (!regex.test(value)) {
+                        e.target.value = value.slice(0, -1);
+                      }
+                    }}
+                  />
+                </div> */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Jury /30</span>
+                  </label>
+                  <input
+                    name="noteJyry"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="30"
                     className="input input-bordered rounded-xl focus:input-primary text-sm"
                     placeholder="Ex: 15.50"
                     required
@@ -1401,34 +1648,68 @@ export default function NotesClient() {
                 {/* Section note */}
                 <div>
                   <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
-                    Détails de la note
+                    Détails des notes
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-medium">Matière</span>
+                        <span className="label-text font-medium">Ev Théorique /20</span>
                       </label>
                       <input
-                        name="matiere"
-                        defaultValue={selectedNote.matiere}
-                        className="input input-bordered rounded-xl focus:input-primary text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">Note /20</span>
-                      </label>
-                      <input
-                        name="note"
+                        name="noteTheorique"
                         type="number"
                         step="0.01"
                         min="0"
                         max="20"
-                        defaultValue={selectedNote.note}
+                        defaultValue={selectedNote.noteTheorique}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        placeholder="Ex: 15.50"
+                        required
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                          if (!regex.test(value)) {
+                            e.target.value = value.slice(0, -1);
+                          }
+                        }}
+                      />
+                    </div>
+                    {/* <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Ev Pratique /50</span>
+                      </label>
+                      <input
+                        name="notePratique"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="50"
+                        defaultValue={selectedNote.notePratique}
+                        className="input input-bordered rounded-xl focus:input-primary text-sm"
+                        placeholder="Ex: 15.50"
+                        required
+                        onInput={(e: any) => {
+                          const value = e.target.value;
+                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
+                          if (!regex.test(value)) {
+                            e.target.value = value.slice(0, -1);
+                          }
+                        }}
+                      />
+                    </div> */}
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">Jury /30</span>
+                      </label>
+                      <input
+                        name="noteJyry"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="30"
+                        defaultValue={selectedNote.noteJyry}
                         className="input input-bordered rounded-xl focus:input-primary text-sm"
                         placeholder="Ex: 15.50"
                         required

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, PieLabelRenderProps } from "recharts";
 
 type SexePieChartProps = {
   hommes: number;
@@ -22,15 +22,9 @@ export default function SexePieChart({ hommes, femmes, total }: SexePieChartProp
 
   const COLORS = ["#6366F1", "#EC4899"];
 
-  const renderCustomizedLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-    index,
-  }: any) => {
+  const renderCustomizedLabel = (props: PieLabelRenderProps) => {
+    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0, index = 0 } = props;
+
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -81,7 +75,7 @@ export default function SexePieChart({ hommes, femmes, total }: SexePieChartProp
                 fontSize: 14,
                 padding: "8px 12px",
               }}
-              formatter={(value: number) => [`${value}`, ""]}
+              formatter={(value?: number) => [`${value ?? 0}`, ""]}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -6,6 +6,7 @@ import Confetti from "react-confetti";
 import Swal from "sweetalert2"; // ← SweetAlert2
 import { Edit, Trash2, Plus } from "lucide-react";
 import { toast } from "react-toastify";
+import EmptyStates from "@/app/components/EmptyStates";
 
 type Role = "ADMIN" | "ENSEIGNANT" | "USER";
 
@@ -152,7 +153,7 @@ export default function UsersPage() {
             ) : paginatedUsers.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-4">
-                  Aucun utilisateur trouvé
+                  <EmptyStates IconComponent={"User"} message="Aucune utilisateur trouvé" sm={true}/>
                 </td>
               </tr>
             ) : (

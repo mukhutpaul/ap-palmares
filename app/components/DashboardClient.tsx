@@ -1,7 +1,7 @@
-// app/dashboard/page.tsx
-import DashboardClient from "./DashboardClient";
-import { getAnneesAcademiques } from "@/app/actions/notesActions";
-import { getDashboardStats } from "@/app/actions/dashboardActions";
+// app/dashboard/DashboardClient.tsx
+"use client";
+
+import React, { useState, useEffect } from "react";
 
 type AnneeAcademique = { id: number; annee: string; active: boolean };
 type DashboardStats = {
@@ -12,21 +12,53 @@ type DashboardStats = {
   tauxEchec: number;
 };
 
-export default async function DashboardPage() {
-  // Tout côté serveur
-  const annees: AnneeAcademique[] = await getAnneesAcademiques();
-  const activeAnnee = annees.find((a) => a.active) ?? annees[0];
+type DashboardClientProps = {
+  annees: AnneeAcademique[];
+  initialAnneeId: number | null;
+  initialStats: DashboardStats;
+};
 
-  const stats: DashboardStats = activeAnnee
-    ? await getDashboardStats(activeAnnee.id)
-    : { totalEtudiants: 0, hommes: 0, femmes: 0, tauxReussite: 0, tauxEchec: 0 };
+export default function DashboardClient({
+  annees,
+  initialAnneeId,
+  initialStats,
+}: DashboardClientProps) {
+  const [selectedAnneeId, setSelectedAnneeId] = useState<number | null>(initialAnneeId);
+  const [stats, setStats] = useState<DashboardStats>(initialStats);
 
-  // Passe les données au composant client
+  // Ici tu peux ajouter useEffect pour recharger les stats si l'année change
+  useEffect(() => {
+    // Exemple : fetch les stats si selectedAnneeId change
+    // fetchStats(selectedAnneeId).then(setStats);
+  }, [selectedAnneeId]);
+
   return (
-    <DashboardClient
-      annees={annees}
-      initialAnneeId={activeAnnee?.id ?? null}
-      initialStats={stats}
-    />
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+
+      <div className="mb-4">
+        <label htmlFor="annee" className="mr-2 font-semibold">Année académique :</label>
+        <select
+          id="annee"
+          value={selectedAnneeId ?? undefined}
+          onChange={(e) => setSelectedAnneeId(Number(e.target.value))}
+          className="border rounded px-2 py-1"
+        >
+          {annees.map((annee) => (
+            <option key={annee.id} value={annee.id}>
+              {annee.annee}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>Total étudiants : {stats.totalEtudiants}</div>
+        <div>Hommes : {stats.hommes}</div>
+        <div>Femmes : {stats.femmes}</div>
+        <div>Taux de réussite : {stats.tauxReussite}%</div>
+        <div>Taux d’échec : {stats.tauxEchec}%</div>
+      </div>
+    </div>
   );
 }
