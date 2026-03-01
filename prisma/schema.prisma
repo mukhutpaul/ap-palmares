@@ -27,11 +27,12 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now())
 
-  etudiants Etudiant[]
-  classes   Classe[]
-  filieres  Filiere[]
-  notes     Note[]
+  etudiants   Etudiant[]
+  classes     Classe[]
+  filieres    Filiere[]
+  notes       Note[]
   evaluations Evaluation[]
+  presences   Presence[]
 }
 
 // -------------------------------
@@ -44,9 +45,10 @@ model Etudiant {
   email   String @unique
   sexe    String
 
-  classes Classe[]
+  classes     Classe[]
   evaluations Evaluation[]
-  notes   Note[]
+  notes       Note[]
+  presences   Presence[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -85,10 +87,11 @@ model Filiere {
   nombreHt    Int     @default(0)
   description String?
 
-  classes Classe[]
-  notes   Note[]
+  classes     Classe[]
+  notes       Note[]
   evaluations Evaluation[]
   competences Competence[]
+  presences   Presence[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -103,8 +106,9 @@ model AnneeAcademique {
   annee  String  @unique
   active Boolean @default(false)
 
-  notes Note[]
+  notes       Note[]
   evaluations Evaluation[]
+  presences   Presence[]
 
   createdAt DateTime @default(now())
 }
@@ -116,10 +120,12 @@ model Session {
   designation String
   dateDebut   DateTime
   dateFin     DateTime
+  isactive    Boolean  @default(false)
 
-  notes   Note[]
-  classes Classe[]
+  notes       Note[]
+  classes     Classe[]
   evaluations Evaluation[]
+  presences   Presence[]
 
   createdAt DateTime @default(now())
 }
@@ -127,10 +133,10 @@ model Session {
 // -------------------------------
 
 model Note {
-  id     Int    @id @default(autoincrement())
-  noteTheorique Float?  @default(0)
-  notePratique Float?  @default(0)
-  noteJyry Float?  @default(0)
+  id            Int    @id @default(autoincrement())
+  noteTheorique Float? @default(0)
+  notePratique  Float? @default(0)
+  noteJyry      Float? @default(0)
 
   etudiant   Etudiant? @relation(fields: [etudiantId], references: [id])
   etudiantId Int?
@@ -153,7 +159,7 @@ model Note {
 }
 
 model Evaluation {
-  id     Int @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
   etudiantId Int
@@ -206,4 +212,36 @@ model EvaluationCompetence {
   score Float
 
   @@unique([evaluationId, competenceId])
+}
+
+model Presence {
+  id Int @id @default(autoincrement())
+
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId Int
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+
+  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+  anneeAcademiqueId Int
+
+  status PresenceStatus
+
+  date DateTime @default(now()) // on normalisera à 00:00:00 côté backend
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+
+  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, date])
+}
+
+enum PresenceStatus {
+  PRESENT
+  ABSENT
 }
