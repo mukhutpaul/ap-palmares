@@ -281,7 +281,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
               options={users}
               value={filterUser}
               onChange={(opt) => setFilterUser(opt)}
-              placeholder="Filtrer par utilisateur"
+              placeholder="Filtrer par formteur"
               isClearable
             />
           </div>
