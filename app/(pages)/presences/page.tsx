@@ -51,10 +51,15 @@ export default function PresenceClient({ userId }: { userId: string }) {
             return;
         }
 
-        const data = await getStudentsByFiliere(selectedFiliere.value);
 
+        const data = await getStudentsByFiliere(selectedFiliere.value);
+       
         if (!data.success) {
             toast.error(data.error);
+            return;
+        }
+         if (data.students.length === 0) {
+            toast.info("Tous les étudiants ont déjà été appelés aujourd'hui.");
             return;
         }
 
@@ -70,6 +75,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
     /* ---------------- MARK PRESENCE ---------------- */
     const handleMark = async (status: "PRESENT" | "ABSENT") => {
         const student = students[currentIndex];
+
         if (!student) {
             toast.error("Aucun étudiant trouvé pour cette étape de l'appel");
             return;
@@ -84,19 +90,17 @@ export default function PresenceClient({ userId }: { userId: string }) {
             const result = await markOrUpdatePresence({
                 etudiantId: student.id,
                 filiereId: selectedFiliere.value,
-                sessionId: sessionId,
+                sessionId,
                 anneeAcademiqueId: anneeId,
-                status,
-                userId,
+                status
             });
 
-            // Vérifie si l'action a échoué
             if (!result.success) {
                 toast.error(result.message || "Impossible d'enregistrer la présence");
                 return;
             }
 
-            // Étudiant suivant ou fin de l'appel
+            // Étudiant suivant ou fin
             if (currentIndex + 1 < students.length) {
                 setCurrentIndex((prev) => prev + 1);
             } else {
@@ -108,8 +112,9 @@ export default function PresenceClient({ userId }: { userId: string }) {
                 setAnneeId(null);
                 setCurrentIndex(0);
             }
-        } catch (err) {
-            console.error(err);
+
+        } catch (error) {
+            console.error(error);
             toast.error("Erreur lors de l'enregistrement de la présence");
         }
     };

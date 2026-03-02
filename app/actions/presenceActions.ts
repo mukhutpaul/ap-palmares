@@ -1,5 +1,6 @@
 "use server"
 
+import { auth } from "../lib/auth";
 import { prisma } from "../lib/prisma"
 
 
@@ -10,43 +11,88 @@ export async function getActiveSession() {
     })
 }
 
-export async function getStudentsByFiliere(
-  filiereId: number
-): Promise<PresenceCallResponse> {
-
-  const sessionActive = await prisma.session.findFirst({
-    where: { isactive: true }
-  });
-
-  if (!sessionActive) {
-    return { success: false, error: "Aucune session active." };
-  }
-
-  const anneeActive = await prisma.anneeAcademique.findFirst({
-    where: { active: true }
-  });
-
-  if (!anneeActive) {
-    return { success: false, error: "Aucune année active." };
-  }
-
-  const students = await prisma.etudiant.findMany({
-    where: {
-      classes: {
-        some: {
-          filiereId,
-          sessionId: sessionActive.id
-        }
-      }
+type GetStudentsResponse =
+  | {
+      success: true;
+      students: {
+        id: number;
+        nom: string;
+        postnom: string;
+        prenom: string;
+      }[];
+      session: { id: number };
+      annee: { id: number };
     }
-  });
+  | {
+      success: false;
+      error: string;
+    };
 
-  return {
-    success: true,
-    students,
-    session: { id: sessionActive.id },
-    annee: { id: anneeActive.id }
-  };
+
+export async function getStudentsByFiliere(filiereId: number) : Promise<GetStudentsResponse> {
+  try {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    // 🔎 Session active
+    const sessionActive = await prisma.session.findFirst({
+      where: { isactive: true },
+    });
+
+    if (!sessionActive) {
+      return { success: false, error: "Aucune session active" };
+    }
+
+    // 🔎 Année active
+    const anneeActive = await prisma.anneeAcademique.findFirst({
+      where: { active: true },
+    });
+
+    if (!anneeActive) {
+      return { success: false, error: "Aucune année académique active" };
+    }
+
+    // 👨‍🎓 Tous les étudiants de la filière
+    const students = await prisma.etudiant.findMany({
+      where: {
+        classes: {
+          some: { filiereId }
+        }
+      },
+      orderBy: { nom: "asc" }
+    });
+
+    // 📅 Présences déjà enregistrées aujourd'hui
+    const presencesToday = await prisma.presence.findMany({
+      where: {
+        filiereId,
+        sessionId: sessionActive.id,
+        anneeAcademiqueId: anneeActive.id,
+        date: today
+      },
+      select: {
+        etudiantId: true
+      }
+    });
+
+    const alreadyCalledIds = presencesToday.map(p => p.etudiantId);
+
+    // 🚫 Filtrer les déjà appelés
+    const remainingStudents = students.filter(
+      student => !alreadyCalledIds.includes(student.id)
+    );
+
+    return {
+      success: true,
+      students: remainingStudents,
+      session: sessionActive,
+      annee: anneeActive
+    };
+
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Erreur serveur" };
+  }
 }
 
 
@@ -118,57 +164,62 @@ export async function checkIfCallAlreadyDone(
     return count > 0
 }
 
-
 export async function markOrUpdatePresence({
-    etudiantId,
-    filiereId,
-    sessionId,
-    anneeAcademiqueId,
-    status,
-    userId
+  etudiantId,
+  filiereId,
+  sessionId,
+  anneeAcademiqueId,
+  status,
 }: {
-    etudiantId: number;
-    filiereId: number;
-    sessionId: number;
-    anneeAcademiqueId: number;
-    status: "PRESENT" | "ABSENT";
-    userId: string;
+  etudiantId: number;
+  filiereId: number;
+  sessionId: number;
+  anneeAcademiqueId: number;
+  status: "PRESENT" | "ABSENT";
 }) {
-    // Normaliser la date à 00:00:00 pour ne garder que la date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  // 🔐 Récupérer l'utilisateur connecté côté serveur
+  const session = await auth();
 
-    try {
-        const presence = await prisma.presence.upsert({
-            where: {
-                etudiantId_filiereId_sessionId_anneeAcademiqueId_date: {
-                    etudiantId,
-                    filiereId,
-                    sessionId,
-                    anneeAcademiqueId,
-                    date: today,
-                },
-            },
-            update: {
-                status,
-                createdById: userId, // pour suivre qui a modifié
-            },
-            create: {
-                etudiantId,
-                filiereId,
-                sessionId,
-                anneeAcademiqueId,
-                status,
-                date: today,
-                createdById: userId,
-            },
-        });
+  if (!session?.user?.id) {
+    return { success: false, message: "Utilisateur non authentifié" };
+  }
 
-        return { success: true, data: presence };
-    } catch (error) {
-        console.error("Erreur Prisma upsert presence:", error);
-        return { success: false, message: "Erreur lors de l’enregistrement de la présence." };
-    }
+  const userId = session.user.id;
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  try {
+    const presence = await prisma.presence.upsert({
+      where: {
+        etudiantId_filiereId_sessionId_anneeAcademiqueId_date: {
+          etudiantId,
+          filiereId,
+          sessionId,
+          anneeAcademiqueId,
+          date: today,
+        },
+      },
+      update: {
+        status,
+        createdById: userId, // 👈 automatiquement affecté
+      },
+      create: {
+        etudiantId,
+        filiereId,
+        sessionId,
+        anneeAcademiqueId,
+        status,
+        date: today,
+        createdById: userId, // 👈 automatiquement affecté
+      },
+    });
+
+    return { success: true, data: presence };
+  } catch (error) {
+    console.error("Erreur Prisma:", error);
+    return { success: false, message: "Erreur lors de l’enregistrement" };
+  }
 }
 
 export type PresenceCallResponse =
