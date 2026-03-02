@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import Select from "react-select";
 import { toast } from "react-toastify";
 import { LucideEdit2, LucideX } from "lucide-react";
+import EmptyStates from "@/app/components/EmptyStates";
 
 type FiliereOption = { value: number; label: string };
 type Student = { id: number; nom: string; postnom: string; prenom: string };
@@ -339,7 +340,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
               ) : (
                 <tr>
                   <td colSpan={6} className="text-center py-6 text-gray-500">
-                    Aucune présence trouvée
+                    <EmptyStates IconComponent={"Inbox"} message="Aucune présence trouvée" sm={true}/>
                   </td>
                 </tr>
               )}
