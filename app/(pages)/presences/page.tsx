@@ -25,6 +25,60 @@ type Presence = {
   createdBy?: { id: string; name: string };
 };
 
+// 🔹 Dictionnaire phonétique renforcé pour noms congolais (RDC)
+const phoneticDictionary: Record<string, string> = {
+  "NGA": "N-ga",
+  "NGO": "N-go",
+  "NGOMA": "N-go-ma",
+  "MBALA": "M-ba-la",
+  "MBONGO": "M-bon-go",
+  "MUTOMBO": "Mu-tom-bo",
+  "KABONGO": "Ka-bon-go",
+  "KABILA": "Ka-bi-la",
+  "KABUNDI": "Ka-bun-di",
+  "KASONGO": "Ka-son-go",
+  "KABAYO": "Ka-ba-yo",
+  "KALALA": "Ka-la-la",
+  "MUKOKO": "Mu-ko-ko",
+  "LUMUMBA": "Lu-mum-ba",
+  "KAMBA": "Kam-ba",
+  "BALUME": "Ba-lu-me",
+  "MABIKA": "Ma-bi-ka",
+  "MPOKO": "M-po-ko",
+  "KIPOKO": "Ki-po-ko",
+  "KABANGA": "Ka-ban-ga",
+  "MBOMBO": "M-bom-bo",
+  "NGANDU": "N-gan-du",
+  "KABWILA": "Ka-bwi-la",
+  "MUTUMBO": "Mu-tum-bo",
+  "MBONGE": "M-bon-ge",
+  "DJO": "D-jo"
+  // Ajouter d'autres noms fréquents pour ton école ou filière
+};
+
+// 🔹 Fonction pour corriger la prononciation
+const phoneticizeName = (name: string) => {
+  const upper = name.toUpperCase();
+  return phoneticDictionary[upper] || name;
+};
+
+// 🔹 Fonction pour lire le nom avec pauses entre nom, postnom et prénom
+const speakStudentName = (student: Student) => {
+  if (!window.speechSynthesis) return;
+
+  const utter = (text: string, delay: number) => {
+    setTimeout(() => {
+      const msg = new SpeechSynthesisUtterance(phoneticizeName(text));
+      msg.lang = "fr-FR";
+      window.speechSynthesis.speak(msg);
+    }, delay);
+  };
+
+  utter(student.nom, 0);
+  utter(student.postnom, 600);
+  utter(student.prenom, 1200);
+};
+
 export default function PresenceClient({ userId }: { userId: string }) {
   const [choosePopup, setChoosePopup] = useState(false);
   const [callPopup, setCallPopup] = useState(false);
@@ -44,14 +98,6 @@ export default function PresenceClient({ userId }: { userId: string }) {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [filterUser, setFilterUser] = useState<UserOption | null>(null);
   const [selectedPresence, setSelectedPresence] = useState<Presence | null>(null);
-
-  /* ---------------- SPEECH SYNTHESIS ---------------- */
-  const speak = (text: string) => {
-    if (!("speechSynthesis" in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "fr-FR";
-    window.speechSynthesis.speak(utterance);
-  };
 
   /* ---------------- LOAD FILIERES ---------------- */
   useEffect(() => {
@@ -118,8 +164,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
     setCurrentIndex(0);
 
     // 🔊 Lire le nom du premier étudiant
-    const firstStudent = data.students[0];
-    speak(`${firstStudent.nom} ${firstStudent.postnom} ${firstStudent.prenom}`);
+    if (data.students[0]) speakStudentName(data.students[0]);
   };
 
   /* ---------------- MARK PRESENCE ---------------- */
@@ -142,10 +187,8 @@ export default function PresenceClient({ userId }: { userId: string }) {
       if (currentIndex + 1 < students.length) {
         const nextIndex = currentIndex + 1;
         setCurrentIndex(nextIndex);
-
         // 🔊 Lire le nom du prochain étudiant
-        const nextStudent = students[nextIndex];
-        speak(`${nextStudent.nom} ${nextStudent.postnom} ${nextStudent.prenom}`);
+        speakStudentName(students[nextIndex]);
       } else {
         toast.success("Appel terminé !");
         setCallPopup(false);
