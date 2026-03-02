@@ -191,7 +191,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-10">
             {/* BOUTON PRINCIPAL */}
-            <button className="btn btn-primary rounded-xl" onClick={() => setChoosePopup(true)}>
+            <button className="btn btn-accent rounded-xl" onClick={() => setChoosePopup(true)}>
                 Faire l'appel
             </button>
 
