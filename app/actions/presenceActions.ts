@@ -94,6 +94,53 @@ export async function getStudentsByFiliere(filiereId: number) : Promise<GetStude
     return { success: false, error: "Erreur serveur" };
   }
 }
+export async function updatePresenceStatus(id: number, status: "PRESENT" | "ABSENT") {
+  return await prisma.presence.update({
+    where: { id },
+    data: { status },
+  });
+}
+
+export async function getPresences(filters: {
+  search?: string;
+  date?: string;
+  userId?: string;
+}) {
+  const { search, date, userId } = filters;
+
+  const where: any = {};
+
+  if (date) {
+    const selectedDate = new Date(date);
+    selectedDate.setUTCHours(0, 0, 0, 0);
+    where.date = selectedDate;
+  }
+
+  if (userId) {
+    where.createdById = userId;
+  }
+
+  if (search) {
+    where.etudiant = {
+      OR: [
+        { nom: { contains: search, mode: "insensitive" } },
+        { postnom: { contains: search, mode: "insensitive" } },
+        { prenom: { contains: search, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const presences = await prisma.presence.findMany({
+    where,
+    include: {
+      etudiant: true,
+      createdBy: true,
+    },
+    orderBy: { date: "desc" },
+  });
+
+  return presences;
+}
 
 
 
