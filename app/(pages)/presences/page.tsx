@@ -312,7 +312,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
                 <th>Étudiant</th>
                 <th>Status</th>
                 <th>Date</th>
-                <th>Utilisateur</th>
+                <th>Formateur</th>
                 <th></th>
               </tr>
             </thead>

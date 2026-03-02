@@ -90,7 +90,7 @@ model Filiere {
   classes     Classe[]
   notes       Note[]
   evaluations Evaluation[]
-  competences Competence[]
+  moduleCotations ModuleCotation[]
   presences   Presence[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -186,20 +186,32 @@ model Evaluation {
   @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId])
 }
 
+model ModuleCotation {
+  id       Int     @id @default(autoincrement())
+  intitule String
+  max      Float
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  createdAt DateTime @default(now())
+
+  competences Competence[]
+}
+
 model Competence {
   id          Int    @id @default(autoincrement())
   nom         String
   maxScore    Float
   coefficient Float  @default(1)
 
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-  filiereId Int
+  moduleCotation  ModuleCotation @relation(fields: [moduleCotationId], references: [id])
+  moduleCotationId Int
 
   evaluations EvaluationCompetence[]
 
   createdAt DateTime @default(now())
 }
-
 model EvaluationCompetence {
   id Int @id @default(autoincrement())
 
@@ -245,3 +257,5 @@ enum PresenceStatus {
   PRESENT
   ABSENT
 }
+
+
