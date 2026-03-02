@@ -245,7 +245,11 @@ export default function PresenceClient({ userId }: { userId: string }) {
         : true
     )
     .filter((p) => (filterDate ? p.date.startsWith(filterDate) : true))
-    .filter((p) => (filterUser ? p.createdBy?.id === filterUser.value : true));
+    .filter((p) => (filterUser ? p.createdBy?.id === filterUser.value : true))
+    .filter((p) => (selectedFiliere ? p.filiereId === selectedFiliere.value : true));
+
+  const totalPresents = filteredPresences.filter(p => p.status === "PRESENT").length;
+  const totalAbsents = filteredPresences.filter(p => p.status === "ABSENT").length;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-10">
@@ -280,7 +284,25 @@ export default function PresenceClient({ userId }: { userId: string }) {
               isClearable
             />
           </div>
+          <div className="w-72">
+            <Select
+              options={filiereOptions}
+              value={selectedFiliere}
+              onChange={(opt) => setSelectedFiliere(opt)}
+              placeholder="Filtrer par filière"
+              isClearable
+            />
+          </div>
         </div>
+
+        {/* Résumé totaux par filière */}
+        {selectedFiliere && (
+          <div className="flex gap-4 mb-4 text-sm font-medium">
+            <span className="badge badge-success">Présents: {totalPresents}</span>
+            <span className="badge badge-error">Absents: {totalAbsents}</span>
+            <span className="badge badge-info">Total: {totalAbsents + totalPresents}</span>
+          </div>
+        )}
 
         <div className="overflow-x-auto rounded-xl border shadow">
           <table className="table w-full">
