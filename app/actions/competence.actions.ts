@@ -10,7 +10,7 @@ export async function createCompetence(data: {
   nom: string;
   maxScore: number;
   coefficient?: number;
-  filiereId: number;
+  moduleCotationId: number; // <-- ID du module
 }) {
   try {
     const competence = await prisma.competence.create({
@@ -18,14 +18,14 @@ export async function createCompetence(data: {
         nom: data.nom,
         maxScore: data.maxScore,
         coefficient: data.coefficient ?? 1,
-        filiereId: data.filiereId,
+        moduleCotationId: data.moduleCotationId, // <- lien correct
       },
     });
 
     revalidatePath("/competences");
-
     return { success: true, data: competence };
   } catch (error) {
+    console.error(error);
     return { success: false, error: "Erreur création compétence" };
   }
 }
@@ -39,6 +39,7 @@ export async function updateCompetence(
     nom?: string;
     maxScore?: number;
     coefficient?: number;
+    moduleCotationId?: number; // si on veut changer de module
   }
 ) {
   try {
@@ -48,14 +49,12 @@ export async function updateCompetence(
     });
 
     revalidatePath("/competences");
-
     return { success: true, data: competence };
   } catch (error) {
+    console.error(error);
     return { success: false, error: "Erreur modification compétence" };
   }
 }
-
-
 
 /* =========================
    DELETE
@@ -67,9 +66,9 @@ export async function deleteCompetence(id: number) {
     });
 
     revalidatePath("/competences");
-
     return { success: true };
   } catch (error) {
+    console.error(error);
     return { success: false, error: "Erreur suppression compétence" };
   }
 }
@@ -80,24 +79,25 @@ export async function deleteCompetence(id: number) {
 export async function getCompetences() {
   return prisma.competence.findMany({
     include: {
-      filiere: true,
+      moduleCotation: true,
       evaluations: true,
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getCompetencesByFiliere(filiereId: number) {
-    // Récupère toutes les compétences d'une filière
-    return await prisma.competence.findMany({
-        where: { filiereId },
-        select: {
-            id: true,
-            nom: true,
-            coefficient: true,
-        },
-        orderBy: {
-            nom: "asc",
-        },
-    });
+/* =========================
+   GET BY MODULE
+========================= */
+export async function getCompetencesByModule(moduleCotationId: number) {
+  return prisma.competence.findMany({
+    where: { moduleCotationId },
+    select: {
+      id: true,
+      nom: true,
+      coefficient: true,
+      maxScore: true,
+    },
+    orderBy: { nom: "asc" },
+  });
 }

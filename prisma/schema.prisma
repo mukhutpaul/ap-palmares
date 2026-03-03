@@ -50,8 +50,8 @@ model Etudiant {
   notes       Note[]
   presences   Presence[]
 
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+  createdById String?
 
   createdAt DateTime @default(now())
 }
@@ -87,11 +87,11 @@ model Filiere {
   nombreHt    Int     @default(0)
   description String?
 
-  classes     Classe[]
-  notes       Note[]
-  evaluations Evaluation[]
+  classes         Classe[]
+  notes           Note[]
+  evaluations     Evaluation[]
   moduleCotations ModuleCotation[]
-  presences   Presence[]
+  presences       Presence[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -187,16 +187,15 @@ model Evaluation {
 }
 
 model ModuleCotation {
-  id       Int     @id @default(autoincrement())
-  intitule String
-  max      Float
-
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  id        Int      @id @default(autoincrement())
+  intitule  String
+  max       Float
+  filiere   Filiere  @relation(fields: [filiereId], references: [id])
   filiereId Int
-
   createdAt DateTime @default(now())
 
-  competences Competence[]
+  // Relation correcte vers Competence
+  competences Competence[] @relation("ModuleCompetences")
 }
 
 model Competence {
@@ -205,13 +204,14 @@ model Competence {
   maxScore    Float
   coefficient Float  @default(1)
 
-  moduleCotation  ModuleCotation @relation(fields: [moduleCotationId], references: [id])
-  moduleCotationId Int
+  // Relation temporairement nullable
+  moduleCotation   ModuleCotation? @relation("ModuleCompetences", fields: [moduleCotationId], references: [id])
+  moduleCotationId Int? // <- nullable
 
   evaluations EvaluationCompetence[]
-
-  createdAt DateTime @default(now())
+  createdAt   DateTime               @default(now())
 }
+
 model EvaluationCompetence {
   id Int @id @default(autoincrement())
 
@@ -257,5 +257,3 @@ enum PresenceStatus {
   PRESENT
   ABSENT
 }
-
-

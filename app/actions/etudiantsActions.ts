@@ -13,6 +13,8 @@ export async function getClasses() {
   });
 }
 
+
+
 // ===============================
 // Ajouter un étudiant
 // ===============================
@@ -22,7 +24,6 @@ export async function addEtudiant(formData: FormData) {
   const prenom = formData.get("prenom")?.toString();
   const email = formData.get("email")?.toString();
   const sexe = formData.get("sexe")?.toString();
-  const createdById = String(formData.get("createdById"));
 
   if (!nom || !postnom || !prenom || !email || !sexe) {
     throw new Error("Tous les champs sont obligatoires");
@@ -34,8 +35,7 @@ export async function addEtudiant(formData: FormData) {
       postnom,
       prenom,
       email,
-      sexe,
-      createdById,
+      sexe
     },
   });
 

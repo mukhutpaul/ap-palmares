@@ -28,39 +28,48 @@ type Presence = {
 
 // 🔹 Dictionnaire phonétique renforcé pour noms congolais (RDC)
 const phoneticDictionary: Record<string, string> = {
-    "NGA": "Nga",
-    "MWA": "Mwa",
-    "NGO": "Ngo",
-    "NGOMA": "Ngo-Ma",
-    "MBALA": "Mba-La",
-    "MBONGO": "Mbon-Go",
-    "MUTOMBO": "Mu-Tom-Bo",
-    "KABONGO": "Ka-Bon-Go",
-    "KABILA": "Ka-Bi-La",
-    "KABUNDI": "Ka-Bun-Di",
-    "KASONGO": "Ka-Son-Go",
-    "KABAYO": "Ka-Ba-Yo",
-    "KALALA": "Ka-La-La",
-    "MUKOKO": "Mu-Ko-Ko",
-    "LUMUMBA": "Lu-Mum-Ba",
-    "KAMBA": "Kam-Ba",
-    "BALUME": "Ba-Lu-Me",
-    "MABIKA": "Ma-Bi-Ka",
-    "MPOKO": "M-Po-Ko",
-    "KIPOKO": "Ki-Po-Ko",
-    "KABANGA": "Ka-Ban-Ga",
-    "MBOMBO": "Mbom-Bo",
-    "NGANDU": "Ngan-Du",
-    "KABWILA": "Ka-Bwi-La",
-    "MUTUMBO": "Mu-Tum-Bo",
-    "MBONGE": "Mbon-Ge",
-    "DJO": "Djo"
+  "NGA": "Ngaa",
+  "MWA": "Moua",
+  "NGO": "Ngo",
+  "NGOMA": "Ngoma",
+  "MBALA": "Mbala",
+  "MBONGO": "Mbongo",
+  "MUTOMBO": "Mutombo",
+  "KABONGO": "Kabongo",
+  "KABILA": "Kabila",
+  "KABUNDI": "Kabundi",
+  "KASONGO": "Kasongo",
+  "KABAYO": "Kabayou",
+  "KALALA": "Kalala",
+  "MUKOKO": "Mukoko",
+  "LUMUMBA": "Lumumba",
+  "KAMBA": "Kamba",
+  "BALUME": "Baloumé",
+  "MABIKA": "Mabika",
+  "MPOKO": "Mpoko",
+  "KIPOKO": "Kipoko",
+  "KABANGA": "Kabanga",
+  "MBOMBO": "Mbombo",
+  "NGANDU": "Ngandu",
+  "KABWILA": "Kabwila",
+  "MUTUMBO": "Mutumbo",
+  "MBONGE": "Mbongué",
+  "DJO": "Djo"
 };
 
 // 🔹 Fonction pour corriger la prononciation
 const phoneticizeName = (name: string) => {
-    const upper = name.toUpperCase();
-    return phoneticDictionary[upper] || name;
+  if (!name) return "";
+
+  const upper = name.trim().toUpperCase();
+
+  if (phoneticDictionary[upper]) {
+    return phoneticDictionary[upper];
+  }
+
+  // Toujours éviter les MAJUSCULES
+  const lower = upper.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
 // 🔹 Fonction pour lire le nom avec pauses entre nom, postnom et prénom

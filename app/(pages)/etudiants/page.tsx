@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
-import Select from "react-select";
 import { LucideEdit2, LucideTrash2, LucideSearch } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -15,21 +14,6 @@ import {
 } from "@/app/actions/etudiantsActions";
 import EmptyStates from "@/app/components/EmptyStates";
 
-/* =======================
-   Types
-======================= */
-interface Filiere {
-  id: number;
-  nom: string;
-}
-
-interface Classe {
-  id: number;
-  nom: string;
-  section: string;
-  filiere: Filiere | null;
-}
-
 interface Etudiant {
   id: number;
   nom: string;
@@ -39,70 +23,43 @@ interface Etudiant {
   sexe: string;
 }
 
-interface SelectOption {
-  value: number;
-  label: string;
-}
-
-/* =======================
-   Component
-======================= */
 export default function EtudiantsClient() {
   const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
   const [popupOpen, setPopupOpen] = useState(false);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
-
   const [selectedEtudiant, setSelectedEtudiant] = useState<Etudiant | null>(null);
-
-
   const [search, setSearch] = useState("");
-  const [filterClasse, setFilterClasse] = useState<SelectOption | null>(null);
-  const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
 
   const { data: session } = useSession();
 
-  /* =======================
-     Chargements initiaux
-  ======================= */
+  // Charger les étudiants
   useEffect(() => {
     getEtudiants()
       .then(setEtudiants)
       .catch(() => toast.error("Impossible de charger les étudiants"));
   }, []);
 
-
-
-  /* =======================
-     Options Select
-  ======================= */
-  /* =======================
-     Filtrage
-  ======================= */
+  // Filtrage
   const filteredEtudiants = etudiants.filter((e) => {
     const s = search.toLowerCase();
-
-    const matchSearch =
+    return (
       e.nom.toLowerCase().includes(s) ||
       e.postnom.toLowerCase().includes(s) ||
       e.prenom.toLowerCase().includes(s) ||
-      e.email.toLowerCase().includes(s);
-
-    return matchSearch
+      e.email.toLowerCase().includes(s)
+    );
   });
 
-  /* =======================
-     Actions
-  ======================= */
-  const handleOpenAddPopup = () => {
-    setPopupOpen(true);
-  };
+  // Ouvrir popup ajout
+  const handleOpenAddPopup = () => setPopupOpen(true);
 
+  // Ajouter étudiant
   const handleAddEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!session?.user?.id) return toast.error("Utilisateur non connecté");
+    //if (!session?.user?.id) return toast.error("Utilisateur non connecté");
 
     const formData = new FormData(e.currentTarget);
-    formData.append("createdById", session.user.id);
+    //formData.append("createdById", session.user.id);
 
     try {
       const created = await addEtudiant(formData);
@@ -115,11 +72,13 @@ export default function EtudiantsClient() {
     }
   };
 
-  const openEditPopup = (e: Etudiant) => {
-    setSelectedEtudiant(e);
+  // Ouvrir popup édition
+  const openEditPopup = (etudiant: Etudiant) => {
+    setSelectedEtudiant(etudiant);
     setEditPopupOpen(true);
   };
 
+  // Modifier étudiant
   const handleUpdateEtudiant = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!session?.user?.id) return toast.error("Utilisateur non connecté");
@@ -140,6 +99,7 @@ export default function EtudiantsClient() {
     }
   };
 
+  // Supprimer étudiant
   const handleDeleteEtudiant = async (id: number) => {
     const res = await Swal.fire({
       title: "Supprimer cet étudiant ?",
@@ -161,38 +121,29 @@ export default function EtudiantsClient() {
     }
   };
 
-  /* =======================
-     Render
-  ======================= */
   return (
     <div className="mx-8 mt-8">
       <h1 className="text-3xl font-bold mb-6">Gestion des Étudiants</h1>
 
       {/* Filtres */}
       <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
-            <LucideSearch size={18} />
-            <input
-              className="w-full"
-              placeholder="Recherche..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
+          <LucideSearch size={18} />
+          <input
+            className="w-full"
+            placeholder="Recherche..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-
         <button className="btn btn-accent" onClick={handleOpenAddPopup}>
           Ajouter
         </button>
       </div>
 
-      {/* TABLEAU */}
+      {/* Tableau */}
       {filteredEtudiants.length === 0 ? (
-        <div className="text-center text-gray-500 py-10">
-          <EmptyStates IconComponent={"User"} message="Aucune étudiant trouvé" sm={true}/>
-        </div>
+        <EmptyStates IconComponent={"User"} message="Aucun étudiant trouvé" sm />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
           <table className="table w-full">
@@ -214,21 +165,19 @@ export default function EtudiantsClient() {
                   <td>{e.prenom}</td>
                   <td>{e.email}</td>
                   <td>{e.sexe}</td>
-                  <td className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        className="btn btn-xs btn-warning btn-outline"
-                        onClick={() => openEditPopup(e)}
-                      >
-                        <LucideEdit2 size={16} />
-                      </button>
-                      <button
-                        className="btn btn-xs btn-outline btn-error"
-                        onClick={() => handleDeleteEtudiant(e.id)}
-                      >
-                        <LucideTrash2 size={16} />
-                      </button>
-                    </div>
+                  <td className="text-center flex justify-center gap-2">
+                    <button
+                      className="btn btn-xs btn-warning btn-outline"
+                      onClick={() => openEditPopup(e)}
+                    >
+                      <LucideEdit2 size={16} />
+                    </button>
+                    <button
+                      className="btn btn-xs btn-outline btn-error"
+                      onClick={() => handleDeleteEtudiant(e.id)}
+                    >
+                      <LucideTrash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -237,165 +186,98 @@ export default function EtudiantsClient() {
         </div>
       )}
 
-      {/* POPUP AJOUT */}
+      {/* Popup Ajout */}
       {popupOpen && (
-        <dialog className="modal modal-open">
-          <div className="modal-box relative max-w-lg p-8 rounded-2xl shadow-2xl">
-
-            {/* Bouton fermer (croix) */}
-            <button
-              type="button"
-              onClick={() => setPopupOpen(false)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-red-500 transition"
-            >
-              ✕
-            </button>
-
-            <h3 className="text-2xl font-bold mb-6 text-center">
-              Ajouter un étudiant
-            </h3>
-
-            <form onSubmit={handleAddEtudiant} className="space-y-4">
-
-              <input
-                name="nom"
-                placeholder="Nom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="postnom"
-                placeholder="Postnom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="prenom"
-                placeholder="Prénom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <select
-                name="sexe"
-                className="select select-bordered w-full rounded-xl"
-                required
-              >
-                <option value="">Sélectionner le sexe</option>
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-              </select>
-
-              <button
-                type="submit"
-                className="btn btn-accent w-full mt-4 rounded-xl text-lg"
-              >
-                Enregistrer
-              </button>
-
-            </form>
-          </div>
-
-          {/* Background overlay */}
-          <form method="dialog" className="modal-backdrop">
-            <button onClick={() => setPopupOpen(false)}>close</button>
-          </form>
-        </dialog>
+        <EtudiantFormPopup
+          title="Ajouter un étudiant"
+          onClose={() => setPopupOpen(false)}
+          onSubmit={handleAddEtudiant}
+        />
       )}
 
-
-      {/* POPUP EDIT */}
-      {/* POPUP EDIT */}
+      {/* Popup Édition */}
       {editPopupOpen && selectedEtudiant && (
-        <dialog className="modal modal-open">
-          <div className="modal-box relative max-w-lg p-8 rounded-2xl shadow-2xl">
-
-            {/* Bouton fermer (croix) */}
-            <button
-              type="button"
-              onClick={() => setEditPopupOpen(false)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-red-500 transition"
-            >
-              ✕
-            </button>
-
-            <h3 className="text-2xl font-bold mb-6 text-center">
-              Modifier un étudiant
-            </h3>
-
-            <form onSubmit={handleUpdateEtudiant} className="space-y-4">
-              <input type="hidden" name="id" value={selectedEtudiant.id} />
-
-              <input
-                name="nom"
-                defaultValue={selectedEtudiant.nom}
-                placeholder="Nom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="postnom"
-                defaultValue={selectedEtudiant.postnom}
-                placeholder="Postnom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="prenom"
-                defaultValue={selectedEtudiant.prenom}
-                placeholder="Prénom"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <input
-                name="email"
-                defaultValue={selectedEtudiant.email}
-                type="email"
-                placeholder="Email"
-                className="input input-bordered w-full rounded-xl"
-                required
-              />
-
-              <select
-                name="sexe"
-                defaultValue={selectedEtudiant.sexe}
-                className="select select-bordered w-full rounded-xl"
-                required
-              >
-                <option value="">Sélectionner le sexe</option>
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-              </select>
-
-              <button
-                type="submit"
-                className="btn btn-accent w-full mt-4 rounded-xl text-lg"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-
-          {/* Background overlay */}
-          <form method="dialog" className="modal-backdrop">
-            <button onClick={() => setEditPopupOpen(false)}>close</button>
-          </form>
-        </dialog>
+        <EtudiantFormPopup
+          title="Modifier un étudiant"
+          etudiant={selectedEtudiant}
+          onClose={() => setEditPopupOpen(false)}
+          onSubmit={handleUpdateEtudiant}
+        />
       )}
-
     </div>
+  );
+}
+
+/* Popup formulaire réutilisable */
+interface FormPopupProps {
+  title: string;
+  onClose: () => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  etudiant?: Etudiant;
+}
+
+function EtudiantFormPopup({ title, onClose, onSubmit, etudiant }: FormPopupProps) {
+  return (
+    <dialog className="modal modal-open">
+      <div className="modal-box relative max-w-lg p-8 rounded-2xl shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-red-500 transition"
+        >
+          ✕
+        </button>
+        <h3 className="text-2xl font-bold mb-6 text-center">{title}</h3>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          {etudiant && <input type="hidden" name="id" value={etudiant.id} />}
+          <input
+            name="nom"
+            defaultValue={etudiant?.nom || ""}
+            placeholder="Nom"
+            className="input input-bordered w-full rounded-xl"
+            required
+          />
+          <input
+            name="postnom"
+            defaultValue={etudiant?.postnom || ""}
+            placeholder="Postnom"
+            className="input input-bordered w-full rounded-xl"
+            required
+          />
+          <input
+            name="prenom"
+            defaultValue={etudiant?.prenom || ""}
+            placeholder="Prénom"
+            className="input input-bordered w-full rounded-xl"
+            required
+          />
+          <input
+            name="email"
+            type="email"
+            defaultValue={etudiant?.email || ""}
+            placeholder="Email"
+            className="input input-bordered w-full rounded-xl"
+            required
+          />
+          <select
+            name="sexe"
+            defaultValue={etudiant?.sexe || ""}
+            className="select select-bordered w-full rounded-xl"
+            required
+          >
+            <option value="">Sélectionner le sexe</option>
+            <option value="M">Masculin</option>
+            <option value="F">Féminin</option>
+          </select>
+          <button
+            type="submit"
+            className="btn btn-accent w-full mt-4 rounded-xl text-lg"
+          >
+            Enregistrer
+          </button>
+        </form>
+      </div>
+    </dialog>
   );
 }
