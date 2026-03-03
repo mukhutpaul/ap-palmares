@@ -167,27 +167,44 @@ export async function updateEvaluation(
   scores: { competenceId: number; score: number }[]
 ) {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    for (const item of scores) {
-      await tx.evaluationCompetence.update({
-        where: { evaluationId_competenceId: { evaluationId, competenceId: item.competenceId } },
-        data: { score: item.score },
+    for (const s of scores) {
+      // Vérifier si le score existe déjà pour cette compétence
+      const existing = await tx.evaluationCompetence.findUnique({
+        where: { evaluationId_competenceId: { evaluationId, competenceId: s.competenceId } },
       });
+
+      if (existing) {
+        // Mettre à jour
+        await tx.evaluationCompetence.update({
+          where: { evaluationId_competenceId: { evaluationId, competenceId: s.competenceId } },
+          data: { score: s.score },
+        });
+      } else {
+        // Créer si elle n'existe pas encore
+        await tx.evaluationCompetence.create({
+          data: { evaluationId, competenceId: s.competenceId, score: s.score },
+        });
+      }
     }
 
+    // Recalcul de la moyenne pondérée
     const evaluation = await tx.evaluation.findUnique({
       where: { id: evaluationId },
       include: { competences: { include: { competence: true } } },
     });
-    if (!evaluation) throw new Error("Evaluation introuvable");
+    if (!evaluation) throw new Error("Évaluation introuvable");
 
     let total = 0;
     let totalCoef = 0;
-    for (const item of evaluation.competences) {
-      total += item.score * item.competence.coefficient;
-      totalCoef += item.competence.coefficient;
+    for (const c of evaluation.competences) {
+      total += c.score * c.competence.coefficient;
+      totalCoef += c.competence.coefficient;
     }
 
-    return tx.evaluation.update({ where: { id: evaluationId }, data: { moyenne: totalCoef > 0 ? total / totalCoef : 0 } });
+    return tx.evaluation.update({
+      where: { id: evaluationId },
+      data: { moyenne: totalCoef > 0 ? total / totalCoef : 0 },
+    });
   });
 }
 
