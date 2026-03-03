@@ -18,7 +18,7 @@ const evaluationSchema = z.object({
   filiereId: z.number(),
   moduleId: z.number(),
   scores: z.array(scoreSchema),
-  userEmail: z.string(), // ← on envoie email maintenant
+  userEmail: z.string(),
 });
 
 // ================================
@@ -39,28 +39,28 @@ export async function createEvaluation(data: unknown) {
     const module = await tx.moduleCotation.findUnique({ where: { id: moduleId } });
     if (!module) throw new Error("Module inexistant");
 
-    // Session et année académiques actives
     const session = await tx.session.findFirst({ where: { isactive: true } });
     if (!session) throw new Error("Aucune session active trouvée");
 
     const annee = await tx.anneeAcademique.findFirst({ where: { active: true } });
     if (!annee) throw new Error("Aucune année académique active trouvée");
 
-    // On récupère l'utilisateur via son email
     const user = await tx.user.findUnique({ where: { email: userEmail } });
     if (!user) throw new Error("Utilisateur inexistant");
 
+    // Vérification si une évaluation pour ce module existe déjà
     const existing = await tx.evaluation.findUnique({
       where: {
-        etudiantId_filiereId_sessionId_anneeAcademiqueId: {
+        etudiantId_filiereId_sessionId_anneeAcademiqueId_moduleId: {
           etudiantId,
           filiereId,
           sessionId: session.id,
           anneeAcademiqueId: annee.id,
+          moduleId,
         },
       },
     });
-    if (existing) throw new Error("Cette évaluation existe déjà");
+    if (existing) throw new Error("Cette évaluation pour ce module existe déjà");
 
     const competences = await tx.competence.findMany({
       where: { moduleCotationId: moduleId },
@@ -81,10 +81,11 @@ export async function createEvaluation(data: unknown) {
       data: {
         etudiantId,
         filiereId,
+        moduleId,
         sessionId: session.id,
         anneeAcademiqueId: annee.id,
         moyenne,
-        createdById: user.id, // ← on utilise le vrai ID
+        createdById: user.id,
         competences: { create: scores.map((s) => ({ competenceId: s.competenceId, score: s.score })) },
       },
     });
@@ -92,8 +93,9 @@ export async function createEvaluation(data: unknown) {
 }
 
 // ================================
-// 2️⃣ GET EVALUATIONS BY FILIERE
+// GET EVALUATIONS BY FILIERE
 // ================================
+
 export async function getEvaluationsByFiliere(filiereId: number) {
   const evaluations = await prisma.evaluation.findMany({
     where: { filiereId },
@@ -103,9 +105,7 @@ export async function getEvaluationsByFiliere(filiereId: number) {
       competences: {
         include: {
           competence: {
-            include: {
-              moduleCotation: true, // inclut le module de chaque compétence
-            },
+            include: { moduleCotation: true },
           },
         },
       },
@@ -113,7 +113,6 @@ export async function getEvaluationsByFiliere(filiereId: number) {
   });
 
   return evaluations.map(e => {
-    // Récupérer le module principal si toutes les compétences ont le même module
     const modules = Array.from(
       new Set(
         e.competences
@@ -125,7 +124,7 @@ export async function getEvaluationsByFiliere(filiereId: number) {
 
     const module = modules.length === 1
       ? e.competences.find(c => c.competence.moduleCotation)?.competence.moduleCotation
-      : null; // null si plusieurs modules différents
+      : null;
 
     return {
       id: e.id,
@@ -145,7 +144,7 @@ export async function getEvaluationsByFiliere(filiereId: number) {
 }
 
 // ================================
-// 3️⃣ GET ONE EVALUATION
+// GET ONE EVALUATION
 // ================================
 
 export async function getEvaluationById(id: number) {
@@ -154,13 +153,13 @@ export async function getEvaluationById(id: number) {
     include: {
       etudiant: true,
       filiere: true,
-      competences: { include: { competence: true } },
+      competences: { include: { competence: { include: { moduleCotation: true } } } },
     },
   });
 }
 
 // ================================
-// 4️⃣ UPDATE SCORES
+// UPDATE SCORES
 // ================================
 
 export async function updateEvaluation(
@@ -193,7 +192,7 @@ export async function updateEvaluation(
 }
 
 // ================================
-// 5️⃣ DELETE EVALUATION
+// DELETE EVALUATION
 // ================================
 
 export async function deleteEvaluation(id: number) {
@@ -204,7 +203,7 @@ export async function deleteEvaluation(id: number) {
 }
 
 // ================================
-// 6️⃣ GET EVALUATIONS BY STUDENT
+// GET EVALUATIONS BY STUDENT
 // ================================
 
 export async function getEvaluationsByStudent(etudiantId: number) {
@@ -215,14 +214,14 @@ export async function getEvaluationsByStudent(etudiantId: number) {
       filiere: true,
       session: true,
       anneeAcademique: true,
-      competences: { include: { competence: true } },
+      competences: { include: { competence: { include: { moduleCotation: true } } } },
     },
     orderBy: { createdAt: "desc" },
   });
 }
 
 // ================================
-// 7️⃣ MODULES & COMPETENCES
+// MODULES & COMPETENCES
 // ================================
 
 export async function getModulesByFiliere(filiereId: number) {

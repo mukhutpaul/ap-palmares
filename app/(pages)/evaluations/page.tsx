@@ -67,11 +67,6 @@ export default function EvaluationsClient() {
     init();
   }, []);
 
-  // ---------------- DETAILS ----------------
-  const handleShowDetails = (evaluation: Evaluation) => {
-    setDetailEvaluation(evaluation);
-  };
-
   // ---------------- FILIERE CHANGE ----------------
   useEffect(() => {
     if (!selectedFiliere) return;
@@ -128,11 +123,6 @@ export default function EvaluationsClient() {
     }
   };
 
-  // ---------------- OPTIONS ----------------
-  const filiereOptions = filieres.map(f => ({ value: f.id, label: f.nom }));
-  const moduleOptions = modules.map(m => ({ value: m.id, label: m.intitule }));
-  const etudiantOptions = etudiants.map(e => ({ value: e.id, label: `${e.nom} ${e.postnom} ${e.prenom}` }));
-
   // ---------------- ADD EVALUATION ----------------
   const handleAddEvaluation = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -173,6 +163,11 @@ export default function EvaluationsClient() {
     return student?.includes(query) || e.filiere?.nom.toLowerCase().includes(query) || e.module?.intitule.toLowerCase().includes(query);
   });
 
+  // ---------------- OPTIONS ----------------
+  const filiereOptions = filieres.map(f => ({ value: f.id, label: f.nom }));
+  const moduleOptions = modules.map(m => ({ value: m.id, label: m.intitule }));
+  const etudiantOptions = etudiants.map(e => ({ value: e.id, label: `${e.nom} ${e.postnom} ${e.prenom}` }));
+
   // ---------------- UI ----------------
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
@@ -205,7 +200,7 @@ export default function EvaluationsClient() {
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
-              <button className="btn btn-xs btn-outline btn-info" onClick={() => handleShowDetails(e)}>Détails</button>
+              <button className="btn btn-xs btn-outline btn-info" onClick={() => setDetailEvaluation(e)}>Détails</button>
               <button className="btn btn-xs btn-outline btn-warning"><LucideEdit2 size={14} /></button>
               <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDeleteEvaluation(e.id)}><LucideTrash2 size={14} /></button>
             </div>
@@ -270,7 +265,6 @@ export default function EvaluationsClient() {
               Module: {detailEvaluation.module?.intitule}
             </p>
 
-            {/* Competences */}
             <div className="mt-4 space-y-2">
               {detailEvaluation.competences.map(c => (
                 <div key={c.competenceId} className="flex justify-between text-sm">
@@ -280,7 +274,6 @@ export default function EvaluationsClient() {
               ))}
             </div>
 
-            {/* Calcul total & moyenne */}
             {(() => {
               const totalScore = detailEvaluation.competences.reduce((sum, c) => sum + (c.score || 0), 0);
               const totalMax = detailEvaluation.competences.reduce((sum, c) => sum + (c.maxScore || 0), 0);

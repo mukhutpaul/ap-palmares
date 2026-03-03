@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,6 +16,14 @@ enum Role {
   USER
 }
 
+enum PresenceStatus {
+  PRESENT
+  ABSENT
+}
+
+// ===============================
+// MODELS
+// ===============================
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -34,8 +39,6 @@ model User {
   evaluations Evaluation[]
   presences   Presence[]
 }
-
-// -------------------------------
 
 model Etudiant {
   id      Int    @id @default(autoincrement())
@@ -56,13 +59,10 @@ model Etudiant {
   createdAt DateTime @default(now())
 }
 
-// -------------------------------
-
 model Classe {
   id  Int    @id @default(autoincrement())
   nom String
 
-  // Relations optionnelles pour permettre la migration
   filiere   Filiere? @relation(fields: [filiereId], references: [id])
   filiereId Int?
 
@@ -77,8 +77,6 @@ model Classe {
 
   createdAt DateTime @default(now())
 }
-
-// -------------------------------
 
 model Filiere {
   id          Int     @id @default(autoincrement())
@@ -99,8 +97,6 @@ model Filiere {
   createdAt DateTime @default(now())
 }
 
-// -------------------------------
-
 model AnneeAcademique {
   id     Int     @id @default(autoincrement())
   annee  String  @unique
@@ -112,8 +108,6 @@ model AnneeAcademique {
 
   createdAt DateTime @default(now())
 }
-
-// -------------------------------
 
 model Session {
   id          Int      @id @default(autoincrement())
@@ -129,8 +123,6 @@ model Session {
 
   createdAt DateTime @default(now())
 }
-
-// -------------------------------
 
 model Note {
   id            Int    @id @default(autoincrement())
@@ -158,6 +150,9 @@ model Note {
   createdAt DateTime @default(now())
 }
 
+// -------------------------------
+// EVALUATION
+// -------------------------------
 model Evaluation {
   id Int @id @default(autoincrement())
 
@@ -166,6 +161,9 @@ model Evaluation {
 
   filiere   Filiere @relation(fields: [filiereId], references: [id])
   filiereId Int
+
+  module   ModuleCotation? @relation(fields: [moduleId], references: [id])
+  moduleId Int?   // <- rendu nullable temporairement
 
   session   Session @relation(fields: [sessionId], references: [id])
   sessionId Int
@@ -183,9 +181,12 @@ model Evaluation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId])
+  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, moduleId])
 }
 
+// -------------------------------
+// MODULE ET COMPETENCES
+// -------------------------------
 model ModuleCotation {
   id        Int      @id @default(autoincrement())
   intitule  String
@@ -194,8 +195,8 @@ model ModuleCotation {
   filiereId Int
   createdAt DateTime @default(now())
 
-  // Relation correcte vers Competence
   competences Competence[] @relation("ModuleCompetences")
+  evaluations Evaluation[]
 }
 
 model Competence {
@@ -204,12 +205,11 @@ model Competence {
   maxScore    Float
   coefficient Float  @default(1)
 
-  // Relation temporairement nullable
   moduleCotation   ModuleCotation? @relation("ModuleCompetences", fields: [moduleCotationId], references: [id])
-  moduleCotationId Int? // <- nullable
+  moduleCotationId Int?
 
   evaluations EvaluationCompetence[]
-  createdAt   DateTime               @default(now())
+  createdAt   DateTime @default(now())
 }
 
 model EvaluationCompetence {
@@ -226,6 +226,9 @@ model EvaluationCompetence {
   @@unique([evaluationId, competenceId])
 }
 
+// -------------------------------
+// PRESENCES
+// -------------------------------
 model Presence {
   id Int @id @default(autoincrement())
 
@@ -243,7 +246,7 @@ model Presence {
 
   status PresenceStatus
 
-  date DateTime @default(now()) // on normalisera à 00:00:00 côté backend
+  date DateTime @default(now())
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -251,9 +254,4 @@ model Presence {
   createdAt DateTime @default(now())
 
   @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, date])
-}
-
-enum PresenceStatus {
-  PRESENT
-  ABSENT
 }
