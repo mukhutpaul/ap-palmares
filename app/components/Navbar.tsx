@@ -58,17 +58,18 @@ const NavBar = () => {
   // Liens de navigation
   const navLinks: NavLink[] = [
     { href: "/", label: "Accueil" },
-    { href: "/dashboard", label: "Tableau de bord", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/etudiants", label: "Etudiants", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/filieres", label: "Filières", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/dashboard", label: "Tableau de bord", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/etudiants", label: "Etudiants", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/filieres", label: "Filières", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/presences", label: "Presences", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/sessions", label: "Sessions", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/modules", label: "Modules", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/sessions", label: "Sessions", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/users", label: "Utilisateurs", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/classes", label: "Classes", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/competences", label: "Compétences", auth: true, roles: ["USER", "ADMIN"] },
     { href: "/evaluations", label: "Evaluations", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
-    { href: "/modules", label: "Modules", auth: true, roles: ["USER", "ADMIN"] },
+    // { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
+
 
 
 
