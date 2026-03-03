@@ -210,10 +210,28 @@ export default function EvaluationsClient() {
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl border shadow w-full lg:w-80">
                     <LucideSearch size={18} className="text-gray-400" />
-                    <input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-transparent outline-none" />
+                    <input
+                        placeholder="Rechercher..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full bg-transparent outline-none"
+                    />
+                </div>
+
+                {/* Nouveau filtre par filière */}
+                <div className="w-full lg:w-60">
+                    <Select
+                        options={filiereOptions}
+                        value={selectedFiliere}
+                        onChange={o => setSelectedFiliere(o)}
+                        placeholder="Filtrer par filière"
+                        isClearable
+                    />
                 </div>
                 <button className="btn btn-accent rounded-xl w-full lg:w-auto" onClick={() => setPopupOpen(true)}>+ Ajouter évaluation</button>
             </div>
+
+
 
             {/* TABLE */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
