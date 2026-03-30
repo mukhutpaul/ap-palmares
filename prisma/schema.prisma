@@ -38,6 +38,7 @@ model User {
   notes       Note[]
   evaluations Evaluation[]
   presences   Presence[]
+  evaluationTheorie EvaluationTheorie[]
 }
 
 model Etudiant {
@@ -52,6 +53,7 @@ model Etudiant {
   evaluations Evaluation[]
   notes       Note[]
   presences   Presence[]
+  evaluationTheorie EvaluationTheorie[]
 
   createdBy   User?   @relation(fields: [createdById], references: [id])
   createdById String?
@@ -90,6 +92,7 @@ model Filiere {
   evaluations     Evaluation[]
   moduleCotations ModuleCotation[]
   presences       Presence[]
+  evaluationTheorie EvaluationTheorie[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -105,6 +108,8 @@ model AnneeAcademique {
   notes       Note[]
   evaluations Evaluation[]
   presences   Presence[]
+  evaluationTheorie EvaluationTheorie[]
+
 
   createdAt DateTime @default(now())
 }
@@ -120,6 +125,7 @@ model Session {
   classes     Classe[]
   evaluations Evaluation[]
   presences   Presence[]
+  evaluationTheorie EvaluationTheorie[]
 
   createdAt DateTime @default(now())
 }
@@ -245,6 +251,32 @@ model Presence {
   anneeAcademiqueId Int
 
   status PresenceStatus
+
+  date DateTime @default(now())
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+
+  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, date])
+}
+
+model EvaluationTheorie {
+  id Int @id @default(autoincrement())
+
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId Int
+
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+  filiereId Int
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId Int
+
+  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+  anneeAcademiqueId Int
+  score Float
 
   date DateTime @default(now())
 

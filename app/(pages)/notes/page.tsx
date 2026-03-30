@@ -57,7 +57,7 @@ export default function NotesClient() {
   const [filterAnnee, setFilterAnnee] = useState<SelectOption | null>(null);
   const [filterSession, setFilterSession] = useState<SelectOption | null>(null);
   const [filterFiliere, setFilterFiliere] = useState<SelectOption | null>(null);
-    const [isClient, setIsClient] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -74,12 +74,12 @@ export default function NotesClient() {
 
   const tableRef = useRef<HTMLTableElement>(null);
 
-   useEffect(() => {
+  useEffect(() => {
     setIsClient(true); // On ne rend Select qu'après le montage client
   }, []);
 
 
-  
+
 
 
   // =====================
@@ -711,22 +711,18 @@ export default function NotesClient() {
   // =====================
   // ADD NOTE
   // =====================
-  const handleAddNote = async (e: any) => {
+  const handleAddNote = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!authSession?.user?.id)
-      return toast.error("Session expirée");
+    // Vérification session
+    if (!authSession?.user?.id) return toast.error("Session expirée");
 
-    if (
-      !selectedEtudiant ||
-      !selectedSession ||
-      !selectedFiliere ||
-      !selectedAnnee
-    ) {
+    // Vérification des champs obligatoires
+    if (!selectedEtudiant || !selectedSession || !selectedFiliere || !selectedAnnee) {
       return toast.error("Veuillez remplir tous les champs");
     }
 
-    // ✅ Vérification doublon
+    // Vérification doublon
     const already = notes.find(
       (n) =>
         n.etudiant?.id === selectedEtudiant.value &&
@@ -741,42 +737,41 @@ export default function NotesClient() {
       );
     }
 
-    // ✅ On récupère uniquement les champs nécessaires
-    const formData = new FormData(e.currentTarget);
-
-    // ⚠️ IMPORTANT :
-    // Si tu as un input name="notePratique" dans ton form,
-    // on le supprime pour éviter d'envoyer une mauvaise valeur
-    formData.delete("notePratique");
-
-    // ✅ On injecte les relations
-    formData.set("etudiantId", String(selectedEtudiant.value));
-    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
-    formData.set("sessionId", String(selectedSession.value));
-    formData.set("filiereId", String(selectedFiliere.value));
-    formData.set("createdById", authSession.user.id);
-
     try {
+      // Construction FormData pour l'envoi
+      const formData = new FormData(e.currentTarget);
+      formData.set("etudiantId", String(selectedEtudiant.value));
+      formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+      formData.set("sessionId", String(selectedSession.value));
+      formData.set("filiereId", String(selectedFiliere.value));
+      formData.set("createdById", authSession.user.id);
+
+      // Garde seulement la note Jury (le reste sera calculé côté serveur)
+      formData.delete("noteTheorique");
+      formData.delete("notePratique");
+      formData.set("noteJyry", formData.get("noteJyry") as string);
+
+      // Appel API côté serveur pour calcul automatique
       const created = await addNote(formData);
 
+      // Mise à jour du state
       setNotes((prev) => [created, ...prev]);
 
-      toast.success("Note ajoutée avec calcul automatique du pratique");
+      toast.success("Note ajoutée avec calcul automatique du théorique et du pratique !");
 
+      // Fermeture popup + reset
       setPopupOpen(false);
-
-      // ✅ Reset propre
       setSelectedEtudiant(null);
       setSelectedAnnee(null);
       setSelectedSession(null);
       setSelectedFiliere(null);
       setSelectedNote(null);
-
+      e.currentTarget.reset();
     } catch (err: any) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error(err.message || "Erreur lors de l'ajout de la note.");
     }
   };
-
   // =====================
   // EDIT NOTE
   // =====================
@@ -1271,7 +1266,7 @@ export default function NotesClient() {
         <table ref={tableRef} className="table w-full">
           <thead className="bg-base-200 text-sm">
             <tr>
-              <th>N°</th> 
+              <th>N°</th>
               <th>Etudiant</th>
               <th>Théorie/20</th>
               <th>Pratique/50</th>
@@ -1301,7 +1296,7 @@ export default function NotesClient() {
                   <td>{n.notePratique}</td>
                   <td>{n.noteJyry}</td>
                   <td>
-                    {n.noteJyry + n.notePratique + n.noteTheorique} %
+                    {(n.noteJyry + n.notePratique + n.noteTheorique).toFixed(2)} %
                   </td>
                   <td>
                     {calculateMentionFromAverage(
@@ -1328,8 +1323,8 @@ export default function NotesClient() {
             ) : (
               <tr>
                 <td colSpan={10} className="text-center py-6 text-gray-500">
-                   <EmptyStates IconComponent={"Inbox"} message="Aucune note trouvée" sm={true}/>
-                 
+                  <EmptyStates IconComponent={"Inbox"} message="Aucune note trouvée" sm={true} />
+
                 </td>
               </tr>
             )}
@@ -1370,7 +1365,6 @@ export default function NotesClient() {
 
           {/* HEADER */}
           <div className="relative px-7 py-5 border-b bg-base-200 rounded-t-3xl">
-
             <h2 className="text-lg font-bold">Ajouter une note</h2>
             <p className="text-xs text-base-content/60 mt-1">
               Remplissez les informations ci-dessous
@@ -1384,12 +1378,14 @@ export default function NotesClient() {
             >
               ✕
             </button>
-
           </div>
 
           {/* BODY */}
-          <form onSubmit={handleAddNote} className="px-7 py-5 space-y-5 text-sm" key={formKey}>
-
+          <form
+            onSubmit={handleAddNote} // Appelle directement ta fonction handleAddNote
+            className="px-7 py-5 space-y-5 text-sm"
+            key={formKey}
+          >
             {/* Section Informations */}
             <div>
               <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
@@ -1397,7 +1393,6 @@ export default function NotesClient() {
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Étudiant</span>
@@ -1449,63 +1444,15 @@ export default function NotesClient() {
                     isClearable
                   />
                 </div>
-
               </div>
             </div>
 
-            {/* Section note */}
+            {/* Section note Jury */}
             <div>
               <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
                 Détails des notes
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Ev Théorique /20</span>
-                  </label>
-                  <input
-                    name="noteTheorique"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="20"
-                    className="input input-bordered rounded-xl focus:input-primary text-sm"
-                    placeholder="Ex: 15.50"
-                    required
-                    onInput={(e: any) => {
-                      const value = e.target.value;
-                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                      if (!regex.test(value)) {
-                        e.target.value = value.slice(0, -1);
-                      }
-                    }}
-                  />
-                </div>
-                {/* <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Ev Pratique /50</span>
-                  </label>
-                  <input
-                    name="notePratique"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="50"
-                    className="input input-bordered rounded-xl focus:input-primary text-sm"
-                    placeholder="Ex: 15.50"
-                    required
-                    onInput={(e: any) => {
-                      const value = e.target.value;
-                      const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                      if (!regex.test(value)) {
-                        e.target.value = value.slice(0, -1);
-                      }
-                    }}
-                  />
-                </div> */}
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">Jury /30</span>
@@ -1522,14 +1469,10 @@ export default function NotesClient() {
                     onInput={(e: any) => {
                       const value = e.target.value;
                       const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                      if (!regex.test(value)) {
-                        e.target.value = value.slice(0, -1);
-                      }
+                      if (!regex.test(value)) e.target.value = value.slice(0, -1);
                     }}
                   />
                 </div>
-
-
               </div>
             </div>
 
@@ -1539,15 +1482,12 @@ export default function NotesClient() {
                 type="submit"
                 className="btn btn-accent rounded-xl px-7 shadow-md hover:shadow-lg transition flex items-center gap-2"
               >
-
                 Enregistrer
               </button>
             </div>
-
           </form>
         </div>
       </div>
-
       {/* POPUP EDIT */}
       {editPopupOpen && selectedNote ? (
         <>
