@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify"; // notifications
 import Swal from "sweetalert2"; // alertes confirm
 import Select from "react-select"; // dropdowns
-import { FileDown, FileUp, LucideTrash2, Plus, Trash } from "lucide-react"; // icônes
+import { Edit, FileDown, FileUp, LucideTrash2, Plus, Trash } from "lucide-react"; // icônes
 import { useSession } from "next-auth/react"; // session user
 import jsPDF from "jspdf"; // génération PDF
 import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
@@ -804,25 +804,21 @@ export default function NotesClient() {
     setEditPopupOpen(true);
   };
 
-  const handleEditNote = async (e: any) => {
+  const handleEditNote = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!selectedNote) return;
-    if (!authSession?.user?.id)
+    if (!authSession?.user?.id) {
       return toast.error("Session expirée");
+    }
 
-    if (
-      !selectedEtudiant ||
-      !selectedAnnee ||
-      !selectedSession ||
-      !selectedFiliere
-    ) {
+    if (!selectedEtudiant || !selectedAnnee || !selectedSession || !selectedFiliere) {
       return toast.error(
         "Veuillez sélectionner tous les champs (Étudiant / Année / Session / Filière)"
       );
     }
 
-    // ✅ Vérification doublon
+    // Vérification doublon
     const already = notes.find(
       (n) =>
         n.id !== selectedNote.id &&
@@ -838,31 +834,32 @@ export default function NotesClient() {
       );
     }
 
-    const formData = new FormData(e.currentTarget);
-
-    // ⚠️ IMPORTANT : on supprime notePratique si elle existe
-    formData.delete("notePratique");
-
-    // ✅ Injecter les valeurs correctes
-    formData.set("id", String(selectedNote.id));
-    formData.set("etudiantId", String(selectedEtudiant.value));
-    formData.set("anneeAcademiqueId", String(selectedAnnee.value));
-    formData.set("sessionId", String(selectedSession.value));
-    formData.set("filiereId", String(selectedFiliere.value));
-    formData.set("createdById", authSession.user.id);
-
     try {
+      const formData = new FormData(e.currentTarget);
+
+      // Supprime notePratique si elle existe
+      formData.delete("notePratique");
+
+      // Injecter les valeurs correctes
+      formData.set("id", String(selectedNote.id));
+      formData.set("etudiantId", String(selectedEtudiant.value));
+      formData.set("anneeAcademiqueId", String(selectedAnnee.value));
+      formData.set("sessionId", String(selectedSession.value));
+      formData.set("filiereId", String(selectedFiliere.value));
+      formData.set("createdById", authSession.user.id);
+
+      // Appel à updateNote qui recalculera notePratique
       const updated = await updateNote(formData);
 
-      setNotes((prev) =>
-        prev.map((n) => (n.id === updated.id ? updated : n))
-      );
+      // Mettre à jour la liste locale
+      setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
 
-      toast.success("Note modifiée (pratique recalculé automatiquement)");
+      toast.success("Note modifiée (pratique recalculée automatiquement)");
 
+      // Fermer le popup
       setEditPopupOpen(false);
 
-      // ✅ Reset propre
+      // Reset sélections
       setSelectedNote(null);
       setSelectedEtudiant(null);
       setSelectedAnnee(null);
@@ -870,7 +867,8 @@ export default function NotesClient() {
       setSelectedFiliere(null);
 
     } catch (err: any) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error(err.message || "Erreur lors de la modification de la note");
     }
   };
 
@@ -1314,7 +1312,7 @@ export default function NotesClient() {
                   <td className="flex justify-center gap-2">
                     <button className="btn btn-xs btn-error btn-outline" onClick={() => handleDeleteNote(n.id)}> <LucideTrash2 size={16} /> </button>
                     <button className="btn btn-xs btn-success btn-outline" onClick={() => handleDownloadBrevet(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 🎓 </button>
-                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} > c </button>
+                    <button className="btn btn-xs btn-warning btn-outline" onClick={() => openEditPopup(n)} ><Edit size={16} /></button>
                     <button className="btn btn-xs btn-primary btn-outline" onClick={() => handleDownloadReleve(n)} disabled={!n.session || !n.filiere || !n.anneeAcademique || !n.etudiant} > 📄 </button>
                   </td>
 
@@ -1489,14 +1487,15 @@ export default function NotesClient() {
         </div>
       </div>
       {/* POPUP EDIT */}
-      {editPopupOpen && selectedNote ? (
+      {editPopupOpen && selectedNote && (
         <>
+          {/* Checkbox pour modal */}
           <input
             type="checkbox"
             id="modal-edit"
             className="modal-toggle"
             checked={editPopupOpen}
-            onChange={() => setEditPopupOpen(!editPopupOpen)}
+            readOnly
           />
 
           <div className="modal modal-middle">
@@ -1527,7 +1526,6 @@ export default function NotesClient() {
                   <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
                     Informations
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     <div className="form-control">
@@ -1585,60 +1583,14 @@ export default function NotesClient() {
                   </div>
                 </div>
 
-                {/* Section note */}
+                {/* Section Notes */}
                 <div>
                   <h3 className="text-xs font-semibold text-base-content/70 mb-3 uppercase tracking-wide">
                     Détails des notes
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">Ev Théorique /20</span>
-                      </label>
-                      <input
-                        name="noteTheorique"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
-                        defaultValue={selectedNote.noteTheorique}
-                        className="input input-bordered rounded-xl focus:input-primary text-sm"
-                        placeholder="Ex: 15.50"
-                        required
-                        onInput={(e: any) => {
-                          const value = e.target.value;
-                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                          if (!regex.test(value)) {
-                            e.target.value = value.slice(0, -1);
-                          }
-                        }}
-                      />
-                    </div>
-                    {/* <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">Ev Pratique /50</span>
-                      </label>
-                      <input
-                        name="notePratique"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="50"
-                        defaultValue={selectedNote.notePratique}
-                        className="input input-bordered rounded-xl focus:input-primary text-sm"
-                        placeholder="Ex: 15.50"
-                        required
-                        onInput={(e: any) => {
-                          const value = e.target.value;
-                          const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                          if (!regex.test(value)) {
-                            e.target.value = value.slice(0, -1);
-                          }
-                        }}
-                      />
-                    </div> */}
+                    {/* Jury /30 */}
                     <div className="form-control">
                       <label className="label">
                         <span className="label-text font-medium">Jury /30</span>
@@ -1653,16 +1605,15 @@ export default function NotesClient() {
                         className="input input-bordered rounded-xl focus:input-primary text-sm"
                         placeholder="Ex: 15.50"
                         required
-                        onInput={(e: any) => {
-                          const value = e.target.value;
+                        onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                          const input = e.currentTarget;
                           const regex = /^(\d{0,2})(\.\d{0,2})?$/;
-                          if (!regex.test(value)) {
-                            e.target.value = value.slice(0, -1);
+                          if (!regex.test(input.value)) {
+                            input.value = input.value.slice(0, -1);
                           }
                         }}
                       />
                     </div>
-
 
                   </div>
                 </div>
@@ -1681,7 +1632,7 @@ export default function NotesClient() {
             </div>
           </div>
         </>
-      ) : null}
+      )}
 
     </div>
   );
