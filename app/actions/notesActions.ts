@@ -268,7 +268,6 @@ export async function addNote(formData: FormData) {
 
 export async function updateNote(formData: FormData) {
   const id = Number(formData.get("id"));
-  const noteTheorique = Number(formData.get("noteTheorique") ?? 0);
   const noteJyry = Number(formData.get("noteJyry") ?? 0);
 
   const etudiantId = Number(formData.get("etudiantId"));
@@ -277,60 +276,57 @@ export async function updateNote(formData: FormData) {
   const filiereId = Number(formData.get("filiereId"));
   const createdById = String(formData.get("createdById"));
 
-  if (
-    !id ||
-    isNaN(noteTheorique) ||
-    isNaN(noteJyry) ||
-    !etudiantId ||
-    !anneeAcademiqueId ||
-    !sessionId ||
-    !filiereId ||
-    !createdById
-  ) {
+  if (!id || isNaN(noteJyry) || !etudiantId || !anneeAcademiqueId || !sessionId || !filiereId || !createdById)
     throw new Error("Tous les champs sont obligatoires");
+
+  // ===== Récupérer la note théorique automatiquement =====
+  const evalsTheorie = await prisma.evaluationTheorie.findMany({
+    where: { etudiantId },
+  });
+
+  let noteTheorique = 0;
+  if (evalsTheorie.length > 0) {
+    const totalTheorique = evalsTheorie.reduce((acc, ev) => acc + ev.score, 0);
+    const maxTheoriquePossible = evalsTheorie.length * 20;
+    noteTheorique = Number(((totalTheorique / maxTheoriquePossible) * 20).toFixed(2));
   }
 
-  // ===== Calcul note pratique sur 50 =====
+  // ===== Recalculer note pratique automatiquement =====
+  let notePratique = 0;
   const evaluations = await prisma.evaluation.findMany({
     where: { etudiantId },
     include: {
       competences: {
-        include: { competence: true }, // récupérer maxScore réel
+        include: {
+          competence: true, // 🔹 inclut maxScore
+        },
       },
     },
   });
 
-  let notePratique = 0;
   if (evaluations.length > 0) {
-    const totalScoreCompetences = evaluations.reduce(
+    const totalScore = evaluations.reduce(
       (acc, evalObj) =>
-        acc + evalObj.competences.reduce((a, comp) => a + comp.score, 0),
+        acc + evalObj.competences.reduce((a, c) => a + c.score, 0),
       0
     );
 
-    const maxPossibleCompetences = evaluations.reduce(
+    const maxPossible = evaluations.reduce(
       (acc, evalObj) =>
-        acc +
-        evalObj.competences.reduce(
-          (a, comp) => a + (comp.competence?.maxScore ?? 0),
-          0
-        ),
+        acc + evalObj.competences.reduce((a, c) => a + (c.competence?.maxScore ?? 5), 0),
       0
     );
 
-    notePratique =
-      maxPossibleCompetences > 0
-        ? Number(((totalScoreCompetences / maxPossibleCompetences) * 50).toFixed(2))
-        : 0;
+    notePratique = maxPossible > 0 ? Number(((totalScore / maxPossible) * 50).toFixed(2)) : 0;
   }
 
-  // ===== Mise à jour de la note =====
+  // ===== Mettre à jour la note =====
   const updated = await prisma.note.update({
     where: { id },
     data: {
-      noteTheorique,
-      notePratique, // recalculée correctement
-      noteJyry,
+      noteTheorique, // calculée automatiquement
+      notePratique,  // recalculée automatiquement
+      noteJyry,      // provenant du formulaire
       etudiantId,
       anneeAcademiqueId,
       sessionId,
@@ -353,7 +349,6 @@ export async function updateNote(formData: FormData) {
 
   return updated;
 }
-
 // ===============================
 // DELETE NOTE
 // ===============================
