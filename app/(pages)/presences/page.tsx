@@ -238,6 +238,16 @@ export default function PresenceClient({ userId }: { userId: string }) {
       pdf.restoreGraphicsState();
     };
 
+    const totalPresents = filteredPresences.filter(
+      (p) => p.status === "PRESENT",
+    ).length;
+
+    const totalAbsents = filteredPresences.filter(
+      (p) => p.status === "ABSENT",
+    ).length;
+
+    const totalEtudiants = filteredPresences.length;
+
     // ===============================
     // ENTETE
     // ===============================
@@ -318,6 +328,25 @@ export default function PresenceClient({ userId }: { userId: string }) {
       );
     };
 
+    // Statistiques présence
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+
+    pdf.text(`Présents : ${totalPresents}`, margin, 96);
+
+    pdf.setTextColor(220, 38, 38);
+
+    pdf.text(`Absents : ${totalAbsents}`, pageWidth / 2, 96, {
+      align: "center",
+    });
+
+    pdf.setTextColor(29, 78, 216);
+
+    pdf.text(`Total : ${totalEtudiants}`, pageWidth - margin, 96, {
+      align: "right",
+    });
+
     // ===============================
     // FOOTER
     // ===============================
@@ -373,7 +402,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
     // ===============================
 
     autoTable(pdf, {
-      startY: 95,
+      startY: 105,
 
       head: [["N°", "Matricule", "Nom complet", "Présence", "Date"]],
 
@@ -382,7 +411,7 @@ export default function PresenceClient({ userId }: { userId: string }) {
       margin: {
         left: margin,
         right: margin,
-        top: 95,
+        top: 105,
         bottom: 45,
       },
 
@@ -430,6 +459,21 @@ export default function PresenceClient({ userId }: { userId: string }) {
           cellWidth: 30,
           halign: "center",
         },
+      },
+
+      didParseCell: (data) => {
+        // Colonne Présence (index 3)
+        if (data.column.index === 3 && data.section === "body") {
+          if (data.cell.raw === "ABSENT") {
+            data.cell.styles.textColor = [220, 38, 38]; // rouge
+            data.cell.styles.fontStyle = "bold";
+          }
+
+          if (data.cell.raw === "PRESENT") {
+            data.cell.styles.textColor = [22, 163, 74]; // vert
+            data.cell.styles.fontStyle = "bold";
+          }
+        }
       },
 
       didDrawPage: (data) => {
