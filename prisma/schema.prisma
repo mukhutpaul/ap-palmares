@@ -37,7 +37,6 @@ model User {
   filieres    Filiere[]
   notes       Note[]
   evaluations Evaluation[]
-  presences   Presence[]
   evaluationTheorie EvaluationTheorie[]
 }
 
@@ -52,7 +51,6 @@ model Etudiant {
   classes     Classe[]
   evaluations Evaluation[]
   notes       Note[]
-  presences   Presence[]
   evaluationTheorie EvaluationTheorie[]
 
   createdBy   User?   @relation(fields: [createdById], references: [id])
@@ -91,7 +89,6 @@ model Filiere {
   notes           Note[]
   evaluations     Evaluation[]
   moduleCotations ModuleCotation[]
-  presences       Presence[]
   evaluationTheorie EvaluationTheorie[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -107,7 +104,6 @@ model AnneeAcademique {
 
   notes       Note[]
   evaluations Evaluation[]
-  presences   Presence[]
   evaluationTheorie EvaluationTheorie[]
 
 
@@ -124,7 +120,6 @@ model Session {
   notes       Note[]
   classes     Classe[]
   evaluations Evaluation[]
-  presences   Presence[]
   evaluationTheorie EvaluationTheorie[]
 
   createdAt DateTime @default(now())
@@ -238,28 +233,24 @@ model EvaluationCompetence {
 model Presence {
   id Int @id @default(autoincrement())
 
-  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
-  etudiantId Int
+  matricule String
 
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-  filiereId Int
+  nom String
+  postnom String
+  prenom String
 
-  session   Session @relation(fields: [sessionId], references: [id])
-  sessionId Int
-
-  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
-  anneeAcademiqueId Int
+  filiere String
+  session String
 
   status PresenceStatus
 
   date DateTime @default(now())
 
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
+  createdBy String
 
   createdAt DateTime @default(now())
 
-  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, date])
+  @@unique([matricule, filiere, session, date])
 }
 
 model EvaluationTheorie {

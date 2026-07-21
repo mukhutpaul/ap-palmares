@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import NavBar from "../components/Navbar";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -27,10 +26,11 @@ export default function ChildLayout({
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <NavBar />
-      <div className="mx-[5%] mt-8">
-        
+
+      {/* espace réservé pour le Navbar fixe */}
+      <main className="mx-[5%] pt-24">
         {children}
-      </div>
+      </main>
     </div>
   );
 }
