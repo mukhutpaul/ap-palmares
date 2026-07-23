@@ -151,6 +151,9 @@ export default function PresenceClient({ userId }: { userId: string }) {
   const [selectedPresence, setSelectedPresence] = useState<Presence | null>(
     null,
   );
+  const [selectedSession, setSelectedSession] = useState<UserOption | null>(
+    null,
+  );
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -238,16 +241,6 @@ export default function PresenceClient({ userId }: { userId: string }) {
       pdf.restoreGraphicsState();
     };
 
-    const totalPresents = filteredPresences.filter(
-      (p) => p.status === "PRESENT",
-    ).length;
-
-    const totalAbsents = filteredPresences.filter(
-      (p) => p.status === "ABSENT",
-    ).length;
-
-    const totalEtudiants = filteredPresences.length;
-
     // ===============================
     // ENTETE
     // ===============================
@@ -330,23 +323,6 @@ export default function PresenceClient({ userId }: { userId: string }) {
 
     // Statistiques présence
 
-    pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0);
-
-    pdf.text(`Présents : ${totalPresents}`, margin, 96);
-
-    pdf.setTextColor(220, 38, 38);
-
-    pdf.text(`Absents : ${totalAbsents}`, pageWidth / 2, 96, {
-      align: "center",
-    });
-
-    pdf.setTextColor(29, 78, 216);
-
-    pdf.text(`Total : ${totalEtudiants}`, pageWidth - margin, 96, {
-      align: "right",
-    });
-
     // ===============================
     // FOOTER
     // ===============================
@@ -401,86 +377,115 @@ export default function PresenceClient({ userId }: { userId: string }) {
     // TABLEAU
     // ===============================
 
-    autoTable(pdf, {
-      startY: 105,
+    const grouped = filteredPresences.reduce(
+      (acc, p) => {
+        // Clé de regroupement : YYYY-MM-DD
+        const key = new Date(p.date).toISOString().split("T")[0];
 
-      head: [["N°", "Matricule", "Nom complet", "Présence", "Date"]],
-
-      body: rows,
-
-      margin: {
-        left: margin,
-        right: margin,
-        top: 105,
-        bottom: 45,
-      },
-
-      theme: "grid",
-
-      styles: {
-        fontSize: 8,
-        cellPadding: 2.5,
-        valign: "middle",
-      },
-
-      headStyles: {
-        fillColor: [15, 118, 110],
-        textColor: 255,
-        fontStyle: "bold",
-        fontSize: 9,
-        halign: "center",
-      },
-
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-
-      columnStyles: {
-        0: {
-          cellWidth: 12,
-          halign: "center",
-        },
-
-        1: {
-          cellWidth: 35,
-          halign: "center",
-        },
-
-        2: {
-          halign: "left",
-        },
-
-        3: {
-          cellWidth: 30,
-          halign: "center",
-        },
-
-        4: {
-          cellWidth: 30,
-          halign: "center",
-        },
-      },
-
-      didParseCell: (data) => {
-        // Colonne Présence (index 3)
-        if (data.column.index === 3 && data.section === "body") {
-          if (data.cell.raw === "ABSENT") {
-            data.cell.styles.textColor = [220, 38, 38]; // rouge
-            data.cell.styles.fontStyle = "bold";
-          }
-
-          if (data.cell.raw === "PRESENT") {
-            data.cell.styles.textColor = [22, 163, 74]; // vert
-            data.cell.styles.fontStyle = "bold";
-          }
+        if (!acc[key]) {
+          acc[key] = [];
         }
-      },
 
-      didDrawPage: (data) => {
-        if (data.pageNumber > 1) {
-          drawHeader();
-        }
+        acc[key].push(p);
+
+        return acc;
       },
+      {} as Record<string, Presence[]>,
+    );
+
+    // Trier les dates du plus ancien au plus récent
+    const sortedDates = Object.keys(grouped).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
+
+    let startY = 105;
+
+    sortedDates.forEach((dateKey) => {
+      const presences = grouped[dateKey];
+
+      // Date affichée
+      const date = new Date(dateKey).toLocaleDateString("fr-FR");
+
+      if (startY > 240) {
+        pdf.addPage();
+        drawHeader();
+        startY = 105;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(12);
+      pdf.setTextColor(15, 118, 110);
+
+      pdf.text(`Date : ${date}`, margin, startY);
+
+      startY += 7;
+
+      const totalPresents = presences.filter(
+        (p) => p.status === "PRESENT",
+      ).length;
+
+      const totalAbsents = presences.filter(
+        (p) => p.status === "ABSENT",
+      ).length;
+
+      const total = presences.length;
+
+      pdf.setFontSize(10);
+
+      pdf.setTextColor(22, 163, 74);
+      pdf.text(`Présents : ${totalPresents}`, margin, startY);
+
+      pdf.setTextColor(220, 38, 38);
+      pdf.text(`Absents : ${totalAbsents}`, pageWidth / 2, startY, {
+        align: "center",
+      });
+
+      pdf.setTextColor(29, 78, 216);
+      pdf.text(`Total : ${total}`, pageWidth - margin, startY, {
+        align: "right",
+      });
+
+      startY += 8;
+
+      autoTable(pdf, {
+        startY,
+        head: [["N°", "Matricule", "Nom complet", "Présence"]],
+        body: presences.map((p, index) => [
+          index + 1,
+          p.matricule,
+          `${p.nom} ${p.postnom} ${p.prenom}`,
+          p.status,
+        ]),
+        margin: {
+          left: margin,
+          right: margin,
+        },
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 2.5,
+        },
+        headStyles: {
+          fillColor: [15, 118, 110],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        didParseCell(data) {
+          if (data.section === "body" && data.column.index === 3) {
+            if (data.cell.raw === "PRESENT") {
+              data.cell.styles.textColor = [22, 163, 74];
+              data.cell.styles.fontStyle = "bold";
+            }
+
+            if (data.cell.raw === "ABSENT") {
+              data.cell.styles.textColor = [220, 38, 38];
+              data.cell.styles.fontStyle = "bold";
+            }
+          }
+        },
+      });
+
+      startY = (pdf as any).lastAutoTable.finalY + 15;
     });
 
     // ===============================
