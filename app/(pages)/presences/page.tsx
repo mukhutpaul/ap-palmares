@@ -329,41 +329,36 @@ export default function PresenceClient({ userId }: { userId: string }) {
 
     const drawFooter = (page: number, total: number) => {
       pdf.setFontSize(9);
-
       pdf.setTextColor(80);
 
-      // Date d'impression
-      const dateImpression = new Date().toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      const dateImpression = new Date().toLocaleDateString("fr-FR");
 
       pdf.text(`Imprimé le : ${dateImpression}`, margin, pageHeight - 10);
 
-      // Signature responsable
-      pdf.line(
-        pageWidth - 75,
-        pageHeight - 35,
-        pageWidth - 20,
-        pageHeight - 35,
-      );
-
-      pdf.text("Responsable", pageWidth - 47, pageHeight - 28, {
-        align: "center",
-      });
-
-      // Pagination
       pdf.text(`Page ${page} / ${total}`, pageWidth / 2, pageHeight - 10, {
         align: "center",
       });
+
+      // Signature uniquement sur la dernière page
+      if (page === total) {
+        pdf.line(
+          pageWidth - 75,
+          pageHeight - 30,
+          pageWidth - 20,
+          pageHeight - 30,
+        );
+
+        pdf.text("Responsable", pageWidth - 47, pageHeight - 24, {
+          align: "center",
+        });
+      }
     };
 
     // ===============================
     // PREMIER ENTETE
     // ===============================
 
-    drawHeader();
+    //drawHeader();
 
     const rows = filteredPresences.map((p, index) => [
       index + 1,
@@ -449,27 +444,36 @@ export default function PresenceClient({ userId }: { userId: string }) {
 
       autoTable(pdf, {
         startY,
+
+        margin: {
+          top: 95, // réserve la place pour l'entête
+          left: margin,
+          right: margin,
+          bottom: 20,
+        },
+
         head: [["N°", "Matricule", "Nom complet", "Présence"]],
+
         body: presences.map((p, index) => [
           index + 1,
           p.matricule,
           `${p.nom} ${p.postnom} ${p.prenom}`,
           p.status,
         ]),
-        margin: {
-          left: margin,
-          right: margin,
-        },
+
         theme: "grid",
+
         styles: {
           fontSize: 8,
           cellPadding: 2.5,
         },
+
         headStyles: {
           fillColor: [15, 118, 110],
           textColor: 255,
           fontStyle: "bold",
         },
+
         didParseCell(data) {
           if (data.section === "body" && data.column.index === 3) {
             if (data.cell.raw === "PRESENT") {
@@ -482,6 +486,11 @@ export default function PresenceClient({ userId }: { userId: string }) {
               data.cell.styles.fontStyle = "bold";
             }
           }
+        },
+
+        // IMPORTANT : exécuté sur chaque page créée par autoTable
+        didDrawPage: () => {
+          drawHeader();
         },
       });
 
