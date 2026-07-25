@@ -2185,52 +2185,111 @@ Le Directeur
       )}
 
       {popupBrevetOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-md rounded-3xl shadow-2xl">
-            <h3 className="font-bold text-lg">Générer le brevet</h3>
+        <div className="modal modal-open backdrop-blur-sm">
+          <div className="modal-box max-w-md rounded-3xl shadow-2xl border border-base-200 p-0 overflow-hidden">
+            {/* HEADER */}
+            <div className="bg-success text-success-content px-7 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
+                  🎓
+                </div>
 
-            <p className="text-sm text-base-content/60 mt-1 mb-5">
-              Renseignez la période de formation de la session.
-            </p>
+                <div>
+                  <h3 className="font-bold text-xl">Générer le brevet</h3>
 
-            <div className="space-y-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Date début</span>
-                </label>
-
-                <input
-                  type="date"
-                  className="input input-bordered rounded-xl"
-                  value={dateDebutSession}
-                  onChange={(e) => setDateDebutSession(e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Date fin</span>
-                </label>
-
-                <input
-                  type="date"
-                  className="input input-bordered rounded-xl"
-                  value={dateFinSession}
-                  onChange={(e) => setDateFinSession(e.target.value)}
-                />
+                  <p className="text-sm opacity-80">Période de formation</p>
+                </div>
               </div>
             </div>
 
-            <div className="modal-action">
+            {/* BODY */}
+            <div className="px-7 py-6">
+              <div className="bg-base-200 rounded-2xl p-4 mb-5">
+                <p className="text-sm text-base-content/70 leading-relaxed">
+                  Veuillez indiquer les dates de début et de fin de la
+                  formation. Elles seront affichées sur le brevet.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                {/* DATE DEBUT */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">
+                      📅 Date de début
+                    </span>
+                  </label>
+
+                  <input
+                    type="date"
+                    className="
+                input input-bordered 
+                rounded-2xl 
+                focus:input-success
+                transition
+              "
+                    value={dateDebutSession}
+                    onChange={(e) => setDateDebutSession(e.target.value)}
+                  />
+                </div>
+
+                {/* DATE FIN */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">
+                      📅 Date de fin
+                    </span>
+                  </label>
+
+                  <input
+                    type="date"
+                    className="
+                input input-bordered 
+                rounded-2xl 
+                focus:input-success
+                transition
+              "
+                    value={dateFinSession}
+                    onChange={(e) => setDateFinSession(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div
+              className="
+        px-7 py-5 
+        bg-base-200/50 
+        border-t 
+        flex 
+        justify-end 
+        gap-3
+      "
+            >
               <button
-                className="btn btn-ghost rounded-xl"
+                className="
+            btn 
+            btn-ghost 
+            rounded-2xl
+            px-6
+          "
                 onClick={() => setPopupBrevetOpen(false)}
               >
                 Annuler
               </button>
 
               <button
-                className="btn btn-success rounded-xl"
+                className="
+            btn 
+            btn-success 
+            rounded-2xl
+            px-7
+            shadow-md
+            hover:shadow-lg
+            transition
+            gap-2
+          "
                 onClick={() => {
                   if (!dateDebutSession || !dateFinSession) {
                     return toast.error("Veuillez renseigner les deux dates.");
@@ -2245,13 +2304,12 @@ Le Directeur
                   );
                 }}
               >
-                Générer le brevet
+                🎓 Générer
               </button>
             </div>
           </div>
         </div>
       )}
-
       {popupReleveOpen && (
         <div className="modal modal-open backdrop-blur-sm">
           <div className="modal-box max-w-md rounded-3xl shadow-2xl p-0 overflow-hidden">
@@ -2528,67 +2586,211 @@ Le Directeur
       )}
 
       {popupBrevetFiliereOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-lg rounded-3xl">
-            <h3 className="font-bold text-xl">Impression des brevets</h3>
-
-            <p className="text-sm opacity-70 mt-1 mb-5">
-              Sélectionnez une filière et la période de formation.
-            </p>
-
-            <div className="space-y-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Filière</span>
-                </label>
-
-                <Select
-                  options={filiereOptions}
-                  value={selectedFiliereBrevet}
-                  onChange={setSelectedFiliereBrevet}
-                  placeholder="Choisir une filière"
-                  isClearable
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Date début</label>
-
-                  <input
-                    type="date"
-                    className="input input-bordered w-full"
-                    value={dateDebutBrevet}
-                    onChange={(e) => setDateDebutBrevet(e.target.value)}
-                  />
+        <div className="modal modal-open backdrop-blur-sm">
+          <div
+            className="
+      modal-box 
+      max-w-lg 
+      rounded-3xl 
+      shadow-2xl 
+      border 
+      border-base-200 
+      p-0 
+      overflow-hidden
+    "
+          >
+            {/* HEADER */}
+            <div
+              className="
+        bg-success 
+        text-success-content 
+        px-7 
+        py-5
+      "
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="
+            w-12 
+            h-12 
+            rounded-2xl 
+            bg-white/20 
+            flex 
+            items-center 
+            justify-center 
+            text-2xl
+          "
+                >
+                  🎓
                 </div>
 
                 <div>
-                  <label className="label">Date fin</label>
+                  <h3 className="font-bold text-xl">Impression des brevets</h3>
 
-                  <input
-                    type="date"
-                    className="input input-bordered w-full"
-                    value={dateFinBrevet}
-                    onChange={(e) => setDateFinBrevet(e.target.value)}
-                  />
+                  <p className="text-sm opacity-80">
+                    Génération en masse par filière
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="modal-action">
+            {/* BODY */}
+            <div className="px-7 py-6">
+              <div
+                className="
+          bg-base-200 
+          rounded-2xl 
+          p-4 
+          mb-5
+        "
+              >
+                <p
+                  className="
+            text-sm 
+            text-base-content/70
+            leading-relaxed
+          "
+                >
+                  Sélectionnez une filière puis indiquez la période de
+                  formation. Tous les apprenants concernés recevront leur brevet
+                  dans un seul PDF.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                {/* FILIERE */}
+                <div className="form-control">
+                  <label className="label">
+                    <span
+                      className="
+                label-text 
+                font-semibold
+              "
+                    >
+                      📚 Filière
+                    </span>
+                  </label>
+
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliereBrevet}
+                    onChange={setSelectedFiliereBrevet}
+                    placeholder="Choisir une filière"
+                    isClearable
+                  />
+                </div>
+
+                {/* PERIODE */}
+                <div>
+                  <label
+                    className="
+              label 
+              mb-1
+            "
+                  >
+                    <span
+                      className="
+                label-text 
+                font-semibold
+              "
+                    >
+                      📅 Période de formation
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-control">
+                      <span
+                        className="
+                  text-xs 
+                  text-base-content/60 
+                  mb-2
+                "
+                      >
+                        Date début
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input 
+                    input-bordered 
+                    rounded-2xl
+                    focus:input-success
+                    transition
+                  "
+                        value={dateDebutBrevet}
+                        onChange={(e) => setDateDebutBrevet(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <span
+                        className="
+                  text-xs 
+                  text-base-content/60 
+                  mb-2
+                "
+                      >
+                        Date fin
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input 
+                    input-bordered 
+                    rounded-2xl
+                    focus:input-success
+                    transition
+                  "
+                        value={dateFinBrevet}
+                        onChange={(e) => setDateFinBrevet(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div
+              className="
+        px-7 
+        py-5 
+        bg-base-200/50 
+        border-t 
+        flex 
+        justify-end 
+        gap-3
+      "
+            >
               <button
-                className="btn"
+                className="
+            btn 
+            btn-ghost 
+            rounded-2xl
+            px-6
+          "
                 onClick={() => setPopupBrevetFiliereOpen(false)}
               >
                 Annuler
               </button>
 
               <button
-                className="btn btn-success"
+                className="
+            btn 
+            btn-success
+            rounded-2xl
+            px-7
+            shadow-md
+            hover:shadow-lg
+            transition
+            gap-2
+          "
                 onClick={handleDownloadBrevetFiliere}
               >
-                Générer PDF
+                🎓 Générer PDF
               </button>
             </div>
           </div>
