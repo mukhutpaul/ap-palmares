@@ -97,7 +97,6 @@ model Filiere {
   classes         Classe[]
   notes           Note[]
   moduleCotations ModuleCotation[]
-  evaluationTheorie EvaluationTheorie[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
@@ -111,7 +110,6 @@ model AnneeAcademique {
   active Boolean @default(false)
 
   notes       Note[]
-  evaluationTheorie EvaluationTheorie[]
 
 
   createdAt DateTime @default(now())
@@ -126,7 +124,6 @@ model Session {
 
   notes       Note[]
   classes     Classe[]
-  evaluationTheorie EvaluationTheorie[]
 
   createdAt DateTime @default(now())
 }
@@ -256,14 +253,6 @@ model EvaluationTheorie {
   etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
   etudiantId Int
 
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-  filiereId Int
-
-  session   Session @relation(fields: [sessionId], references: [id])
-  sessionId Int
-
-  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
-  anneeAcademiqueId Int
   score Float
 
   date DateTime @default(now())
@@ -273,5 +262,5 @@ model EvaluationTheorie {
 
   createdAt DateTime @default(now())
 
-  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, date])
+  @@unique([etudiantId,  date])
 }

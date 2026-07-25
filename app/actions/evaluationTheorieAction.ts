@@ -8,38 +8,21 @@ export async function addEvaluationTheorie(formData: FormData) {
   const userId = formData.get("userId")?.toString();
 
   const etudiantId = Number(formData.get("etudiantId"));
-  const filiereId = Number(formData.get("filiereId"));
   const score = Number(formData.get("score"));
 
-  if (!userId || !etudiantId || !filiereId || isNaN(score)) {
+  if (!userId || !etudiantId || isNaN(score)) {
     throw new Error("Données invalides");
   }
 
-  const annee = await prisma.anneeAcademique.findFirst({
-    where: { active: true },
-  });
-
-  const session = await prisma.session.findFirst({
-    where: { isactive: true },
-  });
-
-  if (!annee || !session) {
-    throw new Error("Année ou session active manquante");
-  }
 
   const data = await prisma.evaluationTheorie.create({
     data: {
       etudiantId,
-      filiereId,
       score,
       createdById: userId,
-      anneeAcademiqueId: annee.id,
-      sessionId: session.id,
     },
     include: {
-      etudiant: true,
-      filiere: true,
-      session: true,
+      etudiant: true
     },
   });
 
@@ -58,9 +41,7 @@ export async function updateEvaluationTheorie(formData: FormData) {
     where: { id },
     data: { score },
     include: {
-      etudiant: true,
-      filiere: true,
-      session: true,
+      etudiant: true
     },
   });
 
@@ -81,9 +62,7 @@ export async function deleteEvaluationTheorie(id: number) {
 export async function getEvaluationTheories() {
   return prisma.evaluationTheorie.findMany({
     include: {
-      etudiant: true,
-      filiere: true,
-      session: true,
+      etudiant: true
     },
     orderBy: { id: "desc" },
   });

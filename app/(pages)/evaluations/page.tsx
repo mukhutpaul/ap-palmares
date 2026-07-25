@@ -320,123 +320,375 @@ export default function EvaluationsClient() {
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
       <h1 className="text-3xl font-semibold mb-6">Gestion des évaluations</h1>
 
-      {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border shadow w-full lg:w-80">
-          <LucideSearch size={18} className="text-gray-400" />
-          <input
-            placeholder="Rechercher..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-transparent outline-none"
-          />
+      {/* TOOLBAR RESPONSIVE */}
+      <div className="bg-base-100 border rounded-2xl shadow-sm p-4 mb-6">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          {/* RECHERCHE + FILTRE */}
+          <div className="flex flex-col md:flex-row gap-3 w-full xl:flex-1">
+            {/* RECHERCHE */}
+            <div
+              className="
+          flex
+          items-center
+          gap-3
+          px-4
+          py-2.5
+          rounded-xl
+          border
+          bg-base-200/40
+          focus-within:border-primary
+          transition
+          w-full
+          md:flex-1
+          xl:max-w-sm
+        "
+            >
+              <LucideSearch size={18} className="text-gray-400" />
+
+              <input
+                placeholder="Rechercher un étudiant..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="
+            w-full
+            bg-transparent
+            outline-none
+            text-sm
+          "
+              />
+            </div>
+
+            {/* FILIERE */}
+            <div className="w-full md:w-64">
+              <Select
+                options={filiereOptions}
+                value={selectedFiliere}
+                onChange={(o) => {
+                  setSelectedFiliere(o);
+                  setCurrentPage(1);
+                }}
+                placeholder="Filtrer par filière"
+                isClearable
+                classNamePrefix="select"
+              />
+            </div>
+          </div>
+
+          {/* ACTIONS */}
+          <div
+            className="
+        flex
+        flex-col
+        sm:flex-row
+        gap-3
+        w-full
+        xl:w-auto
+      "
+          >
+            <button
+              className={`
+          btn
+          btn-info
+          rounded-xl
+          w-full
+          sm:w-auto
+          ${isSyncing ? "loading" : ""}
+        `}
+              onClick={handleSyncEtudiants}
+              disabled={isSyncing}
+            >
+              {isSyncing ? "Synchronisation..." : "📥 Charger les étudiants"}
+            </button>
+
+            <button
+              className="
+          btn
+          btn-accent
+          rounded-xl
+          w-full
+          sm:w-auto
+          shadow-sm
+        "
+              onClick={() => setPopupOpen(true)}
+            >
+              + Ajouter évaluation
+            </button>
+          </div>
         </div>
 
+        {/* PROGRESSION SYNCHRONISATION */}
         {isSyncing && (
-          <div className="mb-6">
-            <div className="flex justify-between text-sm mb-1">
-              <span>Synchronisation des étudiants...</span>
-              <span>{syncProgress}%</span>
+          <div className="mt-5 p-4 rounded-xl bg-info/10 border border-info/20">
+            <div className="flex justify-between items-center text-sm mb-2">
+              <span className="font-medium">
+                Synchronisation des étudiants...
+              </span>
+
+              <span className="font-bold text-info">{syncProgress}%</span>
             </div>
 
             <progress
-              className="progress progress-info w-full"
+              className="progress progress-info w-full h-3"
               value={syncProgress}
               max="100"
             />
           </div>
         )}
-
-        {/* Nouveau filtre par filière */}
-        <div className="w-full lg:w-60">
-          <Select
-            options={filiereOptions}
-            value={selectedFiliere}
-            onChange={(o) => setSelectedFiliere(o)}
-            placeholder="Filtrer par filière"
-            isClearable
-          />
-        </div>
-        <div className="flex gap-3">
-          <button
-            className={`btn btn-info rounded-xl ${isSyncing ? "loading" : ""}`}
-            onClick={handleSyncEtudiants}
-            disabled={isSyncing}
-          >
-            {isSyncing ? "Chargement..." : "📥 Charger les étudiants"}
-          </button>
-
-          <button
-            className="btn btn-accent rounded-xl w-full lg:w-auto"
-            onClick={() => setPopupOpen(true)}
-          >
-            + Ajouter évaluation
-          </button>
-        </div>
       </div>
 
       {/* TABLE */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
         {filteredEvaluations.length ? (
           filteredEvaluations.map((e) => (
             <div
               key={e.id}
-              className="bg-base-100 border rounded-xl shadow p-5 flex flex-col justify-between"
+              className="
+          group
+          bg-base-100
+          border
+          rounded-3xl
+          shadow-sm
+          hover:shadow-xl
+          hover:-translate-y-1
+          transition-all
+          duration-300
+          overflow-hidden
+          flex
+          flex-col
+        "
             >
-              <div className="flex justify-between items-center mb-3">
-                <span className="font-bold text-gray-700">ID #{e.id}</span>
-                <span
-                  className={`px-2 py-1 rounded-full text-white text-xs font-semibold ${e.moyenne >= 14 ? "bg-green-500" : e.moyenne >= 10 ? "bg-yellow-500" : "bg-red-500"}`}
+              {/* HEADER */}
+              <div className="p-4 sm:p-5 bg-base-200/40 border-b">
+                <div
+                  className="
+            flex
+            flex-col
+            xs:flex-row
+            sm:flex-row
+            items-center
+            sm:items-start
+            gap-4
+          "
                 >
-                  {e.moyenne?.toFixed(2)}
-                </span>
+                  {/* AVATAR */}
+                  <div className="avatar placeholder shrink-0">
+                    <div
+                      className="
+                  w-14
+                  h-14
+                  rounded-full
+                  bg-primary
+                  text-primary-content
+                  flex
+                  items-center
+                  justify-center
+                  shadow-md
+                "
+                    >
+                      <span className="text-lg font-bold">
+                        {e.etudiant?.nom?.charAt(0)?.toUpperCase() || ""}
+                        {e.etudiant?.postnom?.charAt(0)?.toUpperCase() || ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ETUDIANT */}
+                  <div
+                    className="
+              flex-1
+              min-w-0
+              text-center
+              sm:text-left
+            "
+                  >
+                    <h3
+                      className="
+                  font-bold
+                  text-sm
+                  sm:text-base
+                  truncate
+                "
+                    >
+                      {e.etudiant
+                        ? `${e.etudiant.nom} ${e.etudiant.postnom}`
+                        : "Étudiant inconnu"}
+                    </h3>
+
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
+                      {e.etudiant?.prenom || "—"}
+                    </p>
+
+                    {e.etudiant?.matricule && (
+                      <span
+                        className="
+                    inline-flex
+                    mt-2
+                    badge
+                    badge-info
+                    badge-outline
+                    rounded-full
+                    text-[11px]
+                    sm:text-xs
+                    px-3
+                    max-w-full
+                    truncate
+                  "
+                      >
+                        Matricule : {e.etudiant.matricule}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* MOYENNE */}
+                  <div
+                    className={`
+                shrink-0
+                flex
+                items-center
+                justify-center
+                w-12
+                h-12
+                sm:w-14
+                sm:h-14
+                rounded-full
+                text-white
+                font-bold
+                text-sm
+                shadow-md
+                ${
+                  e.moyenne >= 14
+                    ? "bg-green-500"
+                    : e.moyenne >= 10
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                }
+              `}
+                  >
+                    {e.moyenne?.toFixed(1)}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2 text-sm">
-                <p>
-                  <span className="font-semibold text-gray-600">Étudiant:</span>{" "}
-                  {e.etudiant
-                    ? `${e.etudiant.nom} ${e.etudiant.postnom} ${e.etudiant.prenom}`
-                    : "—"}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">Session:</span>{" "}
-                  {e.etudiant?.session || "—"}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">Filière:</span>{" "}
-                  {e.filiere?.nom || "—"}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">Module:</span>{" "}
-                  {e.module?.intitule || "—"}
-                </p>
+              {/* DETAILS */}
+              <div className="p-4 sm:p-5 space-y-3 flex-1">
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-gray-500 text-xs sm:text-sm">
+                    Filière
+                  </span>
+
+                  <span
+                    className="
+                badge
+                badge-primary
+                badge-outline
+                rounded-full
+                text-xs
+                max-w-[160px]
+                truncate
+              "
+                  >
+                    {e.filiere?.nom || "—"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500 text-xs sm:text-sm">
+                    Session
+                  </span>
+
+                  <span className="font-medium text-xs sm:text-sm truncate">
+                    {e.etudiant?.session || "Sans session"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500 text-xs sm:text-sm">
+                    Module
+                  </span>
+
+                  <span
+                    className="
+                font-semibold
+                text-xs
+                sm:text-sm
+                text-right
+                line-clamp-2
+                max-w-[180px]
+              "
+                  >
+                    {e.module?.intitule || "—"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-xs sm:text-sm">
+                    Évaluation
+                  </span>
+
+                  <span className="badge badge-ghost rounded-full text-xs">
+                    #{e.id}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 mt-4">
+              {/* ACTIONS */}
+              <div
+                className="
+            px-4
+            sm:px-5
+            py-4
+            border-t
+            bg-base-200/30
+            flex
+            flex-wrap
+            justify-center
+            sm:justify-end
+            gap-2
+          "
+              >
                 <button
-                  className="btn btn-xs btn-outline btn-info"
+                  className="
+              btn
+              btn-sm
+              btn-circle
+              btn-outline
+              btn-info
+            "
                   onClick={() => setDetailEvaluation(e)}
                 >
-                  Détails
+                  👁
                 </button>
+
                 <button
-                  className="btn btn-xs btn-outline btn-warning"
+                  className="
+              btn
+              btn-sm
+              btn-circle
+              btn-outline
+              btn-warning
+            "
                   onClick={() => openEditPopup(e)}
                 >
-                  <LucideEdit2 size={14} />
+                  <LucideEdit2 size={15} />
                 </button>
+
                 <button
-                  className="btn btn-xs btn-outline btn-error"
+                  className="
+              btn
+              btn-sm
+              btn-circle
+              btn-outline
+              btn-error
+            "
                   onClick={() => handleDeleteEvaluation(e.id)}
                 >
-                  <LucideTrash2 size={14} />
+                  <LucideTrash2 size={15} />
                 </button>
               </div>
             </div>
           ))
         ) : (
-          <div className="col-span-full text-center py-10 text-gray-500">
+          <div className="col-span-full py-12 text-center">
             <EmptyStates
               IconComponent={"Inbox"}
               message="Aucune évaluation trouvée"

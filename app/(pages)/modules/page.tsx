@@ -128,7 +128,10 @@ export default function ModulesClient() {
     );
   }
 
-  const totalPages = Math.ceil(filteredModules.length / itemsPerPage);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredModules.length / itemsPerPage),
+  );
   const paginatedModules = filteredModules.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
@@ -263,109 +266,278 @@ export default function ModulesClient() {
         />
       )}
 
+      {/* HEADER */}
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight text-base-content">
           Gestion des modules
         </h1>
-        <p className="text-gray-500 mt-1">
-          Création et gestion des modules de formation
+
+        <p className="text-sm text-gray-500 mt-2">
+          Création, organisation et suivi des modules de formation
         </p>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border bg-base-100 shadow-sm w-72">
-            <LucideSearch size={18} className="text-gray-400" />
-            <input
-              className="w-full bg-transparent outline-none text-sm"
-              placeholder="Rechercher..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
+      {/* TOOLBAR */}
+      <div className="bg-base-100 border rounded-2xl shadow-sm p-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* RECHERCHE + FILTRE */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {/* SEARCH */}
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border bg-base-200/40 focus-within:border-primary transition w-full sm:w-80">
+              <LucideSearch size={18} className="text-gray-400" />
+
+              <input
+                className="bg-transparent outline-none w-full text-sm"
+                placeholder="Rechercher un module..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* FILIERE */}
+            <Select
+              options={filiereOptions}
+              value={selectedFiliere}
+              onChange={(opt) => {
+                setSelectedFiliere(opt);
                 setCurrentPage(1);
               }}
+              placeholder="Filtrer par filière"
+              isClearable
+              className="w-full sm:w-60"
+              classNamePrefix="select"
             />
           </div>
 
-          <Select
-            options={filiereOptions}
-            value={selectedFiliere}
-            onChange={(opt) => setSelectedFiliere(opt)}
-            placeholder="Filtrer par filière"
-            isClearable
-            className="w-48"
-          />
+          {/* ACTION */}
+          <button
+            className={`
+        btn btn-accent rounded-xl px-6 shadow-sm
+        hover:shadow-md transition
+        ${isAdding ? "loading" : ""}
+      `}
+            onClick={() => setPopupOpen(true)}
+          >
+            + Ajouter un module
+          </button>
         </div>
-
-        <button
-          className={`btn btn-accent rounded-xl px-6 ${isAdding ? "loading" : ""}`}
-          onClick={() => setPopupOpen(true)}
-        >
-          + Ajouter un module
-        </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border bg-base-100 shadow-sm">
-        <table className="table w-full">
-          <thead className="bg-base-200 text-sm">
-            <tr>
-              <th>ID</th>
-              <th>
-                <div
-                  className="flex items-center gap-1 cursor-pointer select-none"
-                  onClick={toggleSort}
-                >
-                  Intitulé {sortAsc === true && <LucideChevronUp size={14} />}
-                  {sortAsc === false && <LucideChevronDown size={14} />}
-                </div>
-              </th>
-              <th>Max</th>
-              <th>Filière</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
+      <div className="bg-base-100 rounded-2xl border shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead className="bg-base-200">
+              <tr className="text-sm uppercase text-gray-600">
+                <th className="w-20">ID</th>
 
-          <tbody>
-            {paginatedModules.length ? (
-              paginatedModules.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.id}</td>
-                  <td>{m.intitule}</td>
-                  <td>{m.max}</td>
-                  <td>{m.filiere?.nom ?? "Inconnue"}</td>
-                  <td className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        className="btn btn-xs btn-outline btn-warning"
-                        onClick={() => openEditPopup(m)}
+                <th>
+                  <div
+                    className="
+                flex items-center gap-2 
+                cursor-pointer select-none
+                hover:text-primary
+                transition
+              "
+                    onClick={toggleSort}
+                  >
+                    Intitulé
+                    {sortAsc === true && <LucideChevronUp size={15} />}
+                    {sortAsc === false && <LucideChevronDown size={15} />}
+                  </div>
+                </th>
+
+                <th className="text-center">Maximum</th>
+
+                <th>Filière</th>
+
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {paginatedModules.length ? (
+                paginatedModules.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="
+                hover:bg-base-200/60
+                transition
+                duration-200
+              "
+                  >
+                    {/* ID */}
+                    <td>
+                      <span className="badge badge-ghost rounded-full">
+                        #{m.id}
+                      </span>
+                    </td>
+
+                    {/* INTITULE */}
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="avatar placeholder">
+                          <div
+                            className="
+                        bg-secondary
+                        text-secondary-content
+                        rounded-full
+                        w-10
+                        h-10
+                        flex
+                        items-center
+                        justify-center
+                      "
+                          >
+                            <span className="font-bold text-sm uppercase">
+                              {m.intitule?.charAt(0)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="font-semibold">{m.intitule}</p>
+
+                          <p className="text-xs text-gray-400">
+                            Module #{m.id}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* MAX */}
+                    <td className="text-center">
+                      <span
+                        className="
+                    inline-flex
+                    items-center
+                    justify-center
+                    min-w-16
+                    px-4
+                    py-2
+                    rounded-full
+                    bg-green-500
+                    text-white
+                    font-semibold
+                    text-sm
+                  "
                       >
-                        <LucideEdit2 size={14} />
-                      </button>
-                      <button
-                        className="btn btn-xs btn-outline btn-error"
-                        onClick={() => handleDeleteModule(m.id)}
+                        {m.max}
+                      </span>
+                    </td>
+
+                    {/* FILIERE */}
+                    <td>
+                      <span
+                        className="
+                    badge
+                    badge-info
+                    badge-outline
+                    rounded-full
+                    px-4
+                    py-3
+                  "
                       >
-                        <LucideTrash2 size={14} />
-                      </button>
+                        {m.filiere?.nom ?? "Inconnue"}
+                      </span>
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td>
+                      <div className="flex justify-center gap-3">
+                        <button
+                          className="
+                      btn
+                      btn-sm
+                      btn-circle
+                      btn-outline
+                      btn-warning
+                    "
+                          title="Modifier"
+                          onClick={() => openEditPopup(m)}
+                        >
+                          <LucideEdit2 size={15} />
+                        </button>
+
+                        <button
+                          className="
+                      btn
+                      btn-sm
+                      btn-circle
+                      btn-outline
+                      btn-error
+                    "
+                          title="Supprimer"
+                          onClick={() => handleDeleteModule(m.id)}
+                        >
+                          <LucideTrash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="py-12">
+                      <EmptyStates
+                        IconComponent={"Inbox"}
+                        message="Aucun module trouvé"
+                        sm={true}
+                      />
                     </div>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
-                  <EmptyStates
-                    IconComponent={"Inbox"}
-                    message="Aucun module trouvé"
-                    sm={true}
-                  />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+          {/* PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-6">
+              <div className="join shadow-sm">
+                {/* PRECEDENT */}
+                <button
+                  className="join-item btn btn-sm"
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  ←
+                </button>
+
+                {/* PAGES */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      className={`join-item btn btn-sm ${
+                        currentPage === page ? "btn-primary" : ""
+                      }`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+
+                {/* SUIVANT */}
+                <button
+                  className="join-item btn btn-sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Pagination */}

@@ -761,19 +761,40 @@ export default function PresenceClient({ userId }: { userId: string }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
       {/* BOUTON PRINCIPAL */}
-      <div className="flex gap-3 justify-center sm:justify-start flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-3 justify-center sm:justify-start">
+        {/* FAIRE L'APPEL */}
         <button
-          className="btn btn-accent rounded-xl w-full sm:w-auto"
+          className="
+      btn btn-accent
+      rounded-xl
+      px-6
+      shadow-sm
+      hover:shadow-md
+      transition
+      w-full sm:w-auto
+    "
           onClick={() => setChoosePopup(true)}
         >
+          <span className="text-lg">✓</span>
           Faire l'appel
         </button>
+
+        {/* IMPRIMER */}
         <button
-          className="btn btn-success rounded-xl"
+          className="
+      btn btn-success
+      rounded-xl
+      px-6
+      shadow-sm
+      hover:shadow-md
+      transition
+      w-full sm:w-auto
+      flex items-center gap-2
+    "
           onClick={handlePrintPresence}
         >
           <FileDown size={18} />
-          Imprimer
+          Imprimer la présence
         </button>
       </div>
 
@@ -833,91 +854,163 @@ export default function PresenceClient({ userId }: { userId: string }) {
         )}
 
         {/* TABLE RESPONSIVE */}
-        <div className="overflow-x-auto rounded-xl border shadow bg-base-100">
-          <table className="table table-zebra w-full text-sm sm:text-base">
-            <thead className="bg-base-200 text-xs sm:text-sm">
-              <tr>
-                <th>ID</th>
-                <th>Matricule</th>
-                <th>Étudiant</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPresences.length ? (
-                paginatedPresences.map((p) => (
-                  <tr key={p.id}>
-                    <td className="whitespace-nowrap">{p.id}</td>
+        <div className="bg-base-100 border rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table w-full">
+              {/* HEADER */}
+              <thead className="bg-base-200 text-xs uppercase">
+                <tr>
+                  <th>ID</th>
+                  <th>Étudiant</th>
+                  <th className="text-center">Statut</th>
+                  <th>Date</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
 
-                    <td className="whitespace-nowrap font-medium">
-                      {p.matricule}
-                    </td>
+              {/* BODY */}
+              <tbody>
+                {filteredPresences.length ? (
+                  paginatedPresences.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-base-200/50 transition duration-200"
+                    >
+                      {/* ID */}
+                      <td className="font-semibold text-gray-500">#{p.id}</td>
 
-                    <td className="whitespace-nowrap">
-                      {p.nom} {p.postnom} {p.prenom}
-                    </td>
+                      {/* MATRICULE */}
 
-                    <td>
-                      <span
-                        className={`badge ${
-                          p.status === "PRESENT"
-                            ? "badge-success"
-                            : "badge-error"
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </td>
+                      {/* ETUDIANT */}
+                      <td>
+                        <div className="flex items-center gap-4 min-w-[260px]">
+                          {/* AVATAR */}
+                          <div className="avatar placeholder shrink-0">
+                            <div
+                              className="
+          bg-primary 
+          text-primary-content
+          rounded-full
+          w-12 h-12
+          flex items-center justify-center
+          shadow-sm
+        "
+                            >
+                              <span className="text-sm font-bold">
+                                {p.nom?.charAt(0).toUpperCase()}
+                                {p.postnom?.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
 
-                    <td className="whitespace-nowrap">
-                      {new Date(p.date).toLocaleDateString()}
-                    </td>
+                          {/* INFORMATIONS */}
+                          <div className="flex flex-col leading-tight">
+                            <p className="font-semibold text-sm sm:text-base">
+                              {p.nom} {p.postnom}
+                            </p>
 
-                    <td>
-                      <button
-                        className="btn btn-xs sm:btn-sm btn-warning btn-outline"
-                        onClick={() => setSelectedPresence(p)}
-                      >
-                        <LucideEdit2 size={16} />
-                      </button>
+                            <p className="text-xs text-gray-500">{p.prenom}</p>
+
+                            <div className="mt-1">
+                              <span
+                                className="
+                                badge 
+                                badge-info 
+                                badge-outline
+                                rounded-full
+                                text-xs
+                                px-3 py-2
+                              "
+                              >
+                                {p.matricule}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="text-center">
+                        <span
+                          className={`
+                    badge rounded-full px-4 py-3 font-semibold
+                    ${p.status === "PRESENT" ? "badge-success" : "badge-error"}
+                  `}
+                        >
+                          {p.status === "PRESENT" ? "Présent" : "Absent"}
+                        </span>
+                      </td>
+
+                      {/* DATE */}
+                      <td>
+                        <span className="text-sm font-medium">
+                          {new Date(p.date).toLocaleDateString("fr-FR")}
+                        </span>
+                      </td>
+
+                      {/* ACTION */}
+                      <td>
+                        <div className="flex justify-center">
+                          <button
+                            className="
+                      btn btn-sm btn-circle 
+                      btn-outline btn-warning
+                      hover:scale-105 transition
+                    "
+                            onClick={() => setSelectedPresence(p)}
+                          >
+                            <LucideEdit2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="text-center py-10">
+                      <EmptyStates
+                        IconComponent={"Inbox"}
+                        message="Aucune présence trouvée"
+                        sm={true}
+                      />
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="text-center py-10">
-                    <EmptyStates
-                      IconComponent={"Inbox"}
-                      message="Aucune présence trouvée"
-                      sm={true}
-                    />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-          <div className="flex justify-center items-center gap-3 my-5">
+          {/* PAGINATION */}
+          <div
+            className="
+      flex flex-col sm:flex-row 
+      justify-center items-center 
+      gap-4 py-5 border-t
+    "
+          >
             <button
-              className="btn btn-sm"
+              className="btn btn-sm btn-outline rounded-xl"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((prev) => prev - 1)}
             >
-              Précédent
+              ← Précédent
             </button>
 
-            <span className="font-semibold">
+            <div
+              className="
+              px-5 py-2 rounded-xl 
+              bg-base-200 font-semibold text-sm
+            "
+            >
               Page {currentPage} / {totalPages || 1}
-            </span>
+            </div>
 
             <button
-              className="btn btn-sm"
+              className="btn btn-sm btn-outline rounded-xl"
               disabled={currentPage === totalPages || totalPages === 0}
               onClick={() => setCurrentPage((prev) => prev + 1)}
             >
-              Suivant
+              Suivant →
             </button>
           </div>
         </div>
