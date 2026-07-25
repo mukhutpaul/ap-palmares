@@ -95,7 +95,6 @@ model Filiere {
   description String?
 
   classes         Classe[]
-  notes           Note[]
   moduleCotations ModuleCotation[]
 
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -109,9 +108,6 @@ model AnneeAcademique {
   annee  String  @unique
   active Boolean @default(false)
 
-  notes       Note[]
-
-
   createdAt DateTime @default(now())
 }
 
@@ -121,8 +117,6 @@ model Session {
   dateDebut   DateTime
   dateFin     DateTime
   isactive    Boolean  @default(false)
-
-  notes       Note[]
   classes     Classe[]
 
   createdAt DateTime @default(now())
@@ -137,14 +131,9 @@ model Note {
   etudiant   Etudiant? @relation(fields: [etudiantId], references: [id])
   etudiantId Int?
 
-  anneeAcademique   AnneeAcademique? @relation(fields: [anneeAcademiqueId], references: [id])
-  anneeAcademiqueId Int?
+  filiere   String?
 
-  filiere   Filiere? @relation(fields: [filiereId], references: [id])
-  filiereId Int?
-
-  session   Session? @relation(fields: [sessionId], references: [id])
-  sessionId Int?
+  session   String?
 
   updatedAt DateTime @updatedAt
 
