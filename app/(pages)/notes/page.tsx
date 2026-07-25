@@ -76,6 +76,13 @@ export default function NotesClient() {
   const [popupBrevetOpen, setPopupBrevetOpen] = useState(false);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
 
+  const [popupBrevetFiliereOpen, setPopupBrevetFiliereOpen] = useState(false);
+
+  const [selectedFiliereBrevet, setSelectedFiliereBrevet] = useState<any>(null);
+
+  const [dateDebutBrevet, setDateDebutBrevet] = useState("");
+  const [dateFinBrevet, setDateFinBrevet] = useState("");
+
   const [selectedEtudiant, setSelectedEtudiant] = useState<SelectOption | null>(
     null,
   );
@@ -1166,6 +1173,293 @@ export default function NotesClient() {
     return prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
   };
 
+  const generateBrevetHtml = (
+    note: any,
+    etudiant: any,
+    stats: any,
+    dateDebutSession: string,
+    dateFinSession: string,
+  ) => {
+    const BREVE_CODE_OFFICIEL =
+      "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
+
+    const estHomme =
+      etudiant.sexe?.toLowerCase() === "m" ||
+      etudiant.sexe?.toLowerCase() === "masculin" ||
+      etudiant.sexe?.toLowerCase() === "homme";
+
+    const pronom = estHomme ? "Il" : "Elle";
+
+    const formatPrenom = (prenom?: string | null) => {
+      if (!prenom) return "";
+
+      const value = prenom.trim();
+
+      return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    };
+
+    const pourcentage =
+      Number(note.noteTheorique ?? 0) +
+      Number(note.notePratique ?? 0) +
+      Number(note.noteJyry ?? 0);
+
+    const mention = calculateMentionFromAverage(pourcentage);
+
+    const sessionAffichee = `${dateDebutSession} au ${dateFinSession}`;
+
+    return `
+
+<div style="
+width:100%;
+height:100%;
+padding:20mm;
+font-family:'Times New Roman', serif;
+background:#f2f2f2;
+position:relative;
+box-sizing:border-box;
+">
+
+
+<!-- FILIGRANE -->
+
+<img
+src="/format1.png"
+style="
+position:absolute;
+top:57%;
+left:15%;
+transform:translate(-50%, -50%);
+width:380px;
+opacity:0.35;
+z-index:0;
+"
+/>
+
+
+
+<div style="
+position:relative;
+z-index:1;
+height:100%;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+">
+
+
+
+<!-- HEADER -->
+
+<div style="
+text-align:center;
+">
+
+
+<h2 style="
+margin:0;
+font-size:22px;
+">
+CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+</h2>
+
+
+<p style="
+margin:5px;
+font-weight:bold;
+font-size:20px;
+color:#1f5e3b;
+">
+« LEON ACADEMY »
+</p>
+
+
+
+<img
+src="/logo-leon.png"
+style="
+width:110px;
+margin:8px auto;
+"
+/>
+
+
+
+<p style="
+font-size:12px;
+font-weight:bold;
+">
+${BREVE_CODE_OFFICIEL}
+</p>
+
+
+</div>
+
+
+
+
+<!-- TITRE -->
+
+
+<div style="
+background:#c9a64d;
+padding:12px 25px;
+margin:15px auto;
+text-align:center;
+font-weight:bold;
+font-size:18px;
+">
+
+
+ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
+D’APTITUDE PROFESSIONNELLE
+
+
+</div>
+
+
+
+
+
+<!-- CONTENU -->
+
+
+<div style="
+font-size:15px;
+line-height:1.7;
+text-align:justify;
+">
+
+
+
+<p>
+Nous soussignons la Direction du centre de formation professionnelle
+et Métiers <strong>« Léon Academy »</strong>,
+certifions que :
+</p>
+
+
+
+<p style="
+text-align:center;
+font-size:22px;
+font-weight:bold;
+color:#1f5e3b;
+">
+
+${etudiant.nom ?? ""}
+${etudiant.postnom ?? ""}
+${formatPrenom(etudiant.prenom)}
+
+</p>
+
+
+
+
+<p>
+
+a suivi une formation professionnelle du
+
+<strong>
+${sessionAffichee}
+</strong>
+
+en
+
+<strong>
+${String(note.filiere).toUpperCase()}
+</strong>.
+
+
+${pronom} a satisfait aux épreuves d’évaluation
+avec la mention
+
+<strong style="
+color:#1f5e3b;
+">
+
+${mention}
+
+</strong>
+
+soit
+
+<strong>
+${pourcentage.toFixed(0)} %
+</strong>.
+
+</p>
+
+
+
+
+<p>
+En foi de quoi, nous lui délivrons la présente attestation
+pour servir et valoir ce que de droit.
+</p>
+
+
+
+</div>
+
+
+
+
+
+
+<!-- SIGNATURE -->
+
+
+<div style="
+text-align:right;
+font-size:14px;
+">
+
+
+<p>
+Fait à Kinshasa, le 
+${new Date().toLocaleDateString("fr-FR")}
+</p>
+
+
+
+<div style="
+margin-top:40px;
+">
+
+
+<div style="
+border-top:1px solid #000;
+width:200px;
+margin-left:auto;
+">
+</div>
+
+
+
+<strong style="
+display:block;
+text-align:center;
+width:200px;
+margin-left:auto;
+">
+Le Directeur
+</strong>
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+</div>
+
+`;
+  };
+
   const handleDownloadBrevet = async (
     note: any,
     dateDebutSession: string,
@@ -1487,6 +1781,75 @@ Le Directeur
     }
   };
 
+  const handleDownloadBrevetFiliere = async () => {
+    if (!selectedFiliereBrevet) {
+      return toast.error("Sélectionnez une filière");
+    }
+
+    if (!dateDebutBrevet || !dateFinBrevet) {
+      return toast.error("Veuillez renseigner la période");
+    }
+
+    const filiere = selectedFiliereBrevet.label;
+
+    const apprenants = notes.filter(
+      (n: any) => n.etudiant?.filiere === filiere,
+    );
+
+    if (!apprenants.length) {
+      return toast.info("Aucun apprenant trouvé dans cette filière");
+    }
+
+    const pdf = new jsPDF("l", "mm", "a4");
+
+    for (let i = 0; i < apprenants.length; i++) {
+      const note = apprenants[i];
+
+      const { notes: releveNotes, stats } = await getReleve(
+        note.etudiant.id,
+        note.session,
+        note.filiere,
+      );
+
+      if (!releveNotes.length) continue;
+
+      const etudiant = releveNotes[0].etudiant;
+
+      const html = generateBrevetHtml(
+        note,
+        etudiant,
+        stats,
+        dateDebutBrevet,
+        dateFinBrevet,
+      );
+
+      const container = document.createElement("div");
+
+      container.style.width = "297mm";
+      container.style.height = "210mm";
+      container.innerHTML = html;
+
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+      });
+
+      const img = canvas.toDataURL("image/png");
+
+      if (i > 0) pdf.addPage();
+
+      pdf.addImage(img, "PNG", 0, 0, 297, 210);
+
+      document.body.removeChild(container);
+    }
+
+    pdf.save(`brevets-${filiere}.pdf`);
+
+    setPopupBrevetFiliereOpen(false);
+  };
+
   return (
     <div className="mx-8 mt-8">
       <h1 className="text-3xl font-bold mb-6">Gestion des Notes</h1>
@@ -1525,6 +1888,13 @@ Le Directeur
               <FileUp size={18} />
               Import Excel
             </label>
+
+            <button
+              className="btn btn-success rounded-xl gap-2"
+              onClick={() => setPopupBrevetFiliereOpen(true)}
+            >
+              🎓 Imprimer brevets par filière
+            </button>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -1532,7 +1902,6 @@ Le Directeur
               onClick={() => {
                 setPopupOpen(true);
                 setSelectedEtudiant(null);
-                setSelectedAnnee(null);
                 setSelectedSession(null);
                 setSelectedFiliere(null);
                 setFormKey((prev) => prev + 1); // <-- reset form
@@ -2156,6 +2525,74 @@ Le Directeur
             </div>
           </div>
         </>
+      )}
+
+      {popupBrevetFiliereOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-lg rounded-3xl">
+            <h3 className="font-bold text-xl">Impression des brevets</h3>
+
+            <p className="text-sm opacity-70 mt-1 mb-5">
+              Sélectionnez une filière et la période de formation.
+            </p>
+
+            <div className="space-y-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Filière</span>
+                </label>
+
+                <Select
+                  options={filiereOptions}
+                  value={selectedFiliereBrevet}
+                  onChange={setSelectedFiliereBrevet}
+                  placeholder="Choisir une filière"
+                  isClearable
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Date début</label>
+
+                  <input
+                    type="date"
+                    className="input input-bordered w-full"
+                    value={dateDebutBrevet}
+                    onChange={(e) => setDateDebutBrevet(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Date fin</label>
+
+                  <input
+                    type="date"
+                    className="input input-bordered w-full"
+                    value={dateFinBrevet}
+                    onChange={(e) => setDateFinBrevet(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn"
+                onClick={() => setPopupBrevetFiliereOpen(false)}
+              >
+                Annuler
+              </button>
+
+              <button
+                className="btn btn-success"
+                onClick={handleDownloadBrevetFiliere}
+              >
+                Générer PDF
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ================= POPUP AJOUT ================= */}
