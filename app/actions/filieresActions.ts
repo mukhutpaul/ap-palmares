@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/app/lib/prisma";
+import { getEtudiants } from "@/services/etudiantsService";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -83,4 +84,57 @@ export async function getFilieres() {
   return await prisma.filiere.findMany({
     orderBy: { id: "desc" },
   });
+}
+
+// adapte le chemin
+
+
+export async function syncFilieres() {
+  // Utilisateur par défaut
+  const user = await prisma.user.upsert({
+    where: { email: "default@admin.com" },
+    update: {},
+    create: {
+      name: "Admin",
+      email: "default@admin.com",
+      password: "test123",
+      role: "ADMIN",
+    },
+  });
+
+  // Récupération des étudiants
+  const data = await getEtudiants();
+
+  // Liste des filières uniques
+  const filieresUniques = [...new Set(data.etudiants.map((e) => e.filiere.trim()))];
+
+  let ajoutees = 0;
+
+  for (const nom of filieresUniques) {
+    const existe = await prisma.filiere.findFirst({
+      where: { nom },
+    });
+
+    if (!existe) {
+      await prisma.filiere.create({
+        data: {
+          nom,
+          nombreHp: 0,
+          nombreHt: 0,
+          description: null,
+          createdById: user.id,
+        },
+      });
+
+      ajoutees++;
+    }
+  }
+
+  revalidatePath("/filieres");
+
+  return {
+    success: true,
+    ajoutees,
+    total: filieresUniques.length,
+  };
 }

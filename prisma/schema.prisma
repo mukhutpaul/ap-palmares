@@ -32,7 +32,6 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now())
 
-  etudiants   Etudiant[]
   classes     Classe[]
   filieres    Filiere[]
   notes       Note[]
@@ -41,22 +40,32 @@ model User {
 }
 
 model Etudiant {
-  id      Int    @id @default(autoincrement())
-  nom     String
-  postnom String
-  prenom  String
-  email   String @unique
-  sexe    String
+  id          Int      @id @default(autoincrement())
+
+  matricule   String
+  nom         String
+  postnom     String
+  prenom      String
+  email       String?
+  sexe        String
+
+  telephone   String?
+  adresse     String?
+  nationalite String?
+  avatar      String?
+
+  filiere     String
+  session     String?
+  vacation    String?
 
   classes     Classe[]
   evaluations Evaluation[]
   notes       Note[]
   evaluationTheorie EvaluationTheorie[]
 
-  createdBy   User?   @relation(fields: [createdById], references: [id])
-  createdById String?
-
   createdAt DateTime @default(now())
+
+  @@unique([matricule, nom, postnom, prenom, email, filiere])
 }
 
 model Classe {
@@ -87,7 +96,6 @@ model Filiere {
 
   classes         Classe[]
   notes           Note[]
-  evaluations     Evaluation[]
   moduleCotations ModuleCotation[]
   evaluationTheorie EvaluationTheorie[]
 
@@ -103,7 +111,6 @@ model AnneeAcademique {
   active Boolean @default(false)
 
   notes       Note[]
-  evaluations Evaluation[]
   evaluationTheorie EvaluationTheorie[]
 
 
@@ -119,7 +126,6 @@ model Session {
 
   notes       Note[]
   classes     Classe[]
-  evaluations Evaluation[]
   evaluationTheorie EvaluationTheorie[]
 
   createdAt DateTime @default(now())
@@ -160,29 +166,20 @@ model Evaluation {
   etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
   etudiantId Int
 
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-  filiereId Int
-
   module   ModuleCotation? @relation(fields: [moduleId], references: [id])
-  moduleId Int?   // <- rendu nullable temporairement
-
-  session   Session @relation(fields: [sessionId], references: [id])
-  sessionId Int
-
-  anneeAcademique   AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
-  anneeAcademiqueId Int
+  moduleId Int?
 
   competences EvaluationCompetence[]
 
   moyenne Float?
 
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+  createdById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([etudiantId, filiereId, sessionId, anneeAcademiqueId, moduleId])
+  @@unique([etudiantId, moduleId])
 }
 
 // -------------------------------

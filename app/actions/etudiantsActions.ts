@@ -2,7 +2,7 @@
 
 import { prisma } from "@/app/lib/prisma";
 import { revalidatePath } from "next/cache";
-
+import { getEtudiants as getEtudiantsAPI } from "@/services/etudiantsService";
 // ===============================
 // Récupérer les classes
 // ===============================
@@ -118,4 +118,81 @@ export async function getEtudiantById(id: number) {
 
   if (!etudiant) throw new Error("Étudiant non trouvé");
   return etudiant;
+}
+
+// ===============================
+// Synchroniser les étudiants depuis l'API
+// ===============================
+
+
+export async function syncEtudiants() {
+  try {
+    const response = await getEtudiantsAPI();
+
+    if (!response.success) {
+      throw new Error("Impossible de récupérer les étudiants depuis l'API");
+    }
+
+    let ajoutes = 0;
+    let existants = 0;
+
+    for (const etudiant of response.etudiants) {
+
+      const existe = await prisma.etudiant.findFirst({
+        where: {
+          matricule: etudiant.matricule,
+          nom: etudiant.nom,
+          postnom: etudiant.postnom,
+          prenom: etudiant.prenom,
+          filiere: etudiant.filiere,
+        },
+      });
+
+      if (existe) {
+        existants++;
+        continue;
+      }
+
+      await prisma.etudiant.create({
+        data: {
+          matricule: etudiant.matricule,
+          nom: etudiant.nom,
+          postnom: etudiant.postnom,
+          prenom: etudiant.prenom,
+          sexe: etudiant.genre,
+
+          telephone: etudiant.telephone || null,
+          adresse: etudiant.adresse || null,
+          nationalite: etudiant.nationalite || null,
+          avatar: etudiant.avatar || null,
+
+          filiere: etudiant.filiere,
+          session: etudiant.session,
+          vacation: etudiant.vacation,
+        },
+      });
+
+      ajoutes++;
+    }
+
+    revalidatePath("/etudiants");
+
+    return {
+      success: true,
+      total: response.etudiants.length,
+      ajoutes,
+      existants,
+    };
+
+  } catch (error) {
+    console.error("Erreur synchronisation étudiants :", error);
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erreur inconnue",
+    };
+  }
 }
