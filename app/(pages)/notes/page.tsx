@@ -195,8 +195,6 @@ export default function NotesClient() {
       return toast.info("Veuillez renseigner la période");
     }
 
-    if (!tableRef.current) return;
-
     const filiere = selectedFiliereBrevet.label;
     const session = selectedSessionBrevet.label;
 
@@ -346,40 +344,46 @@ export default function NotesClient() {
       };
 
       // ===============================
-      // EXTRACTION TABLEAU
+      // EXTRACTION DES DONNEES FILTREES
       // ===============================
-
-      const table = tableRef.current;
 
       const body: any[] = [];
 
-      table.querySelectorAll("tbody tr").forEach((tr, index) => {
-        const cells = tr.querySelectorAll("td");
+      const apprenants = notes.filter((n: any) => {
+        const matchFiliere = n.etudiant?.filiere === filiere;
 
-        // Cellule étudiant
-        const studentCell = cells[1];
+        const matchSession = n.session === session;
 
-        const spans = studentCell.querySelectorAll("span");
+        return matchFiliere && matchSession;
+      });
 
-        let nomComplet = "";
-        let matricule = "";
+      if (!apprenants.length) {
+        return toast.info("Aucun apprenant trouvé pour cette filière.");
+      }
 
-        if (spans.length >= 2) {
-          nomComplet = spans[0].textContent?.trim() || "";
+      apprenants.forEach((note: any, index: number) => {
+        const etudiant = note.etudiant;
 
-          matricule =
-            spans[1].textContent?.replace("Matricule :", "").trim() || "";
-        }
+        const nomComplet = [etudiant?.nom, etudiant?.postnom, etudiant?.prenom]
+          .filter(Boolean)
+          .join(" ");
+
+        const total =
+          Number(note.noteTheorique ?? 0) +
+          Number(note.notePratique ?? 0) +
+          Number(note.noteJyry ?? 0);
+
+        const mention = calculateMentionFromAverage(total);
 
         body.push([
           index + 1, // N°
-          matricule, // Matricule séparé
-          nomComplet, // Nom complet séparé
-          cells[2]?.textContent?.trim() || "", // Théorie
-          cells[3]?.textContent?.trim() || "", // Pratique
-          cells[4]?.textContent?.trim() || "", // Jury
-          cells[5]?.textContent?.trim() || "", // Total
-          cells[6]?.textContent?.trim() || "", // Mention
+          etudiant?.matricule ?? "", // Matricule
+          nomComplet, // Étudiant
+          note.noteTheorique ?? 0, // Théorie
+          note.notePratique ?? 0, // Pratique
+          note.noteJyry ?? 0, // Jury
+          total.toFixed(2), // Total
+          mention, // Mention
         ]);
       });
 
@@ -390,8 +394,6 @@ export default function NotesClient() {
        Nouveau PDF :
        N° | Matricule | Étudiant | Théorique | Pratique | Jury | Total | Mention
     */
-
-  
 
       // ===============================
       // TABLEAU
