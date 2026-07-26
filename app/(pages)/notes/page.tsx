@@ -18,6 +18,7 @@ import html2canvas from "html2canvas-pro"; // capture HTML pour PDF
 import * as XLSX from "xlsx"; // lecture et écriture Excel
 import { saveAs } from "file-saver"; // sauvegarde fichiers
 import { Inbox } from "lucide-react";
+import autoTable from "jspdf-autotable";
 
 // ================= ACTIONS SERVER =================
 import {
@@ -63,13 +64,21 @@ export default function NotesClient() {
 
   const [dateDebutSession, setDateDebutSession] = useState("");
   const [dateFinSession, setDateFinSession] = useState("");
+  const [popupDeliberationOpen, setPopupDeliberationOpen] = useState(false);
 
   const [filterEtudiant, setFilterEtudiant] = useState<SelectOption | null>(
     null,
   );
 
+  const [popupReleveFiliereOpen, setPopupReleveFiliereOpen] = useState(false);
+
   const [isClient, setIsClient] = useState(false);
   const [selectedBrevet, setSelectedBrevet] = useState<any>(null);
+
+  const [selectedSessionBrevet, setSelectedSessionBrevet] = useState<{
+    value: string;
+    label: string;
+  } | null>(null);
 
   const [selectedNote, setSelectedNote] = useState<any>(null);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -172,231 +181,341 @@ export default function NotesClient() {
 
     pdf.line(10, 30, pageWidth - 10, 30);
   };
+
   const handleExportDeliberationPDF = async () => {
-    if (!filterAnnee || !filterFiliere || !filterSession) {
-      toast.info(
-        "Veuillez sélectionner l'année, la session et la filière avant d'exporter la grille.",
-      );
-      return;
+    if (!selectedFiliereBrevet) {
+      return toast.info("Veuillez sélectionner une filière");
+    }
+
+    if (!selectedSessionBrevet) {
+      return toast.info("Veuillez sélectionner une session");
+    }
+
+    if (!dateDebutBrevet || !dateFinBrevet) {
+      return toast.info("Veuillez renseigner la période");
     }
 
     if (!tableRef.current) return;
-    const table = tableRef.current;
 
-    const columnsToHide = [7, 8, 9];
-    const hiddenCells: HTMLElement[] = [];
+    const filiere = selectedFiliereBrevet.label;
+    const session = selectedSessionBrevet.label;
 
-    table.querySelectorAll("tr").forEach((row) => {
-      columnsToHide.forEach((index) => {
-        const cell = row.children[index] as HTMLElement;
-        if (cell) {
-          hiddenCells.push(cell);
-          cell.style.display = "none";
-        }
+    const periode = `${dateDebutBrevet} au ${dateFinBrevet}`;
+
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const margin = 12;
+
+      // ===============================
+      // LOGO
+      // ===============================
+
+      const logo = new Image();
+
+      logo.src = "/logo-leon.png";
+
+      await new Promise((resolve) => {
+        logo.onload = resolve;
       });
-    });
 
-    const canvas = await html2canvas(table, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL("image/png");
+      // ===============================
+      // FILIGRANE
+      // ===============================
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+      const drawWatermark = () => {
+        pdf.saveGraphicsState();
 
-    const imgWidth = pageWidth - 20;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.setGState(
+          new pdf.GState({
+            opacity: 0.05,
+          }),
+        );
 
-    const blueHeaderHeight = 35;
-    const whiteHeaderHeight = 25;
-    const logoWidth = 32;
-    const logoHeight = 22;
-    const tableStartY = blueHeaderHeight + whiteHeaderHeight + 8;
+        pdf.addImage(
+          logo,
+          "PNG",
+          pageWidth / 2 - 50,
+          pageHeight / 2 - 50,
+          100,
+          100,
+        );
 
-    let heightLeft = imgHeight;
-    let position = 0;
+        pdf.restoreGraphicsState();
+      };
 
-    const fetchLogoAsDataURL = async (url: string) => {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    };
-    const logoBase64 = await fetchLogoAsDataURL("/logo-leon.png");
+      // ===============================
+      // ENTETE
+      // ===============================
 
-    const addHeader = (pdfInstance: jsPDF) => {
-      const pageWidth = pdfInstance.internal.pageSize.getWidth();
+      const drawHeader = () => {
+        pdf.addImage(logo, "PNG", pageWidth / 2 - 13, 8, 26, 26);
 
-      // Bande bleue avec coins arrondis
-      pdfInstance.setFillColor(72, 118, 255);
-      pdfInstance.roundedRect(
-        10,
-        10,
-        pageWidth - 20,
-        blueHeaderHeight,
-        4,
-        4,
-        "F",
-      );
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(13);
+        pdf.setTextColor(15, 118, 110);
 
-      // Logo centré
-      pdfInstance.addImage(
-        logoBase64,
-        pageWidth / 2 - logoWidth / 2,
-        18, // logo un peu plus bas pour libérer le texte du haut
-        logoWidth,
-        logoHeight,
-      );
+        pdf.text(
+          "CENTRE DE FORMATION PROFESSIONNELLE ET MÉTIERS",
+          pageWidth / 2,
+          39,
+          {
+            align: "center",
+          },
+        );
 
-      // Texte au-dessus du logo avec margin-top
-      pdfInstance.setTextColor(255, 255, 255);
-      pdfInstance.setFont("helvetica", "normal");
-      pdfInstance.setFontSize(9);
-      pdfInstance.text(
-        "CENTRE DE FORMATION PROFESSIONNELLE ET METIERS",
-        pageWidth / 2,
-        12 + 3, // +3 mm pour espacer du bord haut
-        { align: "center" },
-      );
+        pdf.setFontSize(18);
+        pdf.setTextColor(29, 78, 216);
 
-      // Texte sous le logo
-      pdfInstance.setFont("helvetica", "bold");
-      pdfInstance.setFontSize(12);
-      pdfInstance.text(
-        "LEON ACADEMY",
-        pageWidth / 2,
-        18 + logoHeight + 3, // +3 mm marge
-        { align: "center" },
-      );
-
-      // Zone blanche sous la bande bleue
-      pdfInstance.setFillColor(255, 255, 255);
-      pdfInstance.rect(
-        10,
-        blueHeaderHeight + 10,
-        pageWidth - 20,
-        whiteHeaderHeight,
-        "F",
-      );
-
-      // Texte grille et info session/année/filière
-      pdfInstance.setTextColor(0, 0, 0);
-      pdfInstance.setFont("helvetica", "bold");
-      pdfInstance.setFontSize(11);
-      pdfInstance.text(
-        "Grille de Délibération",
-        pageWidth / 2,
-        blueHeaderHeight + 18,
-        { align: "center" },
-      );
-
-      pdfInstance.setFont("helvetica", "normal");
-      pdfInstance.setFontSize(9);
-      pdfInstance.text(
-        `Année: ${filterAnnee.label} | Filière: ${filterFiliere.label} | Session: ${filterSession.label}`,
-        pageWidth / 2,
-        blueHeaderHeight + 26,
-        { align: "center" },
-      );
-
-      // Ligne séparatrice
-      pdfInstance.setDrawColor(72, 118, 255);
-      pdfInstance.setLineWidth(0.8);
-      pdfInstance.line(
-        12,
-        blueHeaderHeight + whiteHeaderHeight + 10,
-        pageWidth - 12,
-        blueHeaderHeight + whiteHeaderHeight + 10,
-      );
-    };
-
-    const modifyTableForPDF = () => {
-      const thead = table.querySelector("thead");
-      if (thead) {
-        Array.from(thead.querySelectorAll("th")).forEach((th) => {
-          (th as HTMLElement).style.backgroundColor = "#B0E0E6";
-          (th as HTMLElement).style.fontSize = "12px";
-          (th as HTMLElement).style.padding = "2px";
+        pdf.text("« LEON ACADEMY »", pageWidth / 2, 48, {
+          align: "center",
         });
-      }
-      const tbody = table.querySelector("tbody");
-      if (tbody) {
-        Array.from(tbody.querySelectorAll("tr")).forEach((tr, index) => {
-          Array.from(tr.querySelectorAll("td")).forEach((td) => {
-            (td as HTMLElement).style.fontSize = "12px";
-            (td as HTMLElement).style.padding = "2px";
-            (td as HTMLElement).style.backgroundColor =
-              index % 2 === 0 ? "#E6F2FA" : "#ffffff";
+
+        pdf.setFontSize(9);
+        pdf.setTextColor(80, 80, 80);
+
+        pdf.text(
+          "N°028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023",
+          pageWidth / 2,
+          56,
+          {
+            align: "center",
+          },
+        );
+
+        pdf.setDrawColor(15, 118, 110);
+        pdf.setLineWidth(0.8);
+
+        pdf.line(margin, 65, pageWidth - margin, 65);
+
+        pdf.setFontSize(16);
+        pdf.setTextColor(15, 118, 110);
+
+        pdf.text("GRILLE DE DÉLIBÉRATION", pageWidth / 2, 76, {
+          align: "center",
+        });
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont("helvetica", "normal");
+
+        pdf.text(`Filière : ${filiere}`, margin, 87);
+
+        pdf.text(`Session : ${session}`, pageWidth / 2, 87, {
+          align: "center",
+        });
+
+        pdf.text(`Période : ${periode}`, pageWidth - margin, 87, {
+          align: "right",
+        });
+      };
+
+      // ===============================
+      // FOOTER
+      // ===============================
+
+      const drawFooter = (page: number, total: number) => {
+        pdf.setFontSize(9);
+        pdf.setTextColor(90);
+
+        pdf.text(
+          `Imprimé le : ${new Date().toLocaleDateString("fr-FR")}`,
+          margin,
+          pageHeight - 10,
+        );
+
+        pdf.text(`Page ${page} / ${total}`, pageWidth / 2, pageHeight - 10, {
+          align: "center",
+        });
+
+        if (page === total) {
+          pdf.line(
+            pageWidth - 75,
+            pageHeight - 30,
+            pageWidth - 20,
+            pageHeight - 30,
+          );
+
+          pdf.text("Directeur", pageWidth - 47, pageHeight - 24, {
+            align: "center",
           });
-        });
+        }
+      };
+
+      // ===============================
+      // EXTRACTION TABLEAU
+      // ===============================
+
+      const table = tableRef.current;
+
+      const body: any[] = [];
+
+      table.querySelectorAll("tbody tr").forEach((tr, index) => {
+        const cells = tr.querySelectorAll("td");
+
+        // Cellule étudiant
+        const studentCell = cells[1];
+
+        const spans = studentCell.querySelectorAll("span");
+
+        let nomComplet = "";
+        let matricule = "";
+
+        if (spans.length >= 2) {
+          nomComplet = spans[0].textContent?.trim() || "";
+
+          matricule =
+            spans[1].textContent?.replace("Matricule :", "").trim() || "";
+        }
+
+        body.push([
+          index + 1, // N°
+          matricule, // Matricule séparé
+          nomComplet, // Nom complet séparé
+          cells[2]?.textContent?.trim() || "", // Théorie
+          cells[3]?.textContent?.trim() || "", // Pratique
+          cells[4]?.textContent?.trim() || "", // Jury
+          cells[5]?.textContent?.trim() || "", // Total
+          cells[6]?.textContent?.trim() || "", // Mention
+        ]);
+      });
+
+      /*
+       Ancien tableau supposé :
+       Nom | Matricule | Théorique | Pratique | Jury | Total | Mention
+
+       Nouveau PDF :
+       N° | Matricule | Étudiant | Théorique | Pratique | Jury | Total | Mention
+    */
+
+  
+
+      // ===============================
+      // TABLEAU
+      // ===============================
+
+      autoTable(pdf, {
+        startY: 100,
+
+        head: [
+          [
+            "N°",
+            "Matricule",
+            "Étudiant",
+            "Théorique",
+            "Pratique",
+            "Jury",
+            "Total",
+            "Mention",
+          ],
+        ],
+
+        body,
+
+        margin: {
+          top: 95,
+          left: margin,
+          right: margin,
+          bottom: 20,
+        },
+
+        theme: "grid",
+
+        styles: {
+          fontSize: 8,
+
+          cellPadding: 3,
+
+          valign: "middle",
+
+          halign: "center",
+
+          lineColor: [200, 200, 200],
+
+          lineWidth: 0.2,
+        },
+
+        headStyles: {
+          fillColor: [15, 118, 110],
+
+          textColor: 255,
+
+          fontStyle: "bold",
+
+          halign: "center",
+        },
+
+        alternateRowStyles: {
+          fillColor: [245, 250, 250],
+        },
+
+        columnStyles: {
+          0: {
+            cellWidth: 10,
+          },
+
+          1: {
+            cellWidth: 25,
+          },
+
+          // ETUDIANT LARGE
+          2: {
+            cellWidth: 55,
+            halign: "left",
+            fontStyle: "bold",
+          },
+
+          3: {
+            cellWidth: 18,
+          },
+
+          4: {
+            cellWidth: 18,
+          },
+
+          5: {
+            cellWidth: 15,
+          },
+
+          6: {
+            cellWidth: 18,
+            fontStyle: "bold",
+          },
+
+          7: {
+            cellWidth: 25,
+            fontStyle: "bold",
+          },
+        },
+
+        didDrawPage: () => {
+          drawHeader();
+        },
+      });
+
+      // ===============================
+      // FINALISATION PAGES
+      // ===============================
+
+      const totalPages = pdf.getNumberOfPages();
+
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+
+        drawWatermark();
+
+        drawFooter(i, totalPages);
       }
-    };
-    modifyTableForPDF();
 
-    const generatePage = () => {
-      addHeader(pdf);
-      pdf.addImage(
-        imgData,
-        "PNG",
-        10,
-        tableStartY,
-        imgWidth,
-        imgHeight,
-        undefined,
-        "FAST",
-      );
-    };
+      pdf.save(`Grille_Deliberation_${filiere}_${session}.pdf`);
+    } catch (error) {
+      console.error(error);
 
-    generatePage();
-    heightLeft -= pageHeight - tableStartY;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      addHeader(pdf);
-      pdf.addImage(
-        imgData,
-        "PNG",
-        10,
-        tableStartY + position,
-        imgWidth,
-        imgHeight,
-        undefined,
-        "FAST",
-      );
-      heightLeft -= pageHeight - tableStartY;
+      toast.error("Erreur lors de la génération PDF");
     }
-
-    const addFooter = () => {
-      pdf.setDrawColor(72, 118, 255);
-      pdf.setLineWidth(0.8);
-      pdf.line(10, pageHeight - 25, pageWidth - 10, pageHeight - 25);
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(
-        `Fait à Kinshasa, le ${new Date().toLocaleDateString()}`,
-        15,
-        pageHeight - 18,
-      );
-
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Directeur", pageWidth - 40, pageHeight - 18);
-    };
-    addFooter();
-
-    const totalPages = pdf.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      pdf.setFontSize(8);
-      pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 25, pageHeight - 10);
-    }
-
-    pdf.save("Grille_Deliberation.pdf");
-
-    hiddenCells.forEach((cell) => (cell.style.display = ""));
   };
   const sessionOptions = [
     ...new Set(
@@ -973,6 +1092,402 @@ export default function NotesClient() {
     pdf.save("releve-notes.pdf");
 
     document.body.removeChild(container);
+  };
+
+  const handleDownloadRelevesFiliere = async () => {
+    if (!selectedFiliereBrevet) {
+      return toast.error("Sélectionnez une filière");
+    }
+
+    if (!selectedSessionBrevet) {
+      return toast.error("Sélectionnez une session");
+    }
+
+    if (!dateDebutBrevet || !dateFinBrevet) {
+      return toast.error("Veuillez renseigner la période");
+    }
+
+    const filiere = selectedFiliereBrevet.label;
+    const session = selectedSessionBrevet.label;
+
+    // Filtrer les étudiants
+    const apprenants = notes.filter((n: any) => {
+      const matchFiliere = n.etudiant?.filiere === filiere;
+
+      const matchSession = n.session === session;
+
+      return matchFiliere && matchSession;
+    });
+
+    if (!apprenants.length) {
+      return toast.info("Aucun apprenant trouvé.");
+    }
+
+    const BREVE_CODE_OFFICIEL =
+      "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    for (let i = 0; i < apprenants.length; i++) {
+      const note = apprenants[i];
+
+      const { notes: releveNotes } = await getReleve(note.etudiant.id);
+
+      if (!releveNotes?.length) continue;
+
+      const first = releveNotes[0];
+
+      const etudiant = first.etudiant;
+
+      const total =
+        Number(note.noteTheorique ?? 0) +
+        Number(note.notePratique ?? 0) +
+        Number(note.noteJyry ?? 0);
+
+      const pourcentage = Number(total.toFixed(2));
+
+      const mention = calculateMentionFromAverage(pourcentage);
+
+      const sessionAffichee = `${dateDebutBrevet} - ${dateFinBrevet}`;
+
+      const releveHtml = `
+
+<div style="
+width:100%;
+height:100%;
+padding:18mm;
+font-family:'Times New Roman',serif;
+background:white;
+box-sizing:border-box;
+">
+
+
+<div style="
+text-align:center;
+border-bottom:4px solid #1f5e3b;
+padding-bottom:12px;
+">
+
+
+<h2 style="margin:0;font-size:20px;">
+CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+</h2>
+
+
+<p style="
+margin:2px 0;
+font-weight:bold;
+font-size:18px;
+color:#1f5e3b;
+">
+« LEON ACADEMY »
+</p>
+
+
+<img src="/logo-leon.png"
+style="width:90px;margin:8px auto;"
+/>
+
+
+<p style="
+font-size:11px;
+font-weight:bold;
+">
+${BREVE_CODE_OFFICIEL}
+</p>
+
+
+</div>
+
+
+
+<div style="
+margin:22px auto;
+text-align:center;
+font-weight:bold;
+font-size:20px;
+background:#c9a64d;
+padding:10px 25px;
+width:fit-content;
+">
+RELEVÉ DE NOTES
+</div>
+
+
+
+
+
+<div style="
+margin-bottom:25px;
+font-size:14px;
+line-height:1.6;
+padding:15px;
+background:#f9f9f9;
+border-left:5px solid #1f5e3b;
+">
+
+
+<p>
+<strong>Étudiant :</strong>
+${etudiant.nom ?? ""}
+${etudiant.postnom ?? ""}
+${etudiant.prenom ?? ""}
+</p>
+
+
+<p>
+<strong>Matricule :</strong>
+${etudiant.matricule ?? "N/A"}
+</p>
+
+
+<p>
+<strong>Filière :</strong>
+${filiere}
+</p>
+
+
+<p>
+<strong>Session :</strong>
+${sessionAffichee}
+</p>
+
+
+</div>
+
+
+
+
+<table style="
+width:100%;
+border-collapse:collapse;
+font-size:14px;
+">
+
+
+<thead>
+
+<tr style="
+background:#1f5e3b;
+color:white;
+">
+
+<th style="
+padding:10px;
+border:1px solid #ddd;
+">
+Rubriques
+</th>
+
+
+<th style="
+padding:10px;
+border:1px solid #ddd;
+">
+Cotations
+</th>
+
+</tr>
+
+</thead>
+
+
+
+
+<tbody>
+
+
+<tr>
+<td style="
+padding:10px;
+border:1px solid #ddd;
+">
+Évaluation Théorique /20
+</td>
+
+
+<td style="
+padding:10px;
+border:1px solid #ddd;
+text-align:center;
+font-weight:bold;
+">
+${note.noteTheorique ?? 0}
+</td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td style="
+padding:10px;
+border:1px solid #ddd;
+">
+Évaluation Pratique /50
+</td>
+
+
+<td style="
+padding:10px;
+border:1px solid #ddd;
+text-align:center;
+font-weight:bold;
+">
+${note.notePratique ?? 0}
+</td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td style="
+padding:10px;
+border:1px solid #ddd;
+">
+Évaluation Jury /30
+</td>
+
+
+<td style="
+padding:10px;
+border:1px solid #ddd;
+text-align:center;
+font-weight:bold;
+">
+${note.noteJyry ?? 0}
+</td>
+
+</tr>
+
+
+
+</tbody>
+
+</table>
+
+
+
+
+
+<div style="
+margin-top:30px;
+padding:15px;
+background:#eef3f0;
+border:2px solid #1f5e3b;
+">
+
+
+<p>
+<strong>Pourcentage :</strong>
+${pourcentage.toFixed(2)} %
+</p>
+
+
+
+<p>
+<strong>Mention :</strong>
+
+<span style="
+color:#1f5e3b;
+font-weight:bold;
+font-size:16px;
+">
+${mention}
+</span>
+
+</p>
+
+
+</div>
+
+
+
+
+
+<div style="
+text-align:right;
+margin-top:60px;
+">
+
+
+Fait à Kinshasa, le
+${new Date().toLocaleDateString("fr-FR")}
+
+
+
+<div style="margin-top:50px;">
+
+
+<div style="
+border-top:1px solid #000;
+width:200px;
+margin-left:auto;
+"></div>
+
+
+
+<strong style="
+display:block;
+width:200px;
+text-align:center;
+margin-left:auto;
+">
+Le Directeur
+</strong>
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+`;
+
+      const container = document.createElement("div");
+
+      container.style.width = "210mm";
+      container.style.height = "297mm";
+
+      container.innerHTML = releveHtml;
+
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        0,
+        0,
+        pdf.internal.pageSize.getWidth(),
+        pdf.internal.pageSize.getHeight(),
+      );
+
+      document.body.removeChild(container);
+    }
+
+    pdf.save(`releves-${filiere}-${session}.pdf`);
+
+    setPopupReleveFiliereOpen(false);
   };
 
   // =====================
@@ -1791,10 +2306,14 @@ Le Directeur
     }
 
     const filiere = selectedFiliereBrevet.label;
+    const session = selectedSessionBrevet?.label;
 
-    const apprenants = notes.filter(
-      (n: any) => n.etudiant?.filiere === filiere,
-    );
+    const apprenants = notes.filter((n: any) => {
+      const matchFiliere = n.etudiant?.filiere === filiere;
+      const matchSession = session ? n.etudiant?.session === session : true;
+
+      return matchFiliere && matchSession;
+    });
 
     if (!apprenants.length) {
       return toast.info("Aucun apprenant trouvé dans cette filière");
@@ -1866,13 +2385,6 @@ Le Directeur
               Export Excel
             </button>
 
-            <button
-              className="btn btn-outline btn-primary rounded-2xl flex items-center gap-2 px-6 hover:scale-105 transition"
-              onClick={handleExportDeliberationPDF}
-            >
-              Grille
-            </button>
-
             <input
               type="file"
               accept=".xlsx, .xls"
@@ -1893,7 +2405,21 @@ Le Directeur
               className="btn btn-success rounded-xl gap-2"
               onClick={() => setPopupBrevetFiliereOpen(true)}
             >
-              🎓 Imprimer brevets par filière
+              🎓 Imprimer brevets par filière et session
+            </button>
+
+            <button
+              className="btn btn-success rounded-xl gap-2"
+              onClick={() => setPopupReleveFiliereOpen(true)}
+            >
+              🎓 Imprimer relevés par filière et session
+            </button>
+
+            <button
+              className="btn btn-info"
+              onClick={() => setPopupDeliberationOpen(true)}
+            >
+              📊 Grille de délibération
             </button>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -2585,41 +3111,242 @@ Le Directeur
         </>
       )}
 
-      {popupBrevetFiliereOpen && (
+      {popupDeliberationOpen && (
         <div className="modal modal-open backdrop-blur-sm">
           <div
             className="
-      modal-box 
-      max-w-lg 
-      rounded-3xl 
-      shadow-2xl 
-      border 
-      border-base-200 
-      p-0 
-      overflow-hidden
-    "
+        modal-box
+        max-w-lg
+        rounded-3xl
+        shadow-2xl
+        border
+        border-base-200
+        p-0
+        overflow-hidden
+      "
           >
             {/* HEADER */}
             <div
               className="
-        bg-success 
-        text-success-content 
-        px-7 
-        py-5
-      "
+          bg-info
+          text-info-content
+          px-7
+          py-5
+        "
             >
               <div className="flex items-center gap-3">
                 <div
                   className="
-            w-12 
-            h-12 
-            rounded-2xl 
-            bg-white/20 
-            flex 
-            items-center 
-            justify-center 
-            text-2xl
+              w-12
+              h-12
+              rounded-2xl
+              bg-white/20
+              flex
+              items-center
+              justify-center
+              text-2xl
+            "
+                >
+                  📊
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-xl">
+                    Impression grille de délibération
+                  </h3>
+
+                  <p className="text-sm opacity-80">
+                    Génération par filière et session
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* BODY */}
+            <div className="px-7 py-6">
+              <div
+                className="
+            bg-base-200
+            rounded-2xl
+            p-4
+            mb-5
           "
+              >
+                <p
+                  className="
+              text-sm
+              text-base-content/70
+              leading-relaxed
+            "
+                >
+                  Sélectionnez la filière, la session et la période de formation
+                  pour générer la grille de délibération au format PDF.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                {/* SESSION */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">🗂️ Session</span>
+                  </label>
+
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSessionBrevet}
+                    onChange={setSelectedSessionBrevet}
+                    placeholder="Choisir une session"
+                    isClearable
+                  />
+                </div>
+
+                {/* FILIERE */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">📚 Filière</span>
+                  </label>
+
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliereBrevet}
+                    onChange={setSelectedFiliereBrevet}
+                    placeholder="Choisir une filière"
+                    isClearable
+                  />
+                </div>
+
+                {/* PERIODE */}
+                <div>
+                  <label className="label mb-1">
+                    <span className="label-text font-semibold">
+                      📅 Période de formation
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* DATE DEBUT */}
+                    <div className="form-control">
+                      <span className="text-xs text-base-content/60 mb-2">
+                        Date début
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    focus:input-info
+                    transition
+                  "
+                        value={dateDebutBrevet}
+                        onChange={(e) => setDateDebutBrevet(e.target.value)}
+                      />
+                    </div>
+
+                    {/* DATE FIN */}
+                    <div className="form-control">
+                      <span className="text-xs text-base-content/60 mb-2">
+                        Date fin
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    focus:input-info
+                    transition
+                  "
+                        value={dateFinBrevet}
+                        onChange={(e) => setDateFinBrevet(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div
+              className="
+          px-7
+          py-5
+          bg-base-200/50
+          border-t
+          flex
+          justify-end
+          gap-3
+        "
+            >
+              <button
+                className="
+            btn
+            btn-ghost
+            rounded-2xl
+            px-6
+          "
+                onClick={() => setPopupDeliberationOpen(false)}
+              >
+                Annuler
+              </button>
+
+              <button
+                className="
+            btn
+            btn-info
+            rounded-2xl
+            px-7
+            shadow-md
+            hover:shadow-lg
+            transition
+            gap-2
+          "
+                onClick={handleExportDeliberationPDF}
+              >
+                📊 Générer PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {popupBrevetFiliereOpen && (
+        <div className="modal modal-open backdrop-blur-sm">
+          <div
+            className="
+        modal-box
+        max-w-lg
+        rounded-3xl
+        shadow-2xl
+        border
+        border-base-200
+        p-0
+        overflow-hidden
+      "
+          >
+            {/* HEADER */}
+            <div
+              className="
+          bg-success
+          text-success-content
+          px-7
+          py-5
+        "
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="
+              w-12
+              h-12
+              rounded-2xl
+              bg-white/20
+              flex
+              items-center
+              justify-center
+              text-2xl
+            "
                 >
                   🎓
                 </div>
@@ -2638,37 +3365,45 @@ Le Directeur
             <div className="px-7 py-6">
               <div
                 className="
-          bg-base-200 
-          rounded-2xl 
-          p-4 
-          mb-5
-        "
+            bg-base-200
+            rounded-2xl
+            p-4
+            mb-5
+          "
               >
                 <p
                   className="
-            text-sm 
-            text-base-content/70
-            leading-relaxed
-          "
+              text-sm
+              text-base-content/70
+              leading-relaxed
+            "
                 >
-                  Sélectionnez une filière puis indiquez la période de
-                  formation. Tous les apprenants concernés recevront leur brevet
-                  dans un seul PDF.
+                  Sélectionnez la session, la filière puis indiquez la période
+                  de formation. Tous les apprenants concernés recevront leur
+                  brevet dans un seul PDF.
                 </p>
               </div>
 
               <div className="space-y-5">
+                {/* SESSION */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">🗂️ Session</span>
+                  </label>
+
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSessionBrevet}
+                    onChange={setSelectedSessionBrevet}
+                    placeholder="Choisir une session"
+                    isClearable
+                  />
+                </div>
+
                 {/* FILIERE */}
                 <div className="form-control">
                   <label className="label">
-                    <span
-                      className="
-                label-text 
-                font-semibold
-              "
-                    >
-                      📚 Filière
-                    </span>
+                    <span className="label-text font-semibold">📚 Filière</span>
                   </label>
 
                   <Select
@@ -2682,39 +3417,23 @@ Le Directeur
 
                 {/* PERIODE */}
                 <div>
-                  <label
-                    className="
-              label 
-              mb-1
-            "
-                  >
-                    <span
-                      className="
-                label-text 
-                font-semibold
-              "
-                    >
+                  <label className="label mb-1">
+                    <span className="label-text font-semibold">
                       📅 Période de formation
                     </span>
                   </label>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="form-control">
-                      <span
-                        className="
-                  text-xs 
-                  text-base-content/60 
-                  mb-2
-                "
-                      >
+                      <span className="text-xs text-base-content/60 mb-2">
                         Date début
                       </span>
 
                       <input
                         type="date"
                         className="
-                    input 
-                    input-bordered 
+                    input
+                    input-bordered
                     rounded-2xl
                     focus:input-success
                     transition
@@ -2725,21 +3444,15 @@ Le Directeur
                     </div>
 
                     <div className="form-control">
-                      <span
-                        className="
-                  text-xs 
-                  text-base-content/60 
-                  mb-2
-                "
-                      >
+                      <span className="text-xs text-base-content/60 mb-2">
                         Date fin
                       </span>
 
                       <input
                         type="date"
                         className="
-                    input 
-                    input-bordered 
+                    input
+                    input-bordered
                     rounded-2xl
                     focus:input-success
                     transition
@@ -2756,19 +3469,19 @@ Le Directeur
             {/* FOOTER */}
             <div
               className="
-        px-7 
-        py-5 
-        bg-base-200/50 
-        border-t 
-        flex 
-        justify-end 
-        gap-3
-      "
+          px-7
+          py-5
+          bg-base-200/50
+          border-t
+          flex
+          justify-end
+          gap-3
+        "
             >
               <button
                 className="
-            btn 
-            btn-ghost 
+            btn
+            btn-ghost
             rounded-2xl
             px-6
           "
@@ -2779,7 +3492,7 @@ Le Directeur
 
               <button
                 className="
-            btn 
+            btn
             btn-success
             rounded-2xl
             px-7
@@ -2791,6 +3504,204 @@ Le Directeur
                 onClick={handleDownloadBrevetFiliere}
               >
                 🎓 Générer PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {popupReleveFiliereOpen && (
+        <div className="modal modal-open backdrop-blur-sm">
+          <div
+            className="
+        modal-box
+        max-w-lg
+        rounded-3xl
+        shadow-2xl
+        border
+        border-base-200
+        p-0
+        overflow-hidden
+      "
+          >
+            {/* HEADER */}
+            <div
+              className="
+          bg-primary
+          text-primary-content
+          px-7
+          py-5
+        "
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="
+              w-12
+              h-12
+              rounded-2xl
+              bg-white/20
+              flex
+              items-center
+              justify-center
+              text-2xl
+            "
+                >
+                  📄
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-xl">Impression des relevés</h3>
+
+                  <p className="text-sm opacity-80">
+                    Génération en masse par filière
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* BODY */}
+            <div className="px-7 py-6">
+              <div
+                className="
+            bg-base-200
+            rounded-2xl
+            p-4
+            mb-5
+          "
+              >
+                <p
+                  className="
+              text-sm
+              text-base-content/70
+              leading-relaxed
+            "
+                >
+                  Sélectionnez la session, la filière et la période
+                  d'évaluation. Tous les apprenants concernés auront leur relevé
+                  de notes regroupé dans un seul fichier PDF.
+                </p>
+              </div>
+
+              <div className="space-y-5">
+                {/* SESSION */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">🗂️ Session</span>
+                  </label>
+
+                  <Select
+                    options={sessionOptions}
+                    value={selectedSessionBrevet}
+                    onChange={setSelectedSessionBrevet}
+                    placeholder="Choisir une session"
+                    isClearable
+                  />
+                </div>
+
+                {/* FILIERE */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">📚 Filière</span>
+                  </label>
+
+                  <Select
+                    options={filiereOptions}
+                    value={selectedFiliereBrevet}
+                    onChange={setSelectedFiliereBrevet}
+                    placeholder="Choisir une filière"
+                    isClearable
+                  />
+                </div>
+
+                {/* PERIODE */}
+                <div>
+                  <label className="label mb-1">
+                    <span className="label-text font-semibold">
+                      📅 Période de formation
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-control">
+                      <span className="text-xs text-base-content/60 mb-2">
+                        Date début
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    focus:input-primary
+                    transition
+                  "
+                        value={dateDebutBrevet}
+                        onChange={(e) => setDateDebutBrevet(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-control">
+                      <span className="text-xs text-base-content/60 mb-2">
+                        Date fin
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    focus:input-primary
+                    transition
+                  "
+                        value={dateFinBrevet}
+                        onChange={(e) => setDateFinBrevet(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div
+              className="
+          px-7
+          py-5
+          bg-base-200/50
+          border-t
+          flex
+          justify-end
+          gap-3
+        "
+            >
+              <button
+                className="
+            btn
+            btn-ghost
+            rounded-2xl
+            px-6
+          "
+                onClick={() => setPopupReleveFiliereOpen(false)}
+              >
+                Annuler
+              </button>
+
+              <button
+                className="
+            btn
+            btn-primary
+            rounded-2xl
+            px-7
+            shadow-md
+            hover:shadow-lg
+            transition
+            gap-2
+          "
+                onClick={handleDownloadRelevesFiliere}
+              >
+                📄 Générer PDF
               </button>
             </div>
           </div>

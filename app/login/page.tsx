@@ -142,7 +142,7 @@ export default function LoginPage() {
         </button>
 
         <p className="text-xs text-center text-gray-400">
-          © {new Date().getFullYear()} Ap.Palmares
+          © {new Date().getFullYear()} EduTrack
         </p>
       </form>
     </div>

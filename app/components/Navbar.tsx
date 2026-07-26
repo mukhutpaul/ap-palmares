@@ -106,7 +106,7 @@ const NavBar = () => {
       auth: true,
       roles: ["USER", "ADMIN"],
     },
-    { href: "/notes", label: "Notes", auth: true, roles: ["USER", "ADMIN"] },
+    { href: "/notes", label: "Jury", auth: true, roles: ["USER", "ADMIN"] },
 
     // { href: "/annonces", label: "Annonces", auth: true, roles: ["USER", "ADMIN"] },
     // { href: "/evenements", label: "Evenements", auth: true, roles: ["USER", "ADMIN"] },
