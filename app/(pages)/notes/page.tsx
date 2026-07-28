@@ -70,6 +70,7 @@ export default function NotesClient() {
     null,
   );
 
+  const [descriptionBrevet, setDescriptionBrevet] = useState("");
   const [popupReleveFiliereOpen, setPopupReleveFiliereOpen] = useState(false);
 
   const [isClient, setIsClient] = useState(false);
@@ -1696,6 +1697,7 @@ Le Directeur
     stats: any,
     dateDebutSession: string,
     dateFinSession: string,
+    descriptionBrevet: string,
   ) => {
     const BREVE_CODE_OFFICIEL =
       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
@@ -1765,25 +1767,32 @@ justify-content:space-between;
 
 
 
-<!-- HEADER -->
+<!-- ================= HEADER ================= -->
+
 
 <div style="
 text-align:center;
+line-height:1;
 ">
 
 
 <h2 style="
 margin:0;
+padding:0;
 font-size:22px;
+line-height:1.1;
 ">
 CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
 </h2>
 
 
+
 <p style="
-margin:5px;
+margin:0;
+padding:0;
 font-weight:bold;
 font-size:20px;
+line-height:1.1;
 color:#1f5e3b;
 ">
 « LEON ACADEMY »
@@ -1794,8 +1803,11 @@ color:#1f5e3b;
 <img
 src="/logo-leon.png"
 style="
-width:110px;
-margin:8px auto;
+width:140px;
+height:auto;
+display:block;
+margin:0 auto;
+padding:0;
 "
 />
 
@@ -1804,6 +1816,9 @@ margin:8px auto;
 <p style="
 font-size:12px;
 font-weight:bold;
+margin:0;
+padding:0;
+line-height:1;
 ">
 ${BREVE_CODE_OFFICIEL}
 </p>
@@ -1814,7 +1829,9 @@ ${BREVE_CODE_OFFICIEL}
 
 
 
-<!-- TITRE -->
+
+
+<!-- ================= TITRE ================= -->
 
 
 <div style="
@@ -1837,7 +1854,9 @@ D’APTITUDE PROFESSIONNELLE
 
 
 
-<!-- CONTENU -->
+
+
+<!-- ================= CONTENU ================= -->
 
 
 <div style="
@@ -1853,6 +1872,7 @@ Nous soussignons la Direction du centre de formation professionnelle
 et Métiers <strong>« Léon Academy »</strong>,
 certifions que :
 </p>
+
 
 
 
@@ -1872,6 +1892,7 @@ ${formatPrenom(etudiant.prenom)}
 
 
 
+
 <p>
 
 a suivi une formation professionnelle du
@@ -1884,8 +1905,15 @@ en
 
 <strong>
 ${String(note.filiere).toUpperCase()}
-</strong>.
+</strong>. ${
+  descriptionBrevet ||
+  "Formation professionnelle sanctionnée par une attestation d'aptitude professionnelle."
+}
 
+</p>
+
+
+<p>
 
 ${pronom} a satisfait aux épreuves d’évaluation
 avec la mention
@@ -1909,6 +1937,9 @@ ${pourcentage.toFixed(0)} %
 
 
 
+
+
+
 <p>
 En foi de quoi, nous lui délivrons la présente attestation
 pour servir et valoir ce que de droit.
@@ -1923,7 +1954,9 @@ pour servir et valoir ce que de droit.
 
 
 
-<!-- SIGNATURE -->
+
+
+<!-- ================= SIGNATURE ================= -->
 
 
 <div style="
@@ -1970,6 +2003,9 @@ Le Directeur
 
 
 
+
+
+
 </div>
 
 </div>
@@ -1981,6 +2017,7 @@ Le Directeur
     note: any,
     dateDebutSession: string,
     dateFinSession: string,
+    descriptionBrevet: string,
   ) => {
     const BREVE_CODE_OFFICIEL =
       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
@@ -1996,7 +2033,7 @@ Le Directeur
         return toast.error("Veuillez renseigner la période de formation");
       }
 
-      const { notes: releveNotes, stats } = await getReleve(
+      const { notes: releveNotes } = await getReleve(
         note.etudiant.id,
         note.session,
         note.filiere,
@@ -2029,7 +2066,6 @@ Le Directeur
         return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
       };
 
-      // Même calcul que le tableau
       const pourcentage =
         Number(note.noteTheorique ?? 0) +
         Number(note.notePratique ?? 0) +
@@ -2051,19 +2087,18 @@ position:relative;
 box-sizing:border-box;
 ">
 
-<img
-  src="/format1.png"
-  style="
-    position:absolute;
-    top:57%;
-    left:15%;
-    transform:translate(-50%, -50%);
-    width:380px;
-    opacity:0.35;
-    z-index:0;
-  "
-/>
 
+<img
+src="/format1.png"
+style="
+position:absolute;
+top:57%;
+left:15%;
+transform:translate(-50%, -50%);
+width:380px;
+opacity:0.35;
+z-index:0;
+/>
 
 
 <div style="
@@ -2074,6 +2109,7 @@ display:flex;
 flex-direction:column;
 justify-content:space-between;
 ">
+
 
 
 <div style="text-align:center;">
@@ -2093,12 +2129,10 @@ font-size:20px;
 </p>
 
 
-
-<img 
+<img
 src="/logo-leon.png"
 style="width:110px;margin:8px auto;"
 />
-
 
 
 <p style="
@@ -2110,6 +2144,7 @@ ${BREVE_CODE_OFFICIEL}
 
 
 </div>
+
 
 
 
@@ -2132,7 +2167,6 @@ D’APTITUDE PROFESSIONNELLE
 
 
 
-
 <div style="
 font-size:15px;
 line-height:1.7;
@@ -2145,7 +2179,6 @@ Nous soussignons la Direction du centre de formation professionnelle
 et Métiers <strong>« Léon Academy »</strong>,
 certifions que :
 </p>
-
 
 
 
@@ -2178,7 +2211,10 @@ en
 
 <strong>
 ${String(note.filiere).toUpperCase()}
-</strong>.
+</strong>. ${descriptionBrevet || "Formation professionnelle qualifiante."}
+
+
+</p>
 
 
 ${pronom} a satisfait aux épreuves d’évaluation
@@ -2207,7 +2243,6 @@ pour servir et valoir ce que de droit.
 
 
 </div>
-
 
 
 
@@ -2247,7 +2282,6 @@ Le Directeur
 </strong>
 
 
-
 </div>
 
 
@@ -2266,6 +2300,7 @@ Le Directeur
 
       container.style.width = "297mm";
       container.style.height = "210mm";
+
       container.innerHTML = brevetHtml;
 
       document.body.appendChild(container);
@@ -2342,6 +2377,7 @@ Le Directeur
         stats,
         dateDebutBrevet,
         dateFinBrevet,
+        descriptionBrevet,
       );
 
       const container = document.createElement("div");
@@ -2714,103 +2750,214 @@ Le Directeur
 
       {popupBrevetOpen && (
         <div className="modal modal-open backdrop-blur-sm">
-          <div className="modal-box max-w-md rounded-3xl shadow-2xl border border-base-200 p-0 overflow-hidden">
-            {/* HEADER */}
-            <div className="bg-success text-success-content px-7 py-5">
+          <div
+            className="
+        modal-box
+        max-w-2xl
+        rounded-3xl
+        shadow-2xl
+        border
+        border-base-200
+        p-0
+        overflow-hidden
+      "
+          >
+            {/* ================= HEADER ================= */}
+            <div
+              className="
+          bg-success
+          text-success-content
+          px-7
+          py-5
+        "
+            >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
+                <div
+                  className="
+              w-12
+              h-12
+              rounded-2xl
+              bg-white/20
+              flex
+              items-center
+              justify-center
+              text-2xl
+            "
+                >
                   🎓
                 </div>
 
                 <div>
                   <h3 className="font-bold text-xl">Générer le brevet</h3>
 
-                  <p className="text-sm opacity-80">Période de formation</p>
+                  <p className="text-sm opacity-80">
+                    Informations de formation
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* BODY */}
+            {/* ================= BODY ================= */}
             <div className="px-7 py-6">
-              <div className="bg-base-200 rounded-2xl p-4 mb-5">
-                <p className="text-sm text-base-content/70 leading-relaxed">
-                  Veuillez indiquer les dates de début et de fin de la
-                  formation. Elles seront affichées sur le brevet.
+              {/* INFORMATION */}
+              <div
+                className="
+            bg-base-200
+            rounded-2xl
+            p-4
+            mb-6
+          "
+              >
+                <p
+                  className="
+              text-sm
+              text-base-content/70
+              leading-relaxed
+            "
+                >
+                  Renseignez la période et la description de la formation. Ces
+                  informations seront imprimées automatiquement sur le brevet.
                 </p>
               </div>
 
-              <div className="space-y-5">
-                {/* DATE DEBUT */}
-                <div className="form-control">
+              <div className="space-y-6">
+                {/* PERIODE */}
+                <div className="w-full">
                   <label className="label">
                     <span className="label-text font-semibold">
-                      📅 Date de début
+                      📅 Période de formation
                     </span>
                   </label>
 
-                  <input
-                    type="date"
-                    className="
-                input input-bordered 
-                rounded-2xl 
-                focus:input-success
-                transition
-              "
-                    value={dateDebutSession}
-                    onChange={(e) => setDateDebutSession(e.target.value)}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* DATE DEBUT */}
+                    <div className="form-control w-full">
+                      <span
+                        className="
+                    text-xs
+                    text-base-content/60
+                    mb-2
+                  "
+                      >
+                        Date début
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    w-full
+                    focus:input-success
+                  "
+                        value={dateDebutSession}
+                        onChange={(e) => setDateDebutSession(e.target.value)}
+                      />
+                    </div>
+
+                    {/* DATE FIN */}
+                    <div className="form-control w-full">
+                      <span
+                        className="
+                    text-xs
+                    text-base-content/60
+                    mb-2
+                  "
+                      >
+                        Date fin
+                      </span>
+
+                      <input
+                        type="date"
+                        className="
+                    input
+                    input-bordered
+                    rounded-2xl
+                    w-full
+                    focus:input-success
+                  "
+                        value={dateFinSession}
+                        onChange={(e) => setDateFinSession(e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* DATE FIN */}
-                <div className="form-control">
+                {/* DESCRIPTION FORMATION */}
+                <div className="form-control w-full">
                   <label className="label">
                     <span className="label-text font-semibold">
-                      📅 Date de fin
+                      📝 Description de la formation
                     </span>
                   </label>
 
-                  <input
-                    type="date"
+                  <textarea
                     className="
-                input input-bordered 
-                rounded-2xl 
-                focus:input-success
-                transition
+                textarea
+                textarea-bordered
+                rounded-2xl
+                w-full
+                min-h-40
+                resize-none
+                focus:textarea-success
               "
-                    value={dateFinSession}
-                    onChange={(e) => setDateFinSession(e.target.value)}
+                    placeholder="
+Exemple :
+Formation professionnelle en informatique de gestion comprenant :
+- Programmation
+- Bases de données
+- Administration système
+- Réseaux informatiques
+              "
+                    value={descriptionBrevet}
+                    onChange={(e) => setDescriptionBrevet(e.target.value)}
                   />
+
+                  <span
+                    className="
+                text-xs
+                text-base-content/60
+                mt-2
+              "
+                  >
+                    Cette description sera affichée après la filière sur le
+                    brevet.
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* FOOTER */}
+            {/* ================= FOOTER ================= */}
             <div
               className="
-        px-7 py-5 
-        bg-base-200/50 
-        border-t 
-        flex 
-        justify-end 
-        gap-3
-      "
+          px-7
+          py-5
+          bg-base-200/50
+          border-t
+          flex
+          justify-end
+          gap-3
+        "
             >
               <button
                 className="
-            btn 
-            btn-ghost 
+            btn
+            btn-ghost
             rounded-2xl
             px-6
           "
-                onClick={() => setPopupBrevetOpen(false)}
+                onClick={() => {
+                  setPopupBrevetOpen(false);
+                }}
               >
                 Annuler
               </button>
 
               <button
                 className="
-            btn 
-            btn-success 
+            btn
+            btn-success
             rounded-2xl
             px-7
             shadow-md
@@ -2820,15 +2967,25 @@ Le Directeur
           "
                 onClick={() => {
                   if (!dateDebutSession || !dateFinSession) {
-                    return toast.error("Veuillez renseigner les deux dates.");
+                    return toast.error("Veuillez renseigner les dates.");
+                  }
+
+                  if (!descriptionBrevet.trim()) {
+                    return toast.error(
+                      "Veuillez saisir la description de la formation.",
+                    );
                   }
 
                   setPopupBrevetOpen(false);
 
                   handleDownloadBrevet(
                     selectedBrevet,
+
                     dateDebutSession,
+
                     dateFinSession,
+
+                    descriptionBrevet,
                   );
                 }}
               >
@@ -3319,7 +3476,7 @@ Le Directeur
           <div
             className="
         modal-box
-        max-w-lg
+        max-w-2xl
         rounded-3xl
         shadow-2xl
         border
@@ -3328,7 +3485,7 @@ Le Directeur
         overflow-hidden
       "
           >
-            {/* HEADER */}
+            {/* ================= HEADER ================= */}
             <div
               className="
           bg-success
@@ -3363,14 +3520,15 @@ Le Directeur
               </div>
             </div>
 
-            {/* BODY */}
+            {/* ================= BODY ================= */}
             <div className="px-7 py-6">
+              {/* INFORMATION */}
               <div
                 className="
             bg-base-200
             rounded-2xl
             p-4
-            mb-5
+            mb-6
           "
               >
                 <p
@@ -3380,15 +3538,15 @@ Le Directeur
               leading-relaxed
             "
                 >
-                  Sélectionnez la session, la filière puis indiquez la période
-                  de formation. Tous les apprenants concernés recevront leur
-                  brevet dans un seul PDF.
+                  Sélectionnez la session, la filière, la période de formation
+                  et ajoutez la description qui sera affichée automatiquement
+                  sur chaque brevet.
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-6 w-full">
                 {/* SESSION */}
-                <div className="form-control">
+                <div className="form-control w-full">
                   <label className="label">
                     <span className="label-text font-semibold">🗂️ Session</span>
                   </label>
@@ -3403,7 +3561,7 @@ Le Directeur
                 </div>
 
                 {/* FILIERE */}
-                <div className="form-control">
+                <div className="form-control w-full">
                   <label className="label">
                     <span className="label-text font-semibold">📚 Filière</span>
                   </label>
@@ -3418,16 +3576,31 @@ Le Directeur
                 </div>
 
                 {/* PERIODE */}
-                <div>
-                  <label className="label mb-1">
+                <div className="form-control w-full">
+                  <label className="label">
                     <span className="label-text font-semibold">
                       📅 Période de formation
                     </span>
                   </label>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="form-control">
-                      <span className="text-xs text-base-content/60 mb-2">
+                  <div
+                    className="
+                grid
+                grid-cols-1
+                md:grid-cols-2
+                gap-4
+              "
+                  >
+                    {/* DATE DEBUT */}
+                    <div className="w-full">
+                      <span
+                        className="
+                    text-xs
+                    text-base-content/60
+                    mb-2
+                    block
+                  "
+                      >
                         Date début
                       </span>
 
@@ -3437,16 +3610,24 @@ Le Directeur
                     input
                     input-bordered
                     rounded-2xl
+                    w-full
                     focus:input-success
-                    transition
                   "
                         value={dateDebutBrevet}
                         onChange={(e) => setDateDebutBrevet(e.target.value)}
                       />
                     </div>
 
-                    <div className="form-control">
-                      <span className="text-xs text-base-content/60 mb-2">
+                    {/* DATE FIN */}
+                    <div className="w-full">
+                      <span
+                        className="
+                    text-xs
+                    text-base-content/60
+                    mb-2
+                    block
+                  "
+                      >
                         Date fin
                       </span>
 
@@ -3456,8 +3637,8 @@ Le Directeur
                     input
                     input-bordered
                     rounded-2xl
+                    w-full
                     focus:input-success
-                    transition
                   "
                         value={dateFinBrevet}
                         onChange={(e) => setDateFinBrevet(e.target.value)}
@@ -3465,10 +3646,52 @@ Le Directeur
                     </div>
                   </div>
                 </div>
+
+                {/* DESCRIPTION */}
+                <div className="form-control w-full">
+                  <label className="label">
+                    <span className="label-text font-semibold">
+                      📝 Description de la formation
+                    </span>
+                  </label>
+
+                  <textarea
+                    className="
+                textarea
+                textarea-bordered
+                rounded-2xl
+                w-full
+                min-h-40
+                resize-none
+                focus:textarea-success
+              "
+                    placeholder="
+Exemple :
+Formation professionnelle en informatique de gestion comprenant :
+- Programmation
+- Bases de données
+- Administration système
+- Réseaux informatiques
+              "
+                    value={descriptionBrevet}
+                    onChange={(e) => setDescriptionBrevet(e.target.value)}
+                  />
+
+                  <span
+                    className="
+                text-xs
+                text-base-content/60
+                mt-2
+              "
+                  >
+                    Cette description sera imprimée sur tous les brevets
+                    générés.
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* FOOTER */}
+            {/* ================= FOOTER ================= */}
             <div
               className="
           px-7
