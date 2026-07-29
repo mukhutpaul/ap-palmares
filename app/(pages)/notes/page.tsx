@@ -2208,326 +2208,538 @@ height:150px;
 `;
   };
 
-  const handleDownloadBrevet = async (
-    note: any,
-    dateDebutSession: string,
-    dateFinSession: string,
-    descriptionBrevet: string,
-  ) => {
-    const BREVE_CODE_OFFICIEL =
-      "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
+//   const handleDownloadBrevet = async (
+//     note: any,
+//     dateDebutSession: string,
+//     dateFinSession: string,
+//     descriptionBrevet: string,
+//   ) => {
+//     const BREVE_CODE_OFFICIEL =
+//       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
 
-    try {
-      if (!note?.etudiant?.id) {
-        return toast.error(
-          "Impossible de générer le brevet (données manquantes)",
-        );
-      }
+//     try {
+//       if (!note?.etudiant?.id) {
+//         return toast.error(
+//           "Impossible de générer le brevet (données manquantes)",
+//         );
+//       }
 
-      if (!dateDebutSession || !dateFinSession) {
-        return toast.error("Veuillez renseigner la période de formation");
-      }
+//       if (!dateDebutSession || !dateFinSession) {
+//         return toast.error("Veuillez renseigner la période de formation");
+//       }
 
-      const { notes: releveNotes } = await getReleve(
-        note.etudiant.id,
-        note.session,
-        note.filiere,
+//       const { notes: releveNotes } = await getReleve(
+//         note.etudiant.id,
+//         note.session,
+//         note.filiere,
+//       );
+
+//       if (!releveNotes?.length) {
+//         return toast.info("Aucune note trouvée");
+//       }
+
+//       const firstNote = releveNotes[0];
+
+//       const etudiant = firstNote.etudiant;
+
+//       if (!etudiant) {
+//         return toast.error("Étudiant manquant");
+//       }
+
+//       const estHomme =
+//         etudiant.sexe?.toLowerCase() === "m" ||
+//         etudiant.sexe?.toLowerCase() === "masculin" ||
+//         etudiant.sexe?.toLowerCase() === "homme";
+
+//       const pronom = estHomme ? "Il" : "Elle";
+
+//       const formatPrenom = (prenom?: string | null) => {
+//         if (!prenom) return "";
+
+//         const value = prenom.trim();
+
+//         return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+//       };
+
+//       const pourcentage =
+//         Number(note.noteTheorique ?? 0) +
+//         Number(note.notePratique ?? 0) +
+//         Number(note.noteJyry ?? 0);
+
+//       const mention = calculateMentionFromAverage(pourcentage);
+
+//       const sessionAffichee = `${dateDebutSession} au ${dateFinSession}`;
+
+//       const brevetHtml = `
+
+// <div style="
+// width:100%;
+// height:100%;
+// padding:20mm;
+// font-family:'Times New Roman', serif;
+// background:#f2f2f2;
+// position:relative;
+// box-sizing:border-box;
+// ">
+
+
+// <img
+// src="/format1.png"
+// style="
+// position:absolute;
+// top:57%;
+// left:15%;
+// transform:translate(-50%, -50%);
+// width:380px;
+// opacity:0.35;
+// z-index:0;
+// />
+
+
+// <div style="
+// position:relative;
+// z-index:1;
+// height:100%;
+// display:flex;
+// flex-direction:column;
+// justify-content:space-between;
+// ">
+
+
+
+// <div style="text-align:center;">
+
+
+// <h2 style="margin:0;font-size:22px;">
+// CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+// </h2>
+
+
+// <p style="
+// margin:2px 0;
+// font-weight:bold;
+// font-size:20px;
+// ">
+// « LEON ACADEMY »
+// </p>
+
+
+// <img
+// src="/logo-leon.png"
+// style="width:110px;margin:8px auto;"
+// />
+
+
+// <p style="
+// font-size:12px;
+// font-weight:bold;
+// ">
+// ${BREVE_CODE_OFFICIEL}
+// </p>
+
+
+// </div>
+
+
+
+
+
+// <div style="
+// background:#c9a64d;
+// padding:10px 20px;
+// margin:15px auto;
+// text-align:center;
+// font-weight:bold;
+// font-size:18px;
+// ">
+
+// ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
+// D’APTITUDE PROFESSIONNELLE
+
+// </div>
+
+
+
+
+
+// <div style="
+// font-size:15px;
+// line-height:1.7;
+// text-align:justify;
+// ">
+
+
+// <p>
+// Nous soussignons la Direction du centre de formation professionnelle
+// et Métiers <strong>« Léon Academy »</strong>,
+// certifions que :
+// </p>
+
+
+
+// <p style="
+// text-align:center;
+// font-size:22px;
+// font-weight:bold;
+// color:#1f5e3b;
+// ">
+
+// ${etudiant.nom ?? ""}
+// ${etudiant.postnom ?? ""}
+// ${formatPrenom(etudiant.prenom)}
+
+// </p>
+
+
+
+
+
+// <p>
+
+// a suivi une formation professionnelle du
+
+// <strong>
+// ${sessionAffichee}
+// </strong>
+
+// en
+
+// <strong>
+// ${String(note.filiere).toUpperCase()}
+// </strong>. ${descriptionBrevet || "Formation professionnelle qualifiante."}
+
+
+// </p>
+
+
+// ${pronom} a satisfait aux épreuves d’évaluation
+// avec la mention
+
+// <strong style="color:#1f5e3b;">
+// ${mention}
+// </strong>
+
+// soit
+
+// <strong>
+// ${pourcentage.toFixed(0)} %
+// </strong>.
+
+// </p>
+
+
+
+
+// <p>
+// En foi de quoi, nous lui délivrons la présente attestation
+// pour servir et valoir ce que de droit.
+// </p>
+
+
+
+// </div>
+
+
+
+
+
+// <div style="
+// text-align:right;
+// font-size:14px;
+// ">
+
+
+// <div>
+// Fait à Kinshasa, le ${new Date().toLocaleDateString("fr-FR")}
+// </div>
+
+
+
+// <div style="margin-top:40px;">
+
+
+// <div style="
+// border-top:1px solid #000;
+// width:200px;
+// margin-left:auto;
+// ">
+// </div>
+
+
+
+// <strong style="
+// display:block;
+// text-align:center;
+// width:200px;
+// margin-left:auto;
+// ">
+// Le Directeur
+// </strong>
+
+
+// </div>
+
+
+// </div>
+
+
+
+// </div>
+
+
+// </div>
+
+// `;
+
+//       const container = document.createElement("div");
+
+//       container.style.width = "297mm";
+//       container.style.height = "210mm";
+
+//       container.innerHTML = brevetHtml;
+
+//       document.body.appendChild(container);
+
+//       const canvas = await html2canvas(container, {
+//         scale: 2,
+//         useCORS: true,
+//       });
+
+//       const imgData = canvas.toDataURL("image/png");
+
+//       const pdf = new jsPDF("l", "mm", "a4");
+
+//       pdf.addImage(
+//         imgData,
+//         "PNG",
+//         0,
+//         0,
+//         pdf.internal.pageSize.getWidth(),
+//         pdf.internal.pageSize.getHeight(),
+//       );
+
+//       pdf.save("brevet.pdf");
+
+//       document.body.removeChild(container);
+//     } catch (error: any) {
+//       console.error(error);
+
+//       toast.error(error?.message || "Erreur lors de la génération du brevet");
+//     }
+//   };
+
+const handleDownloadBrevet = async (
+  note: any,
+  dateDebutSession: string,
+  dateFinSession: string,
+  descriptionBrevet: string,
+) => {
+  try {
+    if (!note?.etudiant?.id) {
+      return toast.error(
+        "Impossible de générer le brevet (données manquantes)",
       );
-
-      if (!releveNotes?.length) {
-        return toast.info("Aucune note trouvée");
-      }
-
-      const firstNote = releveNotes[0];
-
-      const etudiant = firstNote.etudiant;
-
-      if (!etudiant) {
-        return toast.error("Étudiant manquant");
-      }
-
-      const estHomme =
-        etudiant.sexe?.toLowerCase() === "m" ||
-        etudiant.sexe?.toLowerCase() === "masculin" ||
-        etudiant.sexe?.toLowerCase() === "homme";
-
-      const pronom = estHomme ? "Il" : "Elle";
-
-      const formatPrenom = (prenom?: string | null) => {
-        if (!prenom) return "";
-
-        const value = prenom.trim();
-
-        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-      };
-
-      const pourcentage =
-        Number(note.noteTheorique ?? 0) +
-        Number(note.notePratique ?? 0) +
-        Number(note.noteJyry ?? 0);
-
-      const mention = calculateMentionFromAverage(pourcentage);
-
-      const sessionAffichee = `${dateDebutSession} au ${dateFinSession}`;
-
-      const brevetHtml = `
-
-<div style="
-width:100%;
-height:100%;
-padding:20mm;
-font-family:'Times New Roman', serif;
-background:#f2f2f2;
-position:relative;
-box-sizing:border-box;
-">
-
-
-<img
-src="/format1.png"
-style="
-position:absolute;
-top:57%;
-left:15%;
-transform:translate(-50%, -50%);
-width:380px;
-opacity:0.35;
-z-index:0;
-/>
-
-
-<div style="
-position:relative;
-z-index:1;
-height:100%;
-display:flex;
-flex-direction:column;
-justify-content:space-between;
-">
-
-
-
-<div style="text-align:center;">
-
-
-<h2 style="margin:0;font-size:22px;">
-CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
-</h2>
-
-
-<p style="
-margin:2px 0;
-font-weight:bold;
-font-size:20px;
-">
-« LEON ACADEMY »
-</p>
-
-
-<img
-src="/logo-leon.png"
-style="width:110px;margin:8px auto;"
-/>
-
-
-<p style="
-font-size:12px;
-font-weight:bold;
-">
-${BREVE_CODE_OFFICIEL}
-</p>
-
-
-</div>
-
-
-
-
-
-<div style="
-background:#c9a64d;
-padding:10px 20px;
-margin:15px auto;
-text-align:center;
-font-weight:bold;
-font-size:18px;
-">
-
-ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
-D’APTITUDE PROFESSIONNELLE
-
-</div>
-
-
-
-
-
-<div style="
-font-size:15px;
-line-height:1.7;
-text-align:justify;
-">
-
-
-<p>
-Nous soussignons la Direction du centre de formation professionnelle
-et Métiers <strong>« Léon Academy »</strong>,
-certifions que :
-</p>
-
-
-
-<p style="
-text-align:center;
-font-size:22px;
-font-weight:bold;
-color:#1f5e3b;
-">
-
-${etudiant.nom ?? ""}
-${etudiant.postnom ?? ""}
-${formatPrenom(etudiant.prenom)}
-
-</p>
-
-
-
-
-
-<p>
-
-a suivi une formation professionnelle du
-
-<strong>
-${sessionAffichee}
-</strong>
-
-en
-
-<strong>
-${String(note.filiere).toUpperCase()}
-</strong>. ${descriptionBrevet || "Formation professionnelle qualifiante."}
-
-
-</p>
-
-
-${pronom} a satisfait aux épreuves d’évaluation
-avec la mention
-
-<strong style="color:#1f5e3b;">
-${mention}
-</strong>
-
-soit
-
-<strong>
-${pourcentage.toFixed(0)} %
-</strong>.
-
-</p>
-
-
-
-
-<p>
-En foi de quoi, nous lui délivrons la présente attestation
-pour servir et valoir ce que de droit.
-</p>
-
-
-
-</div>
-
-
-
-
-
-<div style="
-text-align:right;
-font-size:14px;
-">
-
-
-<div>
-Fait à Kinshasa, le ${new Date().toLocaleDateString("fr-FR")}
-</div>
-
-
-
-<div style="margin-top:40px;">
-
-
-<div style="
-border-top:1px solid #000;
-width:200px;
-margin-left:auto;
-">
-</div>
-
-
-
-<strong style="
-display:block;
-text-align:center;
-width:200px;
-margin-left:auto;
-">
-Le Directeur
-</strong>
-
-
-</div>
-
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-`;
-
-      const container = document.createElement("div");
-
-      container.style.width = "297mm";
-      container.style.height = "210mm";
-
-      container.innerHTML = brevetHtml;
-
-      document.body.appendChild(container);
-
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("l", "mm", "a4");
-
-      pdf.addImage(
-        imgData,
-        "PNG",
-        0,
-        0,
-        pdf.internal.pageSize.getWidth(),
-        pdf.internal.pageSize.getHeight(),
-      );
-
-      pdf.save("brevet.pdf");
-
-      document.body.removeChild(container);
-    } catch (error: any) {
-      console.error(error);
-
-      toast.error(error?.message || "Erreur lors de la génération du brevet");
     }
-  };
 
+    if (!dateDebutSession || !dateFinSession) {
+      return toast.error("Veuillez renseigner la période de formation");
+    }
+
+    const { notes: releveNotes } = await getReleve(
+      note.etudiant.id,
+      note.session,
+      note.filiere,
+    );
+
+    if (!releveNotes?.length) {
+      return toast.info("Aucune note trouvée");
+    }
+
+    const firstNote = releveNotes[0];
+
+    const etudiant = firstNote?.etudiant;
+
+    if (!etudiant) {
+      return toast.error("Étudiant manquant");
+    }
+
+    const pourcentage =
+      Number(note.noteTheorique ?? 0) +
+      Number(note.notePratique ?? 0) +
+      Number(note.noteJyry ?? 0);
+
+    const mention = calculateMentionFromAverage(pourcentage);
+
+    const anneeEnCours = new Date().getFullYear();
+
+    const numeroBrevet = String(etudiant.id)
+      .replace(/-/g, "")
+      .substring(0, 8)
+      .toUpperCase();
+
+    // =========================
+    // DONNÉES DU QR CODE
+    // =========================
+
+    const qrData = `
+N° Brevet : ${numeroBrevet}/${anneeEnCours}
+
+Nom : ${etudiant.nom ?? ""} ${etudiant.postnom ?? ""} ${
+      etudiant.prenom ?? ""
+    }
+
+Filière : ${String(note.filiere ?? "").toUpperCase()}
+
+Mention : ${mention}
+
+Pourcentage : ${pourcentage.toFixed(0)}%
+`.trim();
+
+    const qrCodeBase64 = await QRCode.toDataURL(qrData, {
+      width: 400,
+      margin: 1,
+      color: {
+        dark: "#0033CC",
+        light: "#FFFFFF",
+      },
+    });
+
+    // =========================
+    // GÉNÉRATION DU HTML
+    // =========================
+
+    const brevetHtml = await generateBrevetHtml(
+      note,
+      etudiant,
+      {
+        qrcode: qrCodeBase64,
+        qrCode: qrCodeBase64,
+      },
+      dateDebutSession,
+      dateFinSession,
+      descriptionBrevet,
+    );
+
+    // =========================
+    // CONTAINER
+    // =========================
+
+    const container = document.createElement("div");
+
+    container.style.width = "1123px";
+    container.style.height = "794px";
+    container.style.position = "absolute";
+    container.style.left = "-99999px";
+    container.style.top = "0";
+    container.style.margin = "0";
+    container.style.padding = "0";
+
+    container.innerHTML = brevetHtml;
+
+    document.body.appendChild(container);
+
+    // =========================
+    // ATTENDRE LE CHARGEMENT
+    // =========================
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Attendre les images
+    const images = Array.from(
+      container.querySelectorAll("img"),
+    );
+
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete) {
+          return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      }),
+    );
+
+    // =========================
+    // HTML → CANVAS
+    // =========================
+
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+    });
+
+    // =========================
+    // CANVAS → IMAGE
+    // =========================
+
+    const imgData = canvas.toDataURL("image/png", 1.0);
+
+    // =========================
+    // CRÉATION PDF
+    // =========================
+
+    const pdf = new jsPDF(
+      "l",
+      "mm",
+      "a4",
+    );
+
+    const pageWidth =
+      pdf.internal.pageSize.getWidth();
+
+    const pageHeight =
+      pdf.internal.pageSize.getHeight();
+
+    pdf.addImage(
+      imgData,
+      "PNG",
+      0,
+      0,
+      pageWidth,
+      pageHeight,
+    );
+
+    // =========================
+    // NOM DU FICHIER
+    // =========================
+
+    const nomFichier = [
+      etudiant.nom,
+      etudiant.postnom,
+      etudiant.prenom,
+    ]
+      .filter(Boolean)
+      .join("-")
+      .replace(/\s+/g, "-");
+
+    pdf.save(
+      `Brevet-${nomFichier || "etudiant"}.pdf`,
+    );
+
+    // =========================
+    // NETTOYAGE
+    // =========================
+
+    document.body.removeChild(container);
+
+  } catch (error: any) {
+    console.error(
+      "Erreur génération brevet :",
+      error,
+    );
+
+    toast.error(
+      error?.message ||
+        "Erreur lors de la génération du brevet",
+    );
+  }
+};
   const handleDownloadBrevetFiliere = async () => {
     if (!selectedFiliereBrevet) {
       return toast.error("Sélectionnez une filière");
@@ -3034,11 +3246,11 @@ Le Directeur
                     mb-2
                   "
                       >
-                        Date début
+                        Chef d'entité
                       </span>
 
                       <input
-                        type="date"
+                        type="text"
                         className="
                     input
                     input-bordered
@@ -3060,11 +3272,11 @@ Le Directeur
                     mb-2
                   "
                       >
-                        Date fin
+                        Directeur
                       </span>
 
                       <input
-                        type="date"
+                        type="text"
                         className="
                     input
                     input-bordered
