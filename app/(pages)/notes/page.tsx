@@ -1497,71 +1497,156 @@ Le Directeur
   // =====================
   // ADD NOTE
   // =====================
+  // const handleAddNote = async (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+
+  //   const userId = authSession?.user?.id;
+
+  //   if (!userId) {
+  //     toast.error("Session expirée");
+  //     return;
+  //   }
+
+  //   if (!selectedEtudiant) {
+  //     toast.error("Veuillez remplir tous les champs");
+  //     return;
+  //   }
+
+  //   // Vérification doublon
+  //   const already = notes.find(
+  //     (n) => n.etudiant?.id === selectedEtudiant.value,
+  //   );
+
+  //   if (already) {
+  //     toast.error(
+  //       "Doublon détecté : cet étudiant possède déjà une note pour cette session et cette filière.",
+  //     );
+  //     return;
+  //   }
+
+  //   try {
+  //     const formData = new FormData(e.currentTarget);
+
+  //     // Champs obligatoires selon ton modèle Prisma
+  //     formData.set("etudiantId", String(selectedEtudiant.value));
+
+  //     formData.set("createdById", userId);
+
+  //     // Note Jury uniquement (théorique/pratique calculées serveur)
+  //     const juryValue = formData.get("noteJyry");
+
+  //     formData.set("noteJyry", juryValue ? String(juryValue) : "0");
+
+  //     // Ces valeurs ne viennent pas du formulaire
+  //     formData.delete("noteTheorique");
+  //     formData.delete("notePratique");
+
+  //     const created = await addNote(formData);
+
+  //     setNotes((prev) => [created, ...prev]);
+
+  //     toast.success("Note ajoutée avec succès.");
+
+  //     // Fermeture et nettoyage
+  //     setPopupOpen(false);
+
+  //     setSelectedEtudiant(null);
+  //     setSelectedSession(null);
+  //     setSelectedFiliere(null);
+  //     setSelectedNote(null);
+
+  //     e.currentTarget.reset();
+  //   } catch (err: any) {
+  //     console.error("Erreur ajout note :", err);
+
+  //     toast.error(err?.message ?? "Erreur lors de l'ajout de la note.");
+  //   }
+  // };
+
   const handleAddNote = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const userId = authSession?.user?.id;
+  const form = e.currentTarget;
 
-    if (!userId) {
-      toast.error("Session expirée");
-      return;
-    }
+  const userId = authSession?.user?.id;
 
-    if (!selectedEtudiant) {
-      toast.error("Veuillez remplir tous les champs");
-      return;
-    }
+  if (!userId) {
+    toast.error("Session expirée");
+    return;
+  }
 
-    // Vérification doublon
-    const already = notes.find(
-      (n) => n.etudiant?.id === selectedEtudiant.value,
+  if (!selectedEtudiant) {
+    toast.error("Veuillez remplir tous les champs");
+    return;
+  }
+
+  // Vérification doublon
+  const already = notes.find(
+    (n) => n.etudiant?.id === selectedEtudiant.value,
+  );
+
+  if (already) {
+    toast.error(
+      "Doublon détecté : cet étudiant possède déjà une note pour cette session et cette filière.",
+    );
+    return;
+  }
+
+  try {
+    const formData = new FormData(form);
+
+    // Étudiant
+    formData.set(
+      "etudiantId",
+      String(selectedEtudiant.value),
     );
 
-    if (already) {
-      toast.error(
-        "Doublon détecté : cet étudiant possède déjà une note pour cette session et cette filière.",
-      );
-      return;
-    }
+    // Utilisateur
+    formData.set(
+      "createdById",
+      String(userId),
+    );
 
-    try {
-      const formData = new FormData(e.currentTarget);
+    // Note jury uniquement
+    const juryValue = formData.get("noteJyry");
 
-      // Champs obligatoires selon ton modèle Prisma
-      formData.set("etudiantId", String(selectedEtudiant.value));
+    formData.set(
+      "noteJyry",
+      juryValue ? String(juryValue) : "0",
+    );
 
-      formData.set("createdById", userId);
+    // Les notes théorique et pratique sont calculées côté serveur
+    formData.delete("noteTheorique");
+    formData.delete("notePratique");
 
-      // Note Jury uniquement (théorique/pratique calculées serveur)
-      const juryValue = formData.get("noteJyry");
+    // Enregistrement
+    const created = await addNote(formData);
 
-      formData.set("noteJyry", juryValue ? String(juryValue) : "0");
+    setNotes((prev) => [created, ...prev]);
 
-      // Ces valeurs ne viennent pas du formulaire
-      formData.delete("noteTheorique");
-      formData.delete("notePratique");
+    toast.success("Note ajoutée avec succès.");
 
-      const created = await addNote(formData);
+    // Fermeture
+    setPopupOpen(false);
 
-      setNotes((prev) => [created, ...prev]);
+    // Nettoyage des sélections
+    setSelectedEtudiant(null);
+    setSelectedSession(null);
+    setSelectedFiliere(null);
+    setSelectedNote(null);
 
-      toast.success("Note ajoutée avec succès.");
+    // Réinitialisation du formulaire
+    form.reset();
 
-      // Fermeture et nettoyage
-      setPopupOpen(false);
+  } catch (err: any) {
+    console.error("Erreur ajout note :", err);
 
-      setSelectedEtudiant(null);
-      setSelectedSession(null);
-      setSelectedFiliere(null);
-      setSelectedNote(null);
-
-      e.currentTarget.reset();
-    } catch (err: any) {
-      console.error("Erreur ajout note :", err);
-
-      toast.error(err?.message ?? "Erreur lors de l'ajout de la note.");
-    }
-  };
+    toast.error(
+      err?.message ??
+        "Erreur lors de l'ajout de la note.",
+    );
+  }
+};
   // =====================
   // EDIT NOTE
   // =====================
