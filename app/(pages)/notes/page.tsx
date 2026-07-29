@@ -19,6 +19,7 @@ import * as XLSX from "xlsx"; // lecture et écriture Excel
 import { saveAs } from "file-saver"; // sauvegarde fichiers
 import { Inbox } from "lucide-react";
 import autoTable from "jspdf-autotable";
+import QRCode from "qrcode";
 
 // ================= ACTIONS SERVER =================
 import {
@@ -1691,7 +1692,261 @@ Le Directeur
     return prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
   };
 
-  const generateBrevetHtml = (
+  //   const generateBrevetHtml = (
+  //     note: any,
+  //     etudiant: any,
+  //     stats: any,
+  //     dateDebutSession: string,
+  //     dateFinSession: string,
+  //     descriptionBrevet: string,
+  //   ) => {
+  //     const BREVE_CODE_OFFICIEL =
+  //       "028/CABMIN/MI-FPM/AKK/KM/MAF/2023 DU 21/01/2023";
+
+  //     const estHomme =
+  //       etudiant.sexe?.toLowerCase() === "m" ||
+  //       etudiant.sexe?.toLowerCase() === "masculin" ||
+  //       etudiant.sexe?.toLowerCase() === "homme";
+
+  //     const pronom = estHomme ? "Il" : "Elle";
+
+  //     const formatPrenom = (prenom?: string | null) => {
+  //       if (!prenom) return "";
+
+  //       const value = prenom.trim();
+
+  //       return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  //     };
+
+  //     const pourcentage =
+  //       Number(note.noteTheorique ?? 0) +
+  //       Number(note.notePratique ?? 0) +
+  //       Number(note.noteJyry ?? 0);
+
+  //     const mention = calculateMentionFromAverage(pourcentage);
+
+  //     const sessionAffichee = `${dateDebutSession} au ${dateFinSession}`;
+
+  //     return `
+
+  // <div style="
+  // width:100%;
+  // height:100%;
+  // padding:20mm;
+  // font-family:'Times New Roman', serif;
+  // background:#f2f2f2;
+  // position:relative;
+  // box-sizing:border-box;
+  // ">
+
+  // <!-- FILIGRANE -->
+
+  // <img
+  // src="/format1.png"
+  // style="
+  // position:absolute;
+  // top:57%;
+  // left:15%;
+  // transform:translate(-50%, -50%);
+  // width:380px;
+  // opacity:0.35;
+  // z-index:0;
+  // "
+  // />
+
+  // <div style="
+  // position:relative;
+  // z-index:1;
+  // height:100%;
+  // display:flex;
+  // flex-direction:column;
+  // justify-content:space-between;
+  // ">
+
+  // <!-- ================= HEADER ================= -->
+
+  // <div style="
+  // text-align:center;
+  // line-height:1;
+  // ">
+
+  // <h2 style="
+  // margin:0;
+  // padding:0;
+  // font-size:22px;
+  // line-height:1.1;
+  // ">
+  // CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
+  // </h2>
+
+  // <p style="
+  // margin:0;
+  // padding:0;
+  // font-weight:bold;
+  // font-size:20px;
+  // line-height:1.1;
+  // color:#1f5e3b;
+  // ">
+  // « LEON ACADEMY »
+  // </p>
+
+  // <img
+  // src="/logo-leon.png"
+  // style="
+  // width:140px;
+  // height:auto;
+  // display:block;
+  // margin:0 auto;
+  // padding:0;
+  // "
+  // />
+
+  // <p style="
+  // font-size:12px;
+  // font-weight:bold;
+  // margin:0;
+  // padding:0;
+  // line-height:1;
+  // ">
+  // ${BREVE_CODE_OFFICIEL}
+  // </p>
+
+  // </div>
+
+  // <!-- ================= TITRE ================= -->
+
+  // <div style="
+  // background:#c9a64d;
+  // padding:12px 25px;
+  // margin:15px auto;
+  // text-align:center;
+  // font-weight:bold;
+  // font-size:18px;
+  // ">
+
+  // ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
+  // D’APTITUDE PROFESSIONNELLE
+
+  // </div>
+
+  // <!-- ================= CONTENU ================= -->
+
+  // <div style="
+  // font-size:15px;
+  // line-height:1.7;
+  // text-align:justify;
+  // ">
+
+  // <p>
+  // Nous soussignons la Direction du centre de formation professionnelle
+  // et Métiers <strong>« Léon Academy »</strong>,
+  // certifions que :
+  // </p>
+
+  // <p style="
+  // text-align:center;
+  // font-size:22px;
+  // font-weight:bold;
+  // color:#1f5e3b;
+  // ">
+
+  // ${etudiant.nom ?? ""}
+  // ${etudiant.postnom ?? ""}
+  // ${formatPrenom(etudiant.prenom)}
+
+  // </p>
+
+  // <p>
+
+  // a suivi une formation professionnelle du
+
+  // <strong>
+  // ${sessionAffichee}
+  // </strong>
+
+  // en
+
+  // <strong>
+  // ${String(note.filiere).toUpperCase()}
+  // </strong>. ${
+  //   descriptionBrevet ||
+  //   "Formation professionnelle sanctionnée par une attestation d'aptitude professionnelle."
+  // }
+
+  // </p>
+
+  // <p>
+
+  // ${pronom} a satisfait aux épreuves d’évaluation
+  // avec la mention
+
+  // <strong style="
+  // color:#1f5e3b;
+  // ">
+
+  // ${mention}
+
+  // </strong>
+
+  // soit
+
+  // <strong>
+  // ${pourcentage.toFixed(0)} %
+  // </strong>.
+
+  // </p>
+
+  // <p>
+  // En foi de quoi, nous lui délivrons la présente attestation
+  // pour servir et valoir ce que de droit.
+  // </p>
+
+  // </div>
+
+  // <!-- ================= SIGNATURE ================= -->
+
+  // <div style="
+  // text-align:right;
+  // font-size:14px;
+  // ">
+
+  // <p>
+  // Fait à Kinshasa, le
+  // ${new Date().toLocaleDateString("fr-FR")}
+  // </p>
+
+  // <div style="
+  // margin-top:40px;
+  // ">
+
+  // <div style="
+  // border-top:1px solid #000;
+  // width:200px;
+  // margin-left:auto;
+  // ">
+  // </div>
+
+  // <strong style="
+  // display:block;
+  // text-align:center;
+  // width:200px;
+  // margin-left:auto;
+  // ">
+  // Le Directeur
+  // </strong>
+
+  // </div>
+
+  // </div>
+
+  // </div>
+
+  // </div>
+
+  // `;
+  //   };
+
+  const generateBrevetHtml = async (
     note: any,
     etudiant: any,
     stats: any,
@@ -1707,13 +1962,11 @@ Le Directeur
       etudiant.sexe?.toLowerCase() === "masculin" ||
       etudiant.sexe?.toLowerCase() === "homme";
 
-    const pronom = estHomme ? "Il" : "Elle";
+    const civilite = estHomme ? "Mr" : "Mme";
 
     const formatPrenom = (prenom?: string | null) => {
       if (!prenom) return "";
-
       const value = prenom.trim();
-
       return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
     };
 
@@ -1724,291 +1977,233 @@ Le Directeur
 
     const mention = calculateMentionFromAverage(pourcentage);
 
-    const sessionAffichee = `${dateDebutSession} au ${dateFinSession}`;
+    const anneeEnCours = new Date().getFullYear();
 
-    return `
+const numeroBrevet = `${String(etudiant.id)
+  .replace(/-/g, "")
+  .substring(0, 8)
+  .toUpperCase()}`;
+    // Exemple : 2026-483921
+    
 
-<div style="
-width:100%;
-height:100%;
-padding:20mm;
-font-family:'Times New Roman', serif;
-background:#f2f2f2;
-position:relative;
-box-sizing:border-box;
-">
-
-
-<!-- FILIGRANE -->
-
-<img
-src="/format1.png"
-style="
-position:absolute;
-top:57%;
-left:15%;
-transform:translate(-50%, -50%);
-width:380px;
-opacity:0.35;
-z-index:0;
-"
-/>
-
-
-
-<div style="
-position:relative;
-z-index:1;
-height:100%;
-display:flex;
-flex-direction:column;
-justify-content:space-between;
-">
-
-
-
-<!-- ================= HEADER ================= -->
-
-
-<div style="
-text-align:center;
-line-height:1;
-">
-
-
-<h2 style="
-margin:0;
-padding:0;
-font-size:22px;
-line-height:1.1;
-">
-CENTRE DE FORMATION PROFESSIONNELLE ET METIERS
-</h2>
-
-
-
-<p style="
-margin:0;
-padding:0;
-font-weight:bold;
-font-size:20px;
-line-height:1.1;
-color:#1f5e3b;
-">
-« LEON ACADEMY »
-</p>
-
-
-
-<img
-src="/logo-leon.png"
-style="
-width:140px;
-height:auto;
-display:block;
-margin:0 auto;
-padding:0;
-"
-/>
-
-
-
-<p style="
-font-size:12px;
-font-weight:bold;
-margin:0;
-padding:0;
-line-height:1;
-">
-${BREVE_CODE_OFFICIEL}
-</p>
-
-
-</div>
-
-
-
-
-
-
-<!-- ================= TITRE ================= -->
-
-
-<div style="
-background:#c9a64d;
-padding:12px 25px;
-margin:15px auto;
-text-align:center;
-font-weight:bold;
-font-size:18px;
-">
-
-
-ATTESTATION TENANT LIEU DE CERTIFICAT<br/>
-D’APTITUDE PROFESSIONNELLE
-
-
-</div>
-
-
-
-
-
-
-
-<!-- ================= CONTENU ================= -->
-
-
-<div style="
-font-size:15px;
-line-height:1.7;
-text-align:justify;
-">
-
-
-
-<p>
-Nous soussignons la Direction du centre de formation professionnelle
-et Métiers <strong>« Léon Academy »</strong>,
-certifions que :
-</p>
-
-
-
-
-<p style="
-text-align:center;
-font-size:22px;
-font-weight:bold;
-color:#1f5e3b;
-">
-
+    const nomComplet = `
 ${etudiant.nom ?? ""}
 ${etudiant.postnom ?? ""}
 ${formatPrenom(etudiant.prenom)}
+`
+      .replace(/\s+/g, " ")
+      .trim();
 
-</p>
+const qrData = `
+N° Brevet : ${numeroBrevet}/${anneeEnCours}
+Nom : ${nomComplet}
+Filière : ${note?.filiere?? ""}
+Mention : ${mention}
+Pourcentage : ${pourcentage.toFixed(0)}%
+`.trim();
 
+const qrCodeBase64 = await QRCode.toDataURL(qrData, {
+  color: {
+    dark: "#0033CC",
+    light: "#FFFFFF"
+  }
+});
 
+    return `
 
-
-
-<p>
-
-a suivi une formation professionnelle du
-
-<strong>
-${sessionAffichee}
-</strong>
-
-en
-
-<strong>
-${String(note.filiere).toUpperCase()}
-</strong>. ${
-  descriptionBrevet ||
-  "Formation professionnelle sanctionnée par une attestation d'aptitude professionnelle."
-}
-
-</p>
-
-
-<p>
-
-${pronom} a satisfait aux épreuves d’évaluation
-avec la mention
-
-<strong style="
-color:#1f5e3b;
+<div
+style="
+width:1123px;
+height:794px;
+position:relative;
+font-family:Arial,Helvetica,sans-serif;
+background:url('/brevt.jpeg') center center no-repeat;
+background-size:100% 100%;
+overflow:hidden;
 ">
 
-${mention}
+<!-- NOM -->
 
-</strong>
+<div
+style="
+position:absolute;
+left:350px;
+top:420px;
+width:830px;
+font-size:22px;
+font-weight:bold;
+font-family: Arial, sans-serif;
+">
+${civilite}. ${nomComplet}
+</div>
 
-soit
+<!-- DATE DEBUT -->
 
-<strong>
-${pourcentage.toFixed(0)} %
-</strong>.
+<div
+style="
+position:absolute;
+left:190px;
+top:720px;
+font-size:19px;
+font-weight:bold;
+font-family: Arial, sans-serif;
+">
+${dateDebutSession}
+</div>
 
-</p>
+<!-- DATE FIN -->
 
+<div
+style="
+position:absolute;
+left:700px;
+top:720px;
+font-size:19px;
+font-weight:bold;
+font-family: Arial, sans-serif;
+">
+${dateFinSession}
+</div>
 
+<!-- NUMERO DU BREVET -->
 
+<!-- NUMERO DU BREVET -->
 
+<div
+style="
+position:absolute;
+right:290px;
+top:305px;
+font-size:26px;
+font-weight:normal;
+font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+color:#FFFFFF;
+text-transform:uppercase;
+"
+>
+ ${numeroBrevet}
+</div>
 
+<!-- ANNEE -->
 
+<div
+style="
+position:absolute;
+right:125px;
+top:305px;
+font-size:26px;
+font-weight:normal;
+font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+color:#FFFFFF;
+text-transform:uppercase;
+"
+>
+ ${anneeEnCours}
+</div>
 
-<p>
-En foi de quoi, nous lui délivrons la présente attestation
-pour servir et valoir ce que de droit.
-</p>
+<!-- FILIERE -->
 
-
+<div
+style="
+position:absolute;
+left:590px;
+top:365px;
+font-size:19px;
+font-weight:bold;
+">
 
 </div>
 
+<!-- DESCRIPTION -->
 
-
-
-
-
-
-
-<!-- ================= SIGNATURE ================= -->
-
-
-<div style="
-text-align:right;
-font-size:14px;
-">
-
-
-<p>
-Fait à Kinshasa, le 
-${new Date().toLocaleDateString("fr-FR")}
-</p>
-
-
-
-<div style="
-margin-top:40px;
-">
-
-
-<div style="
-border-top:1px solid #000;
-width:200px;
-margin-left:auto;
-">
-</div>
-
-
-
-<strong style="
-display:block;
+<div
+style="
+position:absolute;
+left:50px;
+top:450px;
+width:955px;
+font-size:17px;
+line-height:1.5;
 text-align:center;
-width:200px;
-margin-left:auto;
+font-family: Arial, sans-serif;
 ">
-Le Directeur
-</strong>
+${descriptionBrevet ?? ""}
+</div>
+
+<!-- MENTION -->
+
+<div
+style="
+position:absolute;
+left:620px;
+top:550px;
+font-size:20px;
+font-weight:bold;
+">
+${mention}
+</div>
+
+<!-- POURCENTAGE -->
+
+<div
+style="
+position:absolute;
+left:930px;
+top:550px;
+font-size:20px;
+font-weight:bold;
+">
+${pourcentage.toFixed(0)} 
+</div>
+
+<!-- DATE -->
+
+<div
+style="
+position:absolute;
+right:130px;
+top:630px;
+font-size:20px;
+font-weight:normal;
+font-family: Arial, sans-serif;
+">
+Fait à Kinshasa le ${new Date().toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })}
+</div>
+
+<!-- QR CODE -->
+
+
+
+<!-- QR CODE + INFORMATIONS -->
+
+<div
+style="
+position:absolute;
+left:50%;
+bottom:20px;
+transform:translateX(-50%);
+text-align:center;
+font-family:Arial,sans-serif;
+
+"
+>
+
+<img
+src="${qrCodeBase64}"
+style="
+width:150px;
+height:150px;
+
+"
+/>
 
 
 </div>
 
-
-</div>
-
-
-
-
-
-
-</div>
-
-</div>
 
 `;
   };
@@ -2371,7 +2566,7 @@ Le Directeur
 
       const etudiant = releveNotes[0].etudiant;
 
-      const html = generateBrevetHtml(
+      const html = await generateBrevetHtml(
         note,
         etudiant,
         stats,
@@ -3601,11 +3796,11 @@ Formation professionnelle en informatique de gestion comprenant :
                     block
                   "
                       >
-                        Date début
+                        Chef d'entité
                       </span>
 
                       <input
-                        type="date"
+                        type="text"
                         className="
                     input
                     input-bordered
@@ -3628,11 +3823,11 @@ Formation professionnelle en informatique de gestion comprenant :
                     block
                   "
                       >
-                        Date fin
+                        Directeur
                       </span>
 
                       <input
-                        type="date"
+                        type="text"
                         className="
                     input
                     input-bordered
