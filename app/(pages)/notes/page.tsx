@@ -1769,7 +1769,7 @@ Le Directeur
   };
 
   // =====================
-  // DOWNLOAD BREVET
+  // DOWNLOAD BREVETe
   // =====================
   const formatPrenom = (prenom: string) => {
     if (!prenom) return "";
@@ -2113,9 +2113,9 @@ overflow:hidden;
 style="
 position:absolute;
 left:350px;
-top:420px;
+top:415px;
 width:830px;
-font-size:22px;
+font-size:25px;
 font-weight:bold;
 font-family: Arial, sans-serif;
 ">
@@ -2221,8 +2221,8 @@ ${descriptionBrevet ?? ""}
 style="
 position:absolute;
 left:620px;
-top:550px;
-font-size:20px;
+top:538px;
+font-size:25px;
 font-weight:bold;
 ">
 ${mention}
@@ -2233,9 +2233,9 @@ ${mention}
 <div
 style="
 position:absolute;
-left:930px;
-top:550px;
-font-size:20px;
+left:925px;
+top:538px;
+font-size:25px;
 font-weight:bold;
 ">
 ${pourcentage.toFixed(0)} 
